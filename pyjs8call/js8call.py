@@ -101,12 +101,11 @@ class JS8Call:
 
     def _hb(self):
         while self.online:
+            # if no recent rx,check the connection by making a request
             timeout = self._last_rx_timestamp + self._socket_heartbeat_delay
             if timeout > time.time():
-                self.connected = False
-
                 msg = Message()
-                msg.type = Message.STATION.GET_CALLSIGN
+                msg.type = Message.STATION_GET_CALLSIGN
                 self.send(msg)
                 
             time.sleep(1)
@@ -127,26 +126,38 @@ class JS8Call:
         while self.online:
             try:
                 data += self.socket.recv(65535)
-                data_str = data.decode('utf-8')
-                if len(data_str) == 0:
-                    continue
-
-                self._last_rx_timestamp = time.time()
-                self.connected = True
-
             except socket.timeout:
-                #TODO handle
-                pass
+                # if rx from socket fails, stop processing
+                self.connected = False
+                time.sleep(1)
+                continue
+            try: 
+                data_str = data.decode('utf-8')
+            except:
+                # if decode fails, stop processing
+                continue
+
+            # if rx data is empty, stop processing
+            if len(data_str) == 0:
+                continue
+
+            self._last_rx_timestamp = time.time()
+            self.connected = True
 
             msgs = data_str.split('\n')
             for m in msgs:
+                # if message is empty, stop processing
                 if len(m) == 0:
                     continue
 
                 processed = False
 
-                msg = json.loads(m)
-                msg = Message().parse(msg)
+                try:
+                    msg = json.loads(m)
+                    msg = Message().parse(msg)
+                except:
+                    # if loading json or parsing message fails, stop processing
+                    continue
 
                 if msg['type'] == 'RIG.FREQ':
                     self.state['dial'] = msg['params']['DIAL']
@@ -187,7 +198,6 @@ class JS8Call:
                 if msg['type'] == 'RX.BAND_ACTIVITY':
                     self.state['band_activity'] = msg['value']
                     processed = True
-
 
                 if not processed:
                     rx_queue.append(msg)
