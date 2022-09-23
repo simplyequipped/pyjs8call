@@ -108,7 +108,7 @@ class Message:
             else:
                 self.params['GRID'] = grid
 
-        if 'SNR' in self.params and self.snr == None and self.params['SNR'] != '':
+        if 'SNR' in self.params and self.snr == None and self.params['SNR'] != '' and self.params['SNR'] != None:
             self.snr = int(self.params['SNR'])
 
         return self
