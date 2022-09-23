@@ -124,16 +124,11 @@ class Modem:
             for destination, msgs in self.js8call.spots[station].items():
                 for msg in msgs:
                     if msg.time >= since_timestamp:
-                        if 'SNR' in msg.params:
-                            snr = msg.params['SNR']
-                        else:
-                            snr = None
-
                         spot = {
                             'from' : station,
                             'to' : destination,
                             'message' : msg,
-                            'snr' : snr,
+                            'snr' : msg.snr,
                         }
 
                         spots.append(spot)
