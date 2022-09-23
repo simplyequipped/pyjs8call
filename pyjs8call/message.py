@@ -34,6 +34,7 @@ class Message:
         self.destination = destination
         self.value = value
         self.time = None
+        self.snr = None
         self.messages = None
         self.params = {
             'FREQ'      : None,
@@ -93,6 +94,7 @@ class Message:
 
         if self.params['CMD'] == 'HEARTBEAT SNR' or self.params['CMD'] == 'SNR':
             self.params['extra'] = int(self.params['extra'])
+            self.snr = self.params['extra']
             
         #TODO review
         if self.params['CMD'] == 'GRID':
@@ -100,10 +102,14 @@ class Message:
             if len(grid) >= 4:
                 grid = grid[3]
                 
+            #TODO expand error checking
             if Message.ERR in grid:
                 self.params['GRID'] = None
             else:
                 self.params['GRID'] = grid
+
+        if 'SNR' in self.params and self.snr == None and self.params['SNR'] != '':
+            self.snr = int(self.params['SNR'])
 
         return self
                 
