@@ -8,7 +8,7 @@ from pyjs8call import Message
 
 class Modem:
     
-    def __init__(self, host=None, port=None):
+    def __init__(self, host='127.0.0.1', port=2442):
         self.js8call = pyjs8call.JS8Call(host, port)
         self.freq = 7078000
         self.offset = 2000
@@ -19,7 +19,7 @@ class Modem:
         self._set_get_delay = 0.1 # seconds
         
         rx_thread = threading.Thread(target=self._rx)
-        rx_thread.setDaemon()
+        rx_thread.setDaemon(True)
         rx_thread.start()
 
         self.online = True
@@ -39,11 +39,15 @@ class Modem:
         self.online = False
 
     def send_message(self, message):
-        msg = Message(value=message)
+        msg = Message()
+        msg.type = Message.TX_SEND_MESSAGE
+        msg.value = message
         self.js8call.send(msg)
     
     def send_directed_message(self, destination, message):
-        msg = Message(destination, message)
+        msg = Message()
+        msg.type = Message.TX_SEND_MESSAGE
+        msg.value = destination + ' ' + message
         self.js8call.send(msg)
     
     def send_heartbeat(self, grid=None):
@@ -77,7 +81,15 @@ class Modem:
         messages = self.js8call.watch('messages')
         return messages
 
-    def store_inbox_message(self, destination, message):
+    def send_inbox_message(self, destination, message):
+        value = destination + ' MSG ' + message
+        self.send_message(value)
+
+    def forward_inbox_message(self, destination, forward, message):
+        value = destination + ' MSG TO:' + forward + ' ' + message
+        self.send_message(value)
+
+    def store_local_inbox_message(self, destination, message):
         msg = Message()
         msg.type = Message.INBOX_STORE_MESSAGE
         msg.params['CALLSIGN'] = destination
@@ -86,10 +98,34 @@ class Modem:
         time.sleep(self._set_get_delay)
         return self.get_inbox_messages()
 
-    def send_inbox_message(self, destination, message):
-        message = ' MSG ' + message
-        msg = Message(destination, message)
-        self.js8call.send(msg)
+    def query_call(self, destination, callsign):
+        message = 'QUERY CALL ' + callsign + '?'
+        self.send_directed_message(destination, message)
+
+    def query_messages(self, destination):
+        self.send_directed_message(destination, 'QUERY MSGS')
+
+    def query_message_id(self, destination, msg_id):
+        message = 'QUERY MSG ' + msg_id
+        self.send_directed_message(destination, message)
+
+    def query_heard(self, destination):
+        self.send_directed_message(destination, 'HEARD?')
+
+    # destinations is a list of callsigns in order (first relay, second relay, ...)
+    def relay_message(self, destinations, message):
+        destinations = '>'.join(destinations)
+        self.send_directed_message(destinations, message)
+
+    def get_station_spots(self, station, since_timestamp=0):
+        spots = []
+        
+        if station in self.js8call.spots.keys():
+            for destination, msgs in self.js8call.spots[station].items():
+                for msg in msgs:
+                    if msg.time >= since_timestamp:
+                        spots.append(msg)
+        return spots
 
     def get_freq(self):
         msg = Message()
@@ -118,21 +154,21 @@ class Modem:
 
     def get_callsign(self):
         msg = Message()
-        msg.type = Message.STATION.GET_CALLSIGN
+        msg.type = Message.STATION_GET_CALLSIGN
         self.js8call.send(msg)
         callsign = self.js8call.watch('callsign')
         return callsign
 
     def get_grid(self):
         msg = Message()
-        msg.type = STATION_GET_GRID
+        msg.type = Message.STATION_GET_GRID
         self.js8call.send(msg)
         grid = self.js8call.watch('grid')
         return grid
 
     def set_grid(self, grid):
         msg = Message()
-        msg.type = STATION_SET_GRID
+        msg.type = Message.STATION_SET_GRID
         msg.value = grid
         self.js8call.send(msg)
         time.sleep(self._set_get_delay)
@@ -142,7 +178,7 @@ class Modem:
         msg = Message()
         msg.type = Message.STATION_GET_INFO
         self.js8call.send(msg)
-        info = self.js8call.wait('info')
+        info = self.js8call.watch('info')
         return info
 
     def set_info(self, info):
@@ -205,7 +241,7 @@ class Modem:
     # speed: slow, normal, fast, turbo
     def set_speed(self, speed):
         speeds = {'slow':4, 'normal':0, 'fast':1, 'turbo':2}
-        if type(speed, str):
+        if isinstance(speed, str):
             speed = speeds[speed]
 
         msg = Message()
@@ -220,7 +256,29 @@ class Modem:
         msg.type = Message.WINDOW_RAISE
         self.js8call.send(msg)
 
-        
+    def get_rx_messages(self, own=True):
+        rx_text = self.get_rx_text()
+        mycall = self.get_callsign()
+        msgs = rx_text.split('\n')
+        msgs = [m.strip() for m in msgs if len(m.strip()) > 0]
+
+        rx_messages = []
+        for msg in msgs:
+            parts = msg.split('-')
+            data = {
+                #TODO convert time format?
+                'time' : parts[0].strip(),
+                'offset' : int(parts[1].strip(' \n()')),
+                'callsign' : parts[2].split(':')[0].strip(),
+                'message' : parts[2].split(':')[1].strip(' \n' + Message.EOM)
+            }
+
+            if not own and data['callsign'] == mycall:
+                continue
+
+            rx_messages.append(data)
+
+        return rx_messages
 
 
     

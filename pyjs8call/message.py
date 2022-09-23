@@ -1,4 +1,5 @@
 import json
+import time
 
 
 class Message:
@@ -28,7 +29,7 @@ class Message:
     EOM = '♢'
     ERR = '…'
 
-    def __init__(destination=None, value=None):
+    def __init__(self, destination=None, value=None):
         self.type = Message.TX_SEND_MESSAGE
         self.destination = destination
         self.value = value
@@ -69,6 +70,7 @@ class Message:
         msg = json.loads(msg_str)
 
         self.type = msg['type']
+        self.time = time.time()
         
         if self.type == 'MESSAGES':
             self.messages = msg['params']['MESSAGES']
@@ -78,12 +80,13 @@ class Message:
         if 'time' in msg:
             self.time = msg['time']
         if 'value' in msg:
-            self.value = msg['value']
-        if 'params' not in msg:
-            return None
+            self.value = msg['value'].strip()
         
         for param, value in msg['params'].items():
-            self.params[param.strip()] = value.strip()
+            if isinstance(value, str):
+                self.params[param.strip()] = value.strip()
+            else:
+                self.params[param.strip()] = value
 
         if self.params['GRID'] == '':
             self.params['GRID'] = None
@@ -101,9 +104,7 @@ class Message:
                 self.params['GRID'] = None
             else:
                 self.params['GRID'] = grid
-                
-        #TODO review
-        if self.params['CMD'] == 'HEARING':
-            self.params['TEXT'] = self.params['TEXT'].split()[3:]
 
+        return self
+                
         
