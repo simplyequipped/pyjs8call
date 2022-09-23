@@ -65,7 +65,9 @@ class Message:
         packed = json.dumps(packed) + '\r\n'
         return packed.encode('utf-8')
         
-    def parse(self, msg):
+    def parse(self, msg_str):
+        msg = json.loads(msg_str)
+
         self.type = msg['type']
         
         if self.type == 'MESSAGES':
