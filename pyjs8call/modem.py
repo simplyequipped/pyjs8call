@@ -75,10 +75,10 @@ class Modem:
         self.send_message('@APRSIS CMD :POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode+ ' ' + message)
     
     def get_inbox_messages(self):
-        msg = Messages()
+        msg = Message()
         msg.type = Message.INBOX_GET_MESSAGES
         self.js8call.send(msg)
-        messages = self.js8call.watch('messages')
+        messages = self.js8call.watch('inbox')
         return messages
 
     def send_inbox_message(self, destination, message):

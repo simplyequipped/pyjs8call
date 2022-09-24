@@ -82,15 +82,12 @@ class Message:
             self.time = msg['time']
         if 'value' in msg:
             self.value = msg['value'].strip()
-        
+
         for param, value in msg['params'].items():
             if isinstance(value, str):
                 self.params[param.strip()] = value.strip()
             else:
                 self.params[param.strip()] = value
-
-        if self.params['GRID'] == '':
-            self.params['GRID'] = None
 
         if self.params['CMD'] == 'HEARTBEAT SNR' or self.params['CMD'] == 'SNR':
             self.params['extra'] = int(self.params['extra'])
