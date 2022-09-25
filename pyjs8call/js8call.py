@@ -64,8 +64,6 @@ class JS8Call:
         self.send(msg)
         self.watch('callsign')
 
-        self.spots[self.state['callsign']] = {}
-        
     def stop(self):
         self.online = False
 
@@ -243,11 +241,8 @@ class JS8Call:
 
                 #TODO no example, test response and update code
                 #if msg.params['CMD'] == 'QUERY CALL':
-                #    if msg.params['FROM'] not in self.spots.keys():
-                #        self.spots[msg.params['FROM']] = {}
-                #    if msg.params['TO'] not in self.spots[msg.params['FROM']].keys():
-                #        self.spots[msg.params['FROM']][msg.params['TO']] = []
-                #    self.spots[msg.params['FROM']][msg.params['TO']].append(msg)
+                #    # spot message
+                #    self.spot(msg)
                 #    #receive message
                 #    self._rx_queue.append(msg)
 
