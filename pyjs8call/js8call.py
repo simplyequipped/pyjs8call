@@ -9,7 +9,7 @@ from pyjs8call import Message
 
 class JS8Call:
     
-    def __init__(self, host='localhost', port=2442):
+    def __init__(self, host='localhost', port=2442, debug=False):
         self._host = host
         self._port = port
         self._rx_queue = []
@@ -19,10 +19,11 @@ class JS8Call:
         self._last_rx_timestamp = 0
         self._socket_heartbeat_delay = 60 * 5 # seconds
         self._app = None
+        self._debug = debug
         self.pending = False # rx pending
         self.connected = False
         self.online = False
-        self.spots = {}
+        self.spots = []
 
         self.state = {
             'ptt' : None,
@@ -111,6 +112,42 @@ class JS8Call:
         
         return self.state[item]
 
+    def spot(self, msg):
+        spot_data = {
+            'from'      : None,
+            'to'        : None,
+            'freq'      : None,
+            'offset'    : None,
+            'time'      : None,
+            'grid'      : None,
+            'snr'       : None,
+        }
+        
+        if 'CALL' in msg.params.keys():
+            spot_data['from'] = msg.params['CALL']
+        elif 'FROM' in msg.params.keys():
+            spot_data['from'] = msg.params['FROM']
+
+        if 'TO' in msg.params.keys():
+            spot_data['to'] = msg.params['TO']
+
+        if 'DIAL' in msg.params.keys():
+            spot_data['freq'] = msg.params['DIAL']
+
+        if 'OFFSET' in msg.params.keys():
+            spot_data['offset'] = msg.params['OFFSET']
+
+        if 'UTC' in msg.params.keys():
+            spot_data['time'] = msg.params['UTC']
+
+        if 'GRID' in msg.params.keys():
+            spot_data['grid'] = msg.params['GRID']
+
+        if 'SNR' in msg.params.keys():
+            spot_data['snr'] = msg.params['SNR']
+
+        self.spots.append(spot_data)
+
     def _hb(self):
         while self.online:
             # if no recent rx,check the connection by making a request
@@ -175,44 +212,33 @@ class JS8Call:
                 if pyjs8call.Message.ERR in msg.value:
                     continue
 
-                #TODO
-                print(msg_str)
-
-                if msg.params['CMD'] == 'HEARTBEAT SNR':
-                    if msg.params['FROM'] not in self.spots.keys():
-                        self.spots[msg.params['FROM']] = {}
-                    if msg.params['TO'] not in self.spots[msg.params['FROM']].keys():
-                        self.spots[msg.params['FROM']][msg.params['TO']] = []
-                    self.spots[msg.params['FROM']][msg.params['TO']].append(msg)
+                # print raw msg string in debug mode
+                if self._debug:
+                    print(msg_str)
 
                 elif msg.params['CMD'] == 'SNR':
-                    if msg.params['FROM'] not in self.spots.keys():
-                        self.spots[msg.params['FROM']] = {}
-                    if msg.params['TO'] not in self.spots[msg.params['FROM']].keys():
-                        self.spots[msg.params['FROM']][msg.params['TO']] = []
-                    self.spots[msg.params['FROM']][msg.params['TO']].append(msg)
-                    #receive message
+                    # spot message
+                    self.spot(msg)
+                    # receive message
                     self._rx_queue.append(msg)
 
                 elif msg.params['CMD'] == 'GRID':
-                    if msg.params['FROM'] not in self.spots.keys():
-                        self.spots[msg.params['FROM']] = {}
-                    if msg.params['TO'] not in self.spots[msg.params['FROM']].keys():
-                        self.spots[msg.params['FROM']][msg.params['TO']] = []
-                    self.spots[msg.params['FROM']][msg.params['TO']].append(msg)
-                    #receive message
+                    # spot message
+                    self.spot(msg)
+                    # receive message
                     self._rx_queue.append(msg)
 
                 elif msg.params['CMD'] == 'HEARING':
-                    if msg.params['FROM'] not in self.spots.keys():
-                        self.spots[msg.params['FROM']] = {}
-                    if not Message.ERR in msg.params['TEXT']:
-                        hearing = msg.params['TEXT'].split()[3:]
-                        for station in hearing:
-                            if station not in self.spots[msg.params['FROM']].keys():
-                                self.spots[msg.params['FROM']][station] = []
-                            self.spots[msg.params['FROM']][station].append(msg)
-                    #receive message
+                    #TODO validate response structure
+                    # spot message
+                    self.spot(msg)
+                    #if not pyjs8call.Message.ERR in msg.params['TEXT']:
+                    #    hearing = msg.params['TEXT'].split()[3:]
+                    #    for station in hearing:
+                    #        if station not in self.spots[msg.params['FROM']].keys():
+                    #            self.spots[msg.params['FROM']][station] = []
+                    #        self.spots[msg.params['FROM']][station].append(msg)
+                    # receive message
                     self._rx_queue.append(msg)
 
                 #TODO no example, test response and update code
@@ -243,19 +269,13 @@ class JS8Call:
                     self.state['inbox'] = messages
                 
                 elif msg.type == 'RX.SPOT':
-                    if msg.params['CALL'] not in self.spots.keys():
-                        self.spots[msg.params['CALL']] = {}
-                    if self.state['callsign'] not in self.spots[msg.params['CALL']].keys():
-                        self.spots[msg.params['CALL']][self.state['callsign']] = []
-                    self.spots[msg.params['CALL']][self.state['callsign']].append(msg)
+                    # spot message
+                    self.spot(msg)
 
                 elif msg.type == 'RX.DIRECTED':
-                    if msg.params['FROM'] not in self.spots.keys():
-                        self.spots[msg.params['FROM']] = {}
-                    if self.state['callsign'] not in self.spots[msg.params['FROM']].keys():
-                        self.spots[msg.params['FROM']][self.state['callsign']] = []
-                    self.spots[msg.params['FROM']][self.state['callsign']].append(msg)
-                    #receive message
+                    # spot message
+                    self.spot(msg)
+                    # receive message
                     self._rx_queue.append(msg)
 
                 elif msg.type == 'RIG.FREQ':
@@ -320,6 +340,7 @@ class JS8Call:
                     self.state['band_activity'] = activity
 
                 #TODO should this be used? use RX.BAND_ACTIVITY for now
+                #TODO note, RX.SPOT received immediately after RX.ACTIVITY
                 elif msg.type == 'RX.ACTIVITY':
                     pass
 
