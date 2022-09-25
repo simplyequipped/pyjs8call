@@ -120,21 +120,13 @@ class Modem:
         destinations = '>'.join(destinations)
         self.send_directed_message(destinations, message)
 
-    def get_station_spots(self, station, since_timestamp=0):
+    def get_station_spots(self, station=None, since_timestamp=0):
         spots = []
-        
-        if station in self.js8call.spots.keys():
-            for destination, msgs in self.js8call.spots[station].items():
-                for msg in msgs:
-                    if msg.time >= since_timestamp:
-                        spot = {
-                            'from' : station,
-                            'to' : destination,
-                            'message' : msg,
-                            'snr' : msg.snr,
-                        }
+        for spot in self.js8call.spots:
+            if since_timestamp <= spot['time']:
+                if station == None or (station != None and station == spot['from']):
+                    spots.append(spot)
 
-                        spots.append(spot)
         return spots
 
     def get_freq(self):
