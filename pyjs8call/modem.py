@@ -28,12 +28,13 @@ class Modem:
         self.rx_callback = callback
 
     def _rx(self):
-        if self.js8call.pending and self.rx_callback != None:
-            msg = self.js8call.get()
-            #TODO any pre-processing for certain message types?
-            self.rx_callback(msg)
+        while self.online:
+            if self.js8call.pending and self.rx_callback != None:
+                msg = self.js8call.get()
+                #TODO any pre-processing for certain message types?
+                self.rx_callback(msg)
 
-        time.sleep(0.1)
+            time.sleep(0.1)
 
     def js8call_connected(self):
         return self.js8call.connected
