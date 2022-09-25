@@ -8,8 +8,8 @@ from pyjs8call import Message
 
 class Modem:
     
-    def __init__(self, host='127.0.0.1', port=2442):
-        self.js8call = pyjs8call.JS8Call(host, port)
+    def __init__(self, host='127.0.0.1', port=2442, debug=False):
+        self.js8call = pyjs8call.JS8Call(host, port, debug)
         self.freq = 7078000
         self.offset = 2000
         self.rx_callback = None
@@ -34,6 +34,9 @@ class Modem:
             self.rx_callback(msg)
 
         time.sleep(0.1)
+
+    def js8call_connected(self):
+        return self.js8call.connected
 
     def stop(self):
         self.online = False
@@ -138,42 +141,49 @@ class Modem:
         msg = Message()
         msg.type = Message.RIG_GET_FREQ
         self.js8call.send(msg)
-        self.js8call.watch('dial')
-        freq = {
-            'freq' : self.js8call.state['dial'],
-            'offset' : self.js8call.state['offset']
-        }
+        freq = self.js8call.watch('dial')
         return freq
 
-    def set_freq(self, freq=None, offset=None):
-        if freq == None:
-            freq = self.js8call.state['dial']
-        if offset == None:
-            offset = self.js8call.state['offset']
+    def get_offset(self):
+        msg = Message()
+        msg.type = Message.RIG_GET_FREQ
+        self.js8call.send(msg)
+        offset = self.js8call.watch('offset')
+        return offset
 
+    def set_freq(self, freq):
         msg = Message()
         msg.type = Message.RIG_SET_FREQ
         msg.params['DIAL'] = freq
-        msg.params['OFFSET'] = offset
+        msg.params['OFFSET'] = self.js8call.state['offset']
         self.js8call.send(msg)
         time.sleep(self._set_get_delay)
         return self.get_freq()
 
-    def get_callsign(self):
+    def set_offset(self, offset):
+        msg = Message()
+        msg.type = Message.RIG_SET_FREQ
+        msg.params['DIAL'] = self.js8call.state['freq']
+        msg.params['OFFSET'] = offset
+        self.js8call.send(msg)
+        time.sleep(self._set_get_delay)
+        return self.get_offset()
+
+    def get_station_callsign(self):
         msg = Message()
         msg.type = Message.STATION_GET_CALLSIGN
         self.js8call.send(msg)
         callsign = self.js8call.watch('callsign')
         return callsign
 
-    def get_grid(self):
+    def get_station_grid(self):
         msg = Message()
         msg.type = Message.STATION_GET_GRID
         self.js8call.send(msg)
         grid = self.js8call.watch('grid')
         return grid
 
-    def set_grid(self, grid):
+    def set_station_grid(self, grid):
         msg = Message()
         msg.type = Message.STATION_SET_GRID
         msg.value = grid
@@ -181,14 +191,14 @@ class Modem:
         time.sleep(self._set_get_delay)
         return self.get_grid()
 
-    def get_info(self):
+    def get_station_info(self):
         msg = Message()
         msg.type = Message.STATION_GET_INFO
         self.js8call.send(msg)
         info = self.js8call.watch('info')
         return info
 
-    def set_info(self, info):
+    def set_station_info(self, info):
         msg = Message()
         msg.type = Message.STATION_SET_INFO
         msg.value = info
