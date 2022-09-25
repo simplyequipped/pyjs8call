@@ -336,7 +336,7 @@ class JS8Call:
                                 'freq' : value['DIAL'],
                                 'offset' : value['OFFSET'],
                                 'snr' : value['SNR'],
-                                'time' : value['UTC']
+                                'time' : value['UTC'],
                                 'message' : value['TEXT']
                             }
 
