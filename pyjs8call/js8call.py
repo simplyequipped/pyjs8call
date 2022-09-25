@@ -2,6 +2,7 @@ import time
 import json
 import socket
 import threading
+from datetime import datetime, timezone
 
 import pyjs8call
 from pyjs8call import Message
@@ -137,6 +138,8 @@ class JS8Call:
 
         if 'UTC' in msg.params.keys():
             spot_data['time'] = msg.params['UTC']
+        else:
+            spot_data['time'] = datetime.now(timezone.utc)
 
         if 'GRID' in msg.params.keys():
             spot_data['grid'] = msg.params['GRID']
