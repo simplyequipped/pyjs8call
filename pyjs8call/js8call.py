@@ -139,7 +139,7 @@ class JS8Call:
         if 'UTC' in msg.params.keys():
             spot_data['time'] = msg.params['UTC']
         else:
-            spot_data['time'] = datetime.now(timezone.utc)
+            spot_data['time'] = datetime.now(timezone.utc).timestamp()
 
         if 'GRID' in msg.params.keys():
             spot_data['grid'] = msg.params['GRID']
@@ -331,7 +331,16 @@ class JS8Call:
                         try:
                             # if key is not a freq offset this will error and continue
                             int(key)
-                            activity.append(value)
+
+                            data = {
+                                'freq' : value['DIAL'],
+                                'offset' : value['OFFSET'],
+                                'snr' : value['SNR'],
+                                'time' : value['UTC']
+                                'message' : value['TEXT']
+                            }
+
+                            activity.append(data)
                         except:
                             continue
 
