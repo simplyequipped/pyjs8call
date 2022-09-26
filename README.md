@@ -1,14 +1,14 @@
-# pyjs8call
+# js8call-interface
 
-A Python library for interfacing with the JS8Call API. See the code in pyjs8call/modem.py for more information.
+A Python library for interfacing with the JS8Call API. See the code in js8call-interface/modem.py for more information.
 
 ### Example
 
 ```
-import pyjs8call
+import js8call-interface
 
 # use default host, port
-modem = pyjs8call.Modem()
+modem = js8call-interface.Modem()
 # set frequency and offset
 freq = modem.set_freq(7078000, 1500)
 print(freq)
