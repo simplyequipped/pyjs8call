@@ -4,8 +4,8 @@ import socket
 import threading
 from datetime import datetime, timezone
 
-import pyjs8call
-from pyjs8call import Message
+import js8call-interface
+from js8call-interface import Message
 
 
 class JS8Call:
@@ -208,7 +208,7 @@ class JS8Call:
                     continue
 
                 # if error in message value, stop processing
-                if msg['value'] != None and pyjs8call.Message.ERR in msg['value']:
+                if msg['value'] != None and Message.ERR in msg['value']:
                     continue
 
                 # print each msg in debug mode
@@ -233,7 +233,7 @@ class JS8Call:
             #TODO validate response structure
             # spot message
             self.spot(msg)
-            #if not pyjs8call.Message.ERR in msg.params['TEXT']:
+            #if not Message.ERR in msg.params['TEXT']:
             #    hearing = msg.params['TEXT'].split()[3:]
             #    for station in hearing:
             #        if station not in self.spots[msg.params['FROM']].keys():
