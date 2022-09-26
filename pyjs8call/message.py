@@ -1,10 +1,11 @@
 import json
 import time
+from datetime import datetime, timezone
 
 
 class Message:
 
-    # message types
+    # outgoing message types
     RX_GET_TEXT             = 'RX.GET_TEXT'
     RX_GET_CALL_ACTIVITY    = 'RX.GET_CALL_ACTIVITY'
     RX_GET_BAND_ACTIVITY    = 'RX.GET_BAND_ACTIVITY'
@@ -25,43 +26,92 @@ class Message:
     RIG_SET_FREQ            = 'RIG.SET_FREQ'
     WINDOW_RAISE            = 'WINDOW.RAISE'
 
+    # incoming message types
+    MESSAGES                = 'MESSAGES'
+    INBOX_MESSAGES          = 'INBOX.MESSAGES'
+    RX_SPOT                 = 'RX.SPOT'
+    RX_DIRECTED             = 'RX.DIRECTED'
+    RX_SELECTED_CALL        = 'RX.CALL_SELECTED'
+    RX_CALL_ACTIVITY        = 'RX.CALL_ACTIVITY'
+    RX_BAND_ACTIVITY        = 'RX.BAND_ACTIVITY'
+    RX_ACTIVITY             = 'RX.ACTIVITY'
+    RX_TEXT                 = 'RX.TEXT'
+    TX_TEXT                 = 'RX.TEXT'
+    RIG_FREQ                = 'RIG.FREQ'
+    RIG_PTT                 = 'RIG.PTT'
+    STATION_CALLSIGN        = 'STATION.CALLSIGN'
+    STATION_GRID            = 'STATION.GRID'
+    STATION_INFO            = 'STATION.INFO'
+    MODE_SPEED              = 'MODE.SPEED'
+
+    #TODO are more commands supported?
+    # command types
+    CMD_SNR                 = 'SNR'
+    CMD_GRID                = 'GRID'
+    CMD_HEARING             = 'HEARING'
+    CMD_QUERY_CALL          = 'QUERY CALL'
+    COMMANDS = [CMD_SNR, CMD_GRID, CMD_HEARING, CMD_QUERY_CALL]
+
     # constants
     EOM = '♢'
     ERR = '…'
 
-    def __init__(self, destination=None, value=None):
+    def __init__(self, destination=None, value=None, raw=None):
+        self.raw = raw
         self.type = Message.TX_SEND_MESSAGE
         self.destination = destination
         self.value = value
-        self.time = None
+        self.time = datetime.now(timezone.utc).timestamp()
         self.snr = None
         self.messages = None
+        self.band_activity = None
+        self.call_activity = None
         self.params = {
             'FREQ'      : None,
             'DIAL'      : None,
             'OFFSET'    : None,
             'CALL'      : None,
-            'CALLSIGN'  : None,
             'GRID'      : None,
             'SNR'       : None,
             'FROM'      : None,
             'TO'        : None,
+            'UTC'       : None,
             'CMD'       : None,
             'TEXT'      : None,
             'SPEED'     : None,
             'EXTRA'     : None
         }
 
+    def data(self):
+        data = {
+            'type' : self.type,
+            'value' : self.value,
+            'time' : self.time,
+            'messages' : self.messages,
+            'band_activity' : self.band_activity,
+            'call_activity' : self.call_activity
+        }
+
+        for param, value in self.params.items():
+            data[param.lower()] = value
+
+        # handle CALL param for consistency
+        if data['call'] != None and data['from'] == None:
+            data['from'] = data['call']
+
+        return data
+
     def pack(self):
         if self.value == None:
             self.value = ''
+        # handle directed message value
         elif self.type == Message.TX_SEND_MESSAGE and self.destination != None:
             self.value = self.destination + ' ' + self.value
 
         packed = {
             'type' : self.type,
             'value' : self.value,
-            'params' : {param:value for (param, value) in self.params.items() if value != None}
+            'params' : {param.upper(): value for (param, value) in self.params.items() if value != None}
         }
 
         packed = json.dumps(packed) + '\r\n'
@@ -70,44 +120,88 @@ class Message:
     def parse(self, msg_str):
         msg = json.loads(msg_str)
 
-        self.type = msg['type']
-        self.time = time.time()
+        self.type = msg['type'].strip()
         
-        if self.type == 'MESSAGES':
-            self.messages = msg['params']['MESSAGES']
-            return None
+        # handle inbox messages
+        if self.type == Message.MESSAGES:
+            self.messages = [m['params'] for m in msg['params']['MESSAGES']]
             
-        #TODO confirm time format
-        if 'time' in msg:
-            self.time = msg['time']
-        if 'value' in msg:
-            self.value = msg['value'].strip()
+            for i in range(len(self.messages)):
+                self.messages[i] = {
+                    'id' : self.messages[i]['_ID'],
+                    'time' : self.messages[i]['UTC'],
+                    'from' : self.messages[i]['FROM'],
+                    'to' : self.messages[i]['TO'],
+                    'path' : self.messages[i]['PATH'],
+                    'message' : self.messages[i]['TEXT']
+                }
 
-        for param, value in msg['params'].items():
-            if isinstance(value, str):
-                self.params[param.strip()] = value.strip()
-            else:
-                self.params[param.strip()] = value
+        # handle call activity
+        elif self.type == Message.RX_CALL_ACTIVITY:
+            self.call_activity = []
+            for key, value in msg['params'].items():
+                if key == '_ID' or value == None:
+                    continue
 
-        if self.params['CMD'] == 'HEARTBEAT SNR' or self.params['CMD'] == 'SNR':
-            self.params['extra'] = int(self.params['extra'])
-            self.snr = self.params['extra']
-            
-        #TODO review
-        if self.params['CMD'] == 'GRID':
-            grid = self.params['TEXT'].split()
-            if len(grid) >= 4:
-                grid = grid[3]
+                call = {
+                    'callsign' : key,
+                    'grid' : value['GRID'],
+                    'snr' : value['SNR'],
+                    'time' : value['UTC']
+                }
+
+                self.call_activity.append(call)
+
+        #handle band activity
+        elif self.type == Message.RX_BAND_ACTIVITY:
+            self.band_activity = []
+            for key, value in msg['params'].items():
+                try:
+                    # skip if key is not a freq offset (int)
+                    int(key)
+
+                    data = {
+                        'freq' : value['DIAL'],
+                        'offset' : value['OFFSET'],
+                        'snr' : value['SNR'],
+                        'time' : value['UTC'],
+                        'message' : value['TEXT']
+                    }
+
+                    self.band_activity.append(data)
+                except:
+                    continue
+
+        else:
+
+            # get message time or set current UTC time
+            #if 'time' in msg:
+            #    self.time = msg['time']
+            #else:
+            #    self.time = datetime.now(timezone.utc).timestamp()
+
+            if 'value' in msg:
+                self.value = msg['value'].strip()
+
+            # parse remaining message parameters
+            for param, value in msg['params'].items():
+                if isinstance(value, str):
+                    self.params[param.strip()] = value.strip()
+                else:
+                    self.params[param.strip()] = value
+
+            #TODO review, not clear what is going on here
+            if self.params['CMD'] == 'GRID':
+                grid = self.params['TEXT'].split()
+                if len(grid) >= 4:
+                    grid = grid[3]
                 
-            #TODO expand error checking
-            if Message.ERR in grid:
-                self.params['GRID'] = None
-            else:
-                self.params['GRID'] = grid
+                #TODO expand error checking
+                if Message.ERR in grid:
+                    self.params['GRID'] = None
+                else:
+                    self.params['GRID'] = grid
 
-        if 'SNR' in self.params and self.snr == None and self.params['SNR'] != '' and self.params['SNR'] != None:
-            self.snr = int(self.params['SNR'])
-
-        return self
+        return self.data()
                 
         

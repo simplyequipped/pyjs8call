@@ -126,7 +126,7 @@ class Modem:
     def get_station_spots(self, station=None, since_timestamp=0):
         spots = []
         for spot in self.js8call.spots:
-            if since_timestamp <= spot['time']:
+            if spot['time'] >= since_timestamp:
                 if station == None or (station != None and station == spot['from']):
                     spots.append(spot)
 

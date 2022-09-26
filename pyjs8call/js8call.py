@@ -25,6 +25,7 @@ class JS8Call:
         self.connected = False
         self.online = False
         self.spots = []
+        self._recent_spots = []
 
         self.state = {
             'ptt' : None,
@@ -112,42 +113,37 @@ class JS8Call:
         return self.state[item]
 
     def spot(self, msg):
-        spot_data = {
-            'from'      : None,
-            'to'        : None,
-            'freq'      : None,
-            'offset'    : None,
-            'time'      : None,
-            'grid'      : None,
-            'snr'       : None,
+        new_spot = {
+            'from'      : msg['from'],
+            'to'        : msg['to'],
+            'freq'      : msg['dial'],
+            'offset'    : msg['offset'],
+            'time'      : msg['time'],
+            'grid'      : msg['grid'],
+            'snr'       : msg['snr']
         }
         
-        if 'CALL' in msg.params.keys():
-            spot_data['from'] = msg.params['CALL']
-        elif 'FROM' in msg.params.keys():
-            spot_data['from'] = msg.params['FROM']
+        if new_spot['time'] == None or new_spot['time'] == '':
+            new_spot['time'] = datetime.now(timezone.utc).timestamp()
 
-        if 'TO' in msg.params.keys():
-            spot_data['to'] = msg.params['TO']
+        duplicate = False
+        for i in range(len(self._recent_spots)):
+            recent_spot = self._recent_spots.pop(0)
+            # remove spots older than 10 seconds
+            if recent_spot['time'] > (datetime.now(timezone.utc).timestamp() - 10):
+                self._recent_spots.append(recent_spot)  
 
-        if 'DIAL' in msg.params.keys():
-            spot_data['freq'] = msg.params['DIAL']
+            # prevent duplicate spots
+            if (
+                recent_spot['from'] == new_spot['from'] and
+                recent_spot['offset'] == new_spot['offset'] and
+                recent_spot['snr'] == new_spot['snr']
+            ):
+                duplicate = True
 
-        if 'OFFSET' in msg.params.keys():
-            spot_data['offset'] = msg.params['OFFSET']
-
-        if 'UTC' in msg.params.keys():
-            spot_data['time'] = msg.params['UTC']
-        else:
-            spot_data['time'] = datetime.now(timezone.utc).timestamp()
-
-        if 'GRID' in msg.params.keys():
-            spot_data['grid'] = msg.params['GRID']
-
-        if 'SNR' in msg.params.keys():
-            spot_data['snr'] = msg.params['SNR']
-
-        self.spots.append(spot_data)
+        if not duplicate:
+            self._recent_spots.append(new_spot)
+            self.spots.append(new_spot)
 
     def _hb(self):
         while self.online:
@@ -205,151 +201,22 @@ class JS8Call:
 
                 try:
                     msg = Message().parse(msg_str)
-                except:
+                except Exception as e:
                     # if parsing message fails, stop processing
+                    #TODO
+                    raise e
                     continue
 
                 # if error in message value, stop processing
-                if pyjs8call.Message.ERR in msg.value:
+                if msg['value'] != None and pyjs8call.Message.ERR in msg['value']:
                     continue
 
-                # print raw msg string in debug mode
+                # print each msg in debug mode
                 if self._debug:
-                    print(msg_str)
+                    #print(msg_str)
+                    print(msg)
 
-                elif msg.params['CMD'] == 'SNR':
-                    # spot message
-                    self.spot(msg)
-                    # receive message
-                    self._rx_queue.append(msg)
-
-                elif msg.params['CMD'] == 'GRID':
-                    # spot message
-                    self.spot(msg)
-                    # receive message
-                    self._rx_queue.append(msg)
-
-                elif msg.params['CMD'] == 'HEARING':
-                    #TODO validate response structure
-                    # spot message
-                    self.spot(msg)
-                    #if not pyjs8call.Message.ERR in msg.params['TEXT']:
-                    #    hearing = msg.params['TEXT'].split()[3:]
-                    #    for station in hearing:
-                    #        if station not in self.spots[msg.params['FROM']].keys():
-                    #            self.spots[msg.params['FROM']][station] = []
-                    #        self.spots[msg.params['FROM']][station].append(msg)
-                    # receive message
-                    self._rx_queue.append(msg)
-
-                #TODO no example, test response and update code
-                #if msg.params['CMD'] == 'QUERY CALL':
-                #    # spot message
-                #    self.spot(msg)
-                #    #receive message
-                #    self._rx_queue.append(msg)
-
-                if msg.type == 'INBOX.MESSAGES':
-                    msg_data = [m['params'] for m in msg.params['MESSAGES']]
-                    messages = []
-
-                    for m in msg_data:
-                        message = {
-                            'id' : m['_ID'],
-                            'time' : m['UTC'],
-                            'from' : m['FROM'],
-                            'to' : m['TO'],
-                            'path' : m['PATH'],
-                            'message' : m['TEXT']
-                        }
-                        messages.append(message)
-
-                    self.state['inbox'] = messages
-                
-                elif msg.type == 'RX.SPOT':
-                    # spot message
-                    self.spot(msg)
-
-                elif msg.type == 'RX.DIRECTED':
-                    # spot message
-                    self.spot(msg)
-                    # receive message
-                    self._rx_queue.append(msg)
-
-                elif msg.type == 'RIG.FREQ':
-                    self.state['dial'] = msg.params['DIAL']
-                    self.state['freq'] = msg.params['FREQ']
-                    self.state['offset'] = msg.params['OFFSET']
-
-                elif msg.type == 'RIG.PTT':
-                    if msg.value == 'on':
-                        self.state['ptt'] = True
-                    else:
-                        self.state['ptt'] = False
-
-                elif msg.type == 'STATION.CALLSIGN':
-                    self.state['callsign'] = msg.value
-
-                elif msg.type == 'STATION.GRID':
-                    self.state['grid'] = msg.value
-
-                elif msg.type == 'STATION.INFO':
-                    self.state['info'] = msg.value
-
-                elif msg.type == 'MODE.SPEED':
-                    self.state['speed'] = msg.params['SPEED']
-
-                elif msg.type == 'TX.TEXT':
-                    self.state['tx_text'] = msg.value
-
-                elif msg.type == 'RX.TEXT':
-                    self.state['rx_text'] = msg.value
-
-                elif msg.type == 'RX.CALL_SELECTED':
-                    self.state['selected_call'] = msg.value
-
-                elif msg.type == 'RX.CALL_ACTIVITY':
-                    activity = []
-                    for key, value in msg.params.items():
-                        if key == '_ID' or value == None:
-                            continue
-
-                        call = {
-                            'callsign' : key,
-                            'grid' : value['GRID'],
-                            'snr' : value['SNR'],
-                            'time' : value['UTC']
-                        }
-
-                        activity.append(call)
-
-                    self.state['call_activity'] = activity
-
-                elif msg.type == 'RX.BAND_ACTIVITY':
-                    activity = []
-                    for key, value in msg.params.items():
-                        try:
-                            # if key is not a freq offset this will error and continue
-                            int(key)
-
-                            data = {
-                                'freq' : value['DIAL'],
-                                'offset' : value['OFFSET'],
-                                'snr' : value['SNR'],
-                                'time' : value['UTC'],
-                                'message' : value['TEXT']
-                            }
-
-                            activity.append(data)
-                        except:
-                            continue
-
-                    self.state['band_activity'] = activity
-
-                #TODO should this be used? use RX.BAND_ACTIVITY for now
-                #TODO note, RX.SPOT received immediately after RX.ACTIVITY
-                elif msg.type == 'RX.ACTIVITY':
-                    pass
+                self._process_message(msg)
 
         if len(self._rx_queue) > 0:
             self.pending = True
@@ -357,6 +224,95 @@ class JS8Call:
             self.pending = False
 
         time.sleep(0.1)
+
+
+    def _process_message(self, msg):
+        # command handling
+
+        if msg['cmd'] == Message.CMD_HEARING:
+            #TODO validate response structure
+            # spot message
+            self.spot(msg)
+            #if not pyjs8call.Message.ERR in msg.params['TEXT']:
+            #    hearing = msg.params['TEXT'].split()[3:]
+            #    for station in hearing:
+            #        if station not in self.spots[msg.params['FROM']].keys():
+            #            self.spots[msg.params['FROM']][station] = []
+            #        self.spots[msg.params['FROM']][station].append(msg)
+            # receive message
+            self._rx_queue.append(msg)
+
+        #TODO no example, test response and update code
+        #elif msg.params['CMD'] == 'QUERY CALL':
+        #    # spot message
+        #    self.spot(msg)
+        #    #receive message
+        #    self._rx_queue.append(msg)
+                
+        elif msg['cmd'] in Message.COMMANDS:
+            # spot message
+            self.spot(msg)
+            # receive message
+            self._rx_queue.append(msg)
+
+        # message type handling
+
+        if msg['type'] == Message.INBOX_MESSAGES:
+            self.state['inbox'] = msg['messages']
+
+        elif msg['type'] == Message.RX_SPOT:
+            # spot message
+            self.spot(msg)
+
+        elif msg['type'] == Message.RX_DIRECTED:
+            # spot message
+            self.spot(msg)
+            # receive message
+            self._rx_queue.append(msg)
+
+        elif msg['type'] == Message.RIG_FREQ:
+            self.state['dial'] = msg['dial']
+            self.state['freq'] = msg['freq']
+            self.state['offset'] = msg['offset']
+
+        elif msg['type'] == Message.RIG_PTT:
+            if msg['value'] == 'on':
+                self.state['ptt'] = True
+            else:
+                self.state['ptt'] = False
+
+        elif msg['type'] == Message.STATION_CALLSIGN:
+            self.state['callsign'] = msg['value']
+
+        elif msg['type'] == Message.STATION_GRID:
+            self.state['grid'] = msg['value']
+
+        elif msg['type'] == Message.STATION_INFO:
+            self.state['info'] = msg['value']
+
+        elif msg['type'] == Message.MODE_SPEED:
+            self.state['speed'] = msg['speed']
+
+        elif msg['type'] == Message.TX_TEXT:
+            self.state['tx_text'] = msg['value']
+
+        elif msg['type'] == Message.RX_TEXT:
+            self.state['rx_text'] = msg['value']
+
+        elif msg['type'] == Message.RX_SELECTED_CALL:
+            self.state['selected_call'] = msg['value']
+
+        elif msg['type'] == Message.RX_CALL_ACTIVITY:
+            self.state['call_activity'] = msg['call_activity']
+
+        elif msg['type'] == Message.RX_BAND_ACTIVITY:
+            self.state['band_activity'] = msg['band_activity']
+
+        #TODO should this be used? use RX.BAND_ACTIVITY for now
+        #TODO note, RX.SPOT received immediately after RX.ACTIVITY in some cases
+        elif msg['type'] == Message.RX_ACTIVITY:
+            pass
+
 
 
 
