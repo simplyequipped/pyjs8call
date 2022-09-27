@@ -30,8 +30,8 @@ def new_spots(spots):
   for spot in spots:
     print('Spotted ' + spot['from] + ' with a ' + str(spot['snr']) + 'dB SNR')
     
-def station_spotted(station):
-  print(station + ' spotted!')
+def station_spotted(spot):
+  print(spot['from'] + ' spotted!')
     
 modem = js8call-interface.Modem()
 # set spot monitor callback
