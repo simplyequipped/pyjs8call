@@ -1,15 +1,15 @@
 import time
 import threading
 
-import js8call-interface
-from js8call-interface import Message
+import pyjs8call
+from pyjs8call import Message
 
 
 
 class Modem:
     
     def __init__(self, host='127.0.0.1', port=2442):
-        self.js8call = js8call-interface.JS8Call(host, port)
+        self.js8call = pyjs8call.JS8Call(host, port)
         self.freq = 7078000
         self.offset = 2000
         self.rx_callback = None
@@ -24,7 +24,7 @@ class Modem:
 
         self.online = True
 
-        self.spot_monitor = js8call-interface.SpotMonitor(self)
+        self.spot_monitor = pyjs8call.SpotMonitor(self)
 
     def set_rx_callback(self, callback):
         self.rx_callback = callback

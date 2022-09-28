@@ -4,8 +4,8 @@ import socket
 import threading
 from datetime import datetime, timezone
 
-import js8call-interface
-from js8call-interface import Message
+import pyjs8call
+from pyjs8call import Message
 
 
 class JS8Call:

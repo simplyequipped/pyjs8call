@@ -1,4 +1,4 @@
-# js8call-interface
+# pyjs8call
 
 A Python library for interfacing with the JS8Call API. See the code in js8call-interface/modem.py for more information.
 
@@ -6,10 +6,10 @@ A Python library for interfacing with the JS8Call API. See the code in js8call-i
 
 Basic usage:
 ```
-import js8call-interface
+import pyjs8call
 
 # use default host, port
-modem = js8call-interface.Modem()
+modem = pyjs8call.Modem()
 # set frequency and offset
 freq = modem.set_freq(7078000, 1500)
 print(freq)
@@ -24,7 +24,7 @@ modem.send_directed_message('N0GQ', 'Thanks for your work on js8net')
 
 Using the spot monitor:
 ```
-import js8call-interface
+import pyjs8call
 
 def new_spots(spots):
   for spot in spots:
@@ -33,7 +33,7 @@ def new_spots(spots):
 def station_spotted(spot):
   print(spot['from'] + ' spotted!')
     
-modem = js8call-interface.Modem()
+modem = pyjs8call.Modem()
 # set spot monitor callback
 modem.spot_monitor.set_new_spot_callback(new_spots)
 # set station watcher callback

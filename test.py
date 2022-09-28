@@ -1,11 +1,10 @@
 import time
-import js8call-interface
+import pyjs8call
 
 def rx_message(msg):
     print('\t--- Message from ' + str(msg['from']) + ': ' + str(msg['text']))
 
 def new_spots(spots):
-    global modem
     for spot in spots:
         if spot['grid'] == '':
             grid = ' '
@@ -56,7 +55,7 @@ def show_menu():
 
 
 
-modem = js8call-interface.Modem()
+modem = pyjs8call.Modem()
 #modem.js8call._debug = True
 modem.set_rx_callback(rx_message)
 modem.spot_monitor.set_new_spot_callback(new_spots)
