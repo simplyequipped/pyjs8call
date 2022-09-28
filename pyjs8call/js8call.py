@@ -10,7 +10,7 @@ from pyjs8call import Message
 
 class JS8Call:
     
-    def __init__(self, host='localhost', port=2442, debug=False):
+    def __init__(self, host='127.0.0.1', port=2442, headless=False):
         self._host = host
         self._port = port
         self._rx_queue = []
@@ -20,7 +20,7 @@ class JS8Call:
         self._last_rx_timestamp = 0
         self._socket_heartbeat_delay = 60 * 5 # seconds
         self._app = None
-        self._debug = debug
+        self._debug = False
         self.pending = False # rx pending
         self.connected = False
         self.online = False
@@ -44,8 +44,10 @@ class JS8Call:
             'selected_call' : None,
         }
 
-        #self._start_app()
-        self._connect()
+        # start the application monitor
+        self.app_monitor = pyjs8call.AppMonitor(self)
+        self.app_monitor.start(headless=headless)
+
         self.online = True
         
         tx_thread = threading.Thread(target=self._tx)
@@ -60,30 +62,13 @@ class JS8Call:
         hb_thread.setDaemon(True)
         hb_thread.start()
 
-        # get callsign
-        msg = Message()
-        msg.type = Message.STATION_GET_CALLSIGN
-        self.send(msg)
-        self.watch('callsign')
-
     def stop(self):
         self.online = False
-
-        if self._app != None:
-            self._app.terminate()
-
-    def _start_app(self):
-        #TODO start js8call application
-        self._app = subprocess.Popen(['js8call'])
-        time.sleep(3)
+        self.app_monitor.stop()
 
     def _connect(self):
-        try:
-            self._socket.connect((self._host, int(self._port)))
-            self._socket.settimeout(1)
-        except:
-            #TODO handle
-            pass
+        self._socket.connect((self._host, int(self._port)))
+        self._socket.settimeout(1)
 
     def send(self, msg):
         packed = msg.pack()

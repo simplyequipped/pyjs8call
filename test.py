@@ -50,11 +50,14 @@ def show_menu():
     if user_input == 'i':
         show_inbox()
     if user_input == 'x':
+        global modem
+        modem.stop()
         exit()
 
 
 
 
+#modem = pyjs8call.Modem(headless = True)
 modem = pyjs8call.Modem()
 #modem.js8call._debug = True
 modem.set_rx_callback(rx_message)

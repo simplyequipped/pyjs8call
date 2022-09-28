@@ -8,8 +8,8 @@ from pyjs8call import Message
 
 class Modem:
     
-    def __init__(self, host='127.0.0.1', port=2442):
-        self.js8call = pyjs8call.JS8Call(host, port)
+    def __init__(self, host='127.0.0.1', port=2442, headless=False):
+        self.js8call = pyjs8call.JS8Call(host, port, headless=headless)
         self.freq = 7078000
         self.offset = 2000
         self.rx_callback = None
@@ -43,6 +43,7 @@ class Modem:
 
     def stop(self):
         self.online = False
+        self.js8call.stop()
 
     def send_message(self, message):
         msg = Message()
