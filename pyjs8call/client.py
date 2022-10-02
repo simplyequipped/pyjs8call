@@ -6,7 +6,7 @@ from pyjs8call import Message
 
 
 
-class Modem:
+class Client:
     
     def __init__(self, host='127.0.0.1', port=2442, headless=False):
         self.js8call = pyjs8call.JS8Call(host, port, headless=headless)

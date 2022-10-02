@@ -7,13 +7,13 @@ import pyjs8call
 
 
 class AppMonitor:
-    def __init__(self, parent):
+    def __init__(self, owner):
         self._exec_path = None
         self._process = None
         self.headless = False
         self.running = False
         self.restart = True
-        self._parent = parent
+        self._owner = owner
         self._monitor_thread = None
 
         try:
@@ -44,7 +44,7 @@ class AppMonitor:
         while True:
             try:
                 # this will error if unable to connect to the application
-                self._parent._connect()
+                self._owner._connect()
                 # no errors, must be connected
                 self.running = True
                 break
@@ -104,7 +104,7 @@ class AppMonitor:
         return code
 
     def _monitor(self):
-        while self._parent.online:
+        while self._owner.online:
             if not self.is_running() and self.restart:
                 # start the application
                 self.start()

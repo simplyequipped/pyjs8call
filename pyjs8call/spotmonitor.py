@@ -4,8 +4,8 @@ import time
 
 
 class SpotMonitor:
-    def __init__(self, modem):
-        self._modem = modem
+    def __init__(self, client):
+        self._client = client
         self._new_spots = []
         self._last_spot_update_timestamp = 0
         self._new_spot_callback = None
@@ -33,8 +33,8 @@ class SpotMonitor:
             self._station_watch_list.remove(station)
 
     def _monitor(self):
-        while self._modem.online:
-            self._new_spots = self._modem.get_station_spots(since_timestamp = self._last_spot_update_timestamp)
+        while self._client.online:
+            self._new_spots = self._client.get_station_spots(since_timestamp = self._last_spot_update_timestamp)
             self._last_spot_update_timestamp = datetime.now(timezone.utc).timestamp()
             if len(self._new_spots) > 0:
                 if self._new_spot_callback != None:

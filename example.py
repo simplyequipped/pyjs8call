@@ -17,16 +17,16 @@ def new_spots(spots):
 
 # function for sending a directed message
 def send_message():
-    global modem
+    global client
     dest = input('\n\tEnter destination callsign: ')
     msg = input('\tEnter message: ')
-    modem.send_directed_message(dest, msg)
+    client.send_directed_message(dest, msg)
     print('\n\tSending message on next transmit cycle\n')
 
 # function for showing inbox messages
 def show_inbox():
-    global modem
-    messages = modem.get_inbox_messages()
+    global client
+    messages = client.get_inbox_messages()
     print('\n--- Inbox Messages: ' + str(len(messages)))
 
     if len(messages) > 0:
@@ -55,24 +55,24 @@ def show_menu():
     if user_input == 'i':
         show_inbox()
     if user_input == 'x':
-        global modem
-        modem.stop()
+        global client
+        client.stop()
         exit()
 
 
-# initialize the modem object and start the js8call application
-modem = pyjs8call.Modem()
+# initialize the client object and start the js8call application
+client = pyjs8call.Client()
 # set callback functions
-modem.set_rx_callback(rx_message)
-modem.spot_monitor.set_new_spot_callback(new_spots)
+client.set_rx_callback(rx_message)
+client.spot_monitor.set_new_spot_callback(new_spots)
 
 # read current configuration values
-freq = modem.get_freq()
-offset = modem.get_offset()
-grid = modem.get_station_grid()
-callsign = modem.get_station_callsign()
+freq = client.get_freq()
+offset = client.get_offset()
+grid = client.get_station_grid()
+callsign = client.get_station_callsign()
 # check if connected to js8call
-connected = modem.js8call_connected()
+connected = client.js8call_connected()
 
 # parse connected state
 if connected:
@@ -85,5 +85,5 @@ print('\nStation ' + callsign + ' (' + grid + ') - ' + state + ' ---------------
 print('Frequency: ' + str(freq / 1000000).format('0.000') + 'MHz (' + str(offset) + 'Hz)\n')
 
 # show the menu until the user exits
-while modem.online:
+while client.online:
     show_menu()    
