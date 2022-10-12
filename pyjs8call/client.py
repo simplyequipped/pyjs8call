@@ -249,6 +249,14 @@ class Client:
         msg.type = Message.MODE_GET_SPEED
         self.js8call.send(msg)
         speed = self.js8call.watch('speed')
+
+        # try to convert integer to useful text
+        speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo'}
+        try:
+            speed = speeds[int(speed)]
+        except:
+            pass
+
         return speed
 
     # speed: slow, normal, fast, turbo

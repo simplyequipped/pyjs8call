@@ -37,6 +37,8 @@ class Message:
     RX_ACTIVITY             = 'RX.ACTIVITY'
     RX_TEXT                 = 'RX.TEXT'
     TX_TEXT                 = 'RX.TEXT'
+    #TODO confirm tx frame
+    TX_FRAME                = 'TX.FRAME'
     RIG_FREQ                = 'RIG.FREQ'
     RIG_PTT                 = 'RIG.PTT'
     STATION_CALLSIGN        = 'STATION.CALLSIGN'

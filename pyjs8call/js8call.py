@@ -50,6 +50,9 @@ class JS8Call:
 
         self.online = True
         
+        # start tx window monitor
+        self.window_monitor = pyjs8call.WindowMonitor(self)
+
         tx_thread = threading.Thread(target=self._tx)
         tx_thread.setDaemon(True)
         tx_thread.start()
@@ -297,6 +300,9 @@ class JS8Call:
         #TODO note, RX.SPOT received immediately after RX.ACTIVITY in some cases
         elif msg['type'] == Message.RX_ACTIVITY:
             pass
+
+        elif msg['type'] == Message.TX_FRAME:
+            self.window_monitor.process_tx_frame(msg)
 
 
 
