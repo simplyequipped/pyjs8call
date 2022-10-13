@@ -9,11 +9,11 @@ from pyjs8call import Message
 class Client:
     
     def __init__(self, host='127.0.0.1', port=2442, headless=False):
-        self.js8call = pyjs8call.JS8Call(host, port, headless=headless)
+        self.js8call = pyjs8call.JS8Call(self, host, port, headless=headless)
         self.freq = 7078000
         self.offset = 2000
         self.rx_callback = None
-        self.online = False
+        self.online = True
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
@@ -22,9 +22,10 @@ class Client:
         rx_thread.setDaemon(True)
         rx_thread.start()
 
-        self.online = True
-
+        # start station spot monitor
         self.spot_monitor = pyjs8call.SpotMonitor(self)
+        # start tx window monitor
+        self.window_monitor = pyjs8call.WindowMonitor(self)
 
     def set_rx_callback(self, callback):
         self.rx_callback = callback
@@ -33,7 +34,6 @@ class Client:
         while self.online:
             if self.js8call.pending and self.rx_callback != None:
                 msg = self.js8call.get()
-                #TODO any pre-processing for certain message types?
                 self.rx_callback(msg)
 
             time.sleep(0.1)

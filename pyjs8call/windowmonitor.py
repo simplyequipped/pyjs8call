@@ -4,8 +4,8 @@ import threading
 import pyjs8call
 
 class WindowMonitor:
-    def __init__(self, js8call):
-        self._js8call = js8call
+    def __init__(self, client):
+        self.client = client
         self.last_tx_frame_timestamp = 0
         self.next_window_timestamp = 0
         self.window_duration = 10
@@ -25,7 +25,7 @@ class WindowMonitor:
         self.last_tx_frame_timestamp = msg['time']
 
     def update_window_duration(self):
-        speed = self._js8call.state['speed']
+        speed = self.client.js8call.state['speed']
 
         if speed == 'slow':
             self.window_duration = 30
@@ -49,7 +49,7 @@ class WindowMonitor:
         return self.next_window_timestamp + self.window_duration
 
     def _monitor(self):
-        while self._js8call.online:
+        while self.client.online:
             # wait for first tx frame
             if self.last_tx_frame_timestamp == 0:
                 pass

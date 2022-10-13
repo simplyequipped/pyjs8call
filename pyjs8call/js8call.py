@@ -10,7 +10,8 @@ from pyjs8call import Message
 
 class JS8Call:
     
-    def __init__(self, host='127.0.0.1', port=2442, headless=False):
+    def __init__(self, client, host='127.0.0.1', port=2442, headless=False):
+        self._client = client
         self._host = host
         self._port = port
         self._rx_queue = []
@@ -50,9 +51,6 @@ class JS8Call:
 
         self.online = True
         
-        # start tx window monitor
-        self.window_monitor = pyjs8call.WindowMonitor(self)
-
         tx_thread = threading.Thread(target=self._tx)
         tx_thread.setDaemon(True)
         tx_thread.start()
@@ -302,7 +300,7 @@ class JS8Call:
             pass
 
         elif msg['type'] == Message.TX_FRAME:
-            self.window_monitor.process_tx_frame(msg)
+            self._client.window_monitor.process_tx_frame(msg)
 
 
 
