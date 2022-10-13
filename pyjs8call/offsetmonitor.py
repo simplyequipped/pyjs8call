@@ -8,6 +8,7 @@ class OffsetMonitor:
         self.client = client
         self.min_offset = 1000
         self.max_offset = 2500
+        self.heard_station_age = 3 * 60 # seconds
         self.enabled = False
 
         self.enable()
@@ -141,8 +142,8 @@ class OffsetMonitor:
             if not self.enabled:
                 break
 
-            # get spots in the last 3 minutes
-            timestamp = time.time() - (60 * 3)
+            # get recent spots
+            timestamp = time.time() - self.heard_station_age
             activity = self.client.get_station_spots(since_timestamp = timestamp) 
 
             if len(activity) == 0:
