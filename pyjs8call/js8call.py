@@ -24,7 +24,6 @@ class JS8Call:
         self._debug = False
         self.pending = False # rx pending
         self.connected = False
-        self.online = False
         self.spots = []
         self._recent_spots = []
 
@@ -45,11 +44,11 @@ class JS8Call:
             'selected_call' : None,
         }
 
+        self.online = True
+
         # start the application monitor
         self.app_monitor = pyjs8call.AppMonitor(self)
         self.app_monitor.start(headless=headless)
-
-        self.online = True
         
         tx_thread = threading.Thread(target=self._tx)
         tx_thread.setDaemon(True)

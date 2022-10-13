@@ -26,6 +26,8 @@ class Client:
         self.spot_monitor = pyjs8call.SpotMonitor(self)
         # start tx window monitor
         self.window_monitor = pyjs8call.WindowMonitor(self)
+        # start auto offset monitor
+        self.offset_monitor = pyjs8call.OffsetMonitor(self)
 
     def set_rx_callback(self, callback):
         self.rx_callback = callback
@@ -244,18 +246,18 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_tx_text()
 
-    def get_speed(self):
-        msg = Message()
-        msg.type = Message.MODE_GET_SPEED
-        self.js8call.send(msg)
-        speed = self.js8call.watch('speed')
+    def get_speed(self, update=True):
+        if update or self.js8call.state['speed'] == None:
+            msg = Message()
+            msg.type = Message.MODE_GET_SPEED
+            self.js8call.send(msg)
+            speed = self.js8call.watch('speed')
+        else:
+            speed = self.js8call.state['speed']
 
-        # try to convert integer to useful text
+        # map integer to useful text
         speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo'}
-        try:
-            speed = speeds[int(speed)]
-        except:
-            pass
+        speed = speeds[int(speed)]
 
         return speed
 
@@ -271,6 +273,34 @@ class Client:
         self.js8call.send(msg)
         time.sleep(self._set_get_delay)
         return self.get_speed()
+
+    def get_bandwith(self):
+        speed = self.get_speed(update = False)
+
+        if speed == 'slow':
+            bandwidth = 25
+        elif speed == 'normal':
+            bandwidth = 50
+        elif speed == 'fast':
+            bandwidth = 80
+        elif speed == 'turbo':
+            bandwidth == 160
+
+        return bandwidth
+
+    def get_tx_window_duration(self):
+        speed = self.get_speed(update = False)
+
+        if speed == 'slow':
+            duration = 30
+        elif speed == 'normal':
+            duration = 15
+        elif speed == 'fast':
+            duration = 10
+        elif speed == 'turbo':
+            duration = 6
+
+        return duration
 
     def raise_window(self):
         msg = Message()

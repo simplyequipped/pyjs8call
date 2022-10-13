@@ -1,3 +1,4 @@
+from pyjs8call.offsetmonitor import OffsetMonitor
 from pyjs8call.windowmonitor import WindowMonitor
 from pyjs8call.spotmonitor import SpotMonitor
 from pyjs8call.appmonitor import AppMonitor
