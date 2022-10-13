@@ -274,7 +274,7 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_speed()
 
-    def get_bandwith(self):
+    def get_bandwidth(self):
         speed = self.get_speed(update = False)
 
         if speed == 'slow':
