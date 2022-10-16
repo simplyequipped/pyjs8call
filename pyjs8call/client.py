@@ -27,12 +27,6 @@ class Client:
 
         # set the profile as active
         self.config.change_profile(profile)
-        # enable TCP connection
-        self.config.set('Configuration', 'TCPEnabled', 'true')
-        self.config.set('Configuration', 'TCPServer', self.host)
-        self.config.set('Configuration', 'TCPServerPort', str(self.port))
-        self.config.set('Configuration', 'AcceptTCPRequests', 'true')
-        self.config.write()
 
         # restart the app to apply new profile if already running
         if self.online:
@@ -41,6 +35,14 @@ class Client:
            self.start()
 
     def start(self):
+        # enable TCP connection
+        self.config.set('Configuration', 'TCPEnabled', 'true')
+        self.config.set('Configuration', 'TCPServer', self.host)
+        self.config.set('Configuration', 'TCPServerPort', str(self.port))
+        self.config.set('Configuration', 'AcceptTCPRequests', 'true')
+        self.config.write()
+
+        # start js8call app and TCP interface
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
         self.online = True
 
