@@ -3,6 +3,7 @@ import configparser
 
 import pyjs8call
 
+#TODO JS8Call requires callsign to contain at least one number, and max length is 9 characters
 
 class ConfigHandler:
     def __init__(self, config_path=None):
