@@ -8,16 +8,42 @@ from pyjs8call import Message
 
 class Client:
     
-    def __init__(self, host='127.0.0.1', port=2442, headless=False):
-        self.js8call = pyjs8call.JS8Call(self, host, port, headless=headless)
-        self.freq = 7078000
-        self.offset = 2000
+    def __init__(self, host='127.0.0.1', port=2442, headless=False, config_path=None):
+        self.host = host
+        self.port = port
+        self.headless = headless
         self.rx_callback = None
-        self.online = True
+        self.online = False
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
+
+        # initialize the config file handler
+        self.config = pyjs8call.ConfigHandler(config_path = config_path)
         
+    def set_config_profile(self, profile):
+        if profile not in self.config.get_profile_list():
+            raise Exception('Config profile ' + profile + ' does not exist')
+
+        # set the profile as active
+        self.config.change_profile(profile)
+        # enable TCP connection
+        self.config.set('Configuration', 'TCPEnabled', 'true')
+        self.config.set('Configuration', 'TCPServer', self.host)
+        self.config.set('Configuration', 'TCPServerPort', str(self.port))
+        self.config.set('Configuration', 'AcceptTCPRequests', 'true')
+        self.config.write()
+
+        # restart the app to apply new profile if already running
+        if self.online:
+           self.stop()
+           time.sleep(0.25)
+           self.start()
+
+    def start(self):
+        self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
+        self.online = True
+
         rx_thread = threading.Thread(target=self._rx)
         rx_thread.setDaemon(True)
         rx_thread.start()
