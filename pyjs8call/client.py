@@ -20,6 +20,10 @@ class Client:
 
         # initialize the config file handler
         self.config = pyjs8call.ConfigHandler(config_path = config_path)
+
+        self.callbacks = {
+            Message.RX_DIRECTED: []
+        }
         
     def set_config_profile(self, profile):
         if profile not in self.config.get_profile_list():
@@ -46,6 +50,7 @@ class Client:
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
         self.online = True
 
+        # initialize rx thread
         rx_thread = threading.Thread(target=self._rx)
         rx_thread.setDaemon(True)
         rx_thread.start()
@@ -57,23 +62,41 @@ class Client:
         # start auto offset monitor
         self.offset_monitor = pyjs8call.OffsetMonitor(self)
 
-    def set_rx_callback(self, callback):
-        self.rx_callback = callback
-
-    def _rx(self):
-        while self.online:
-            if self.js8call.pending and self.rx_callback != None:
-                msg = self.js8call.get()
-                self.rx_callback(msg)
-
-            time.sleep(0.1)
-
-    def js8call_connected(self):
-        return self.js8call.connected
-
     def stop(self):
         self.online = False
         self.js8call.stop()
+
+    def restart(self):
+        self.stop()
+        time.sleep(1)
+        self.start()
+
+    def register_rx_callback(self, callback, message_type=None):
+        # if type not specified, register callback for all configured types
+        if message_type == None:
+            for message_type in self.callbacks.keys():
+                if callback not in self.callback[message_type]:
+                    self.callbacks[message_type].append(callback)
+
+            return None
+
+        if message_type not in self.callbacks.keys():
+            self.callbacks[message_type] = []
+
+        self.callback[message_type].append(callback)
+
+    def _rx(self):
+        while self.online:
+            if self.js8call.pending:
+                msg = self.js8call.get_next_message()
+                if msg['type'] in self.callbacks.keys():
+                    for callback in self.callbacks[msg['type']]:
+                        callback(msg)
+
+            time.sleep(0.1)
+
+    def connected(self):
+        return self.js8call.connected
 
     def send_message(self, message):
         msg = Message()

@@ -106,7 +106,9 @@ class AppMonitor:
     def _monitor(self):
         while self._owner.online:
             if not self.is_running() and self.restart:
-                # start the application
-                self.start()
+                # close the current socket
+                self._owner._socket.close()
+                # restart the whole system and reconnect
+                self._owner._client.restart()
             time.sleep(2)
 

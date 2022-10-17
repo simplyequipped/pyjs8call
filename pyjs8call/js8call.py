@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import pyjs8call
 from pyjs8call import Message
 
+#TODO cull spots occasionally?
 
 class JS8Call:
     
@@ -16,7 +17,7 @@ class JS8Call:
         self._port = port
         self._rx_queue = []
         self._tx_queue = []
-        self._socket = socket.socket()
+        self._socket = None
         self._watch_timeout = 3 # seconds
         self._last_rx_timestamp = 0
         self._socket_heartbeat_delay = 60 * 5 # seconds
@@ -67,6 +68,7 @@ class JS8Call:
         self.app_monitor.stop()
 
     def _connect(self):
+        self._socket = socket.socket()
         self._socket.connect((self._host, int(self._port)))
         self._socket.settimeout(1)
 
@@ -74,7 +76,7 @@ class JS8Call:
         packed = msg.pack()
         self._tx_queue.append(packed)
 
-    def get(self):
+    def get_next_message(self):
         if len(self._rx_queue) > 0:
             return self._rx_queue.pop(0)
 
@@ -159,8 +161,9 @@ class JS8Call:
 
             try:
                 data += self._socket.recv(65535)
-            except socket.timeout:
+            except (socket.timeout, OSError):
                 # if rx from socket fails, stop processing
+                # OSError occurs while app is restarting
                 continue
 
             try: 
@@ -188,8 +191,6 @@ class JS8Call:
                     msg = Message().parse(msg_str)
                 except Exception as e:
                     # if parsing message fails, stop processing
-                    #TODO
-                    raise e
                     continue
 
                 # if error in message value, stop processing
@@ -210,37 +211,32 @@ class JS8Call:
 
         time.sleep(0.1)
 
-
     def _process_message(self, msg):
-        # command handling
+
+        ### command handling
 
         if msg['cmd'] == Message.CMD_HEARING:
             #TODO validate response structure
-            # spot message
-            self.spot(msg)
             #if not Message.ERR in msg.params['TEXT']:
             #    hearing = msg.params['TEXT'].split()[3:]
             #    for station in hearing:
             #        if station not in self.spots[msg.params['FROM']].keys():
             #            self.spots[msg.params['FROM']][station] = []
             #        self.spots[msg.params['FROM']][station].append(msg)
-            # receive message
-            self._rx_queue.append(msg)
+
+            # spot message
+            self.spot(msg)
 
         #TODO no example, test response and update code
         #elif msg.params['CMD'] == 'QUERY CALL':
         #    # spot message
         #    self.spot(msg)
-        #    #receive message
-        #    self._rx_queue.append(msg)
                 
         elif msg['cmd'] in Message.COMMANDS:
             # spot message
             self.spot(msg)
-            # receive message
-            self._rx_queue.append(msg)
 
-        # message type handling
+        ### message type handling
 
         if msg['type'] == Message.INBOX_MESSAGES:
             self.state['inbox'] = msg['messages']
@@ -252,8 +248,6 @@ class JS8Call:
         elif msg['type'] == Message.RX_DIRECTED:
             # spot message
             self.spot(msg)
-            # receive message
-            self._rx_queue.append(msg)
 
         elif msg['type'] == Message.RIG_FREQ:
             self.state['dial'] = msg['dial']
@@ -301,6 +295,5 @@ class JS8Call:
         elif msg['type'] == Message.TX_FRAME:
             self._client.window_monitor.process_tx_frame(msg)
 
-
-
+        self._rx_queue.append(msg)
 

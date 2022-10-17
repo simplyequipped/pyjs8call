@@ -26,6 +26,8 @@ class Message:
     RIG_SET_FREQ            = 'RIG.SET_FREQ'
     WINDOW_RAISE            = 'WINDOW.RAISE'
 
+    TX_TYPES = [RX_GET_TEXT, RX_GET_CALL_ACTIVITY, RX_GET_BAND_ACTIVITY, RX_GET_SELECTED_CALL, TX_SEND_MESSAGE, TX_GET_TEXT, TX_SET_TEXT, MODE_GET_SPEED, MODE_SET_SPEED, STATION_GET_INFO, STATION_SET_INFO, STATION_GET_GRID, STATION_SET_GRID, STATION_GET_CALLSIGN, INBOX_GET_MESSAGES, INBOX_STORE_MESSAGE, RIG_GET_FREQ, RIG_SET_FREQ, WINDOW_RAISE]
+    
     # incoming message types
     MESSAGES                = 'MESSAGES'
     INBOX_MESSAGES          = 'INBOX.MESSAGES'
@@ -37,7 +39,6 @@ class Message:
     RX_ACTIVITY             = 'RX.ACTIVITY'
     RX_TEXT                 = 'RX.TEXT'
     TX_TEXT                 = 'RX.TEXT'
-    #TODO confirm tx frame
     TX_FRAME                = 'TX.FRAME'
     RIG_FREQ                = 'RIG.FREQ'
     RIG_PTT                 = 'RIG.PTT'
@@ -45,6 +46,8 @@ class Message:
     STATION_GRID            = 'STATION.GRID'
     STATION_INFO            = 'STATION.INFO'
     MODE_SPEED              = 'MODE.SPEED'
+    
+    RX_TYPES = [MESSAGES, INBOX_MESSAGES, RX_SPOT, RX_DIRECTED, RX_SELECTED_CALL, RX_CALL_ACTIVITY, RX_BAND_ACTIVITY, RX_ACTIVITY, RX_TEXT, TX_TEXT, TX_FRAME, RIG_FREQ, RIG_PTT, STATION_CALLSIGN, STATION_GRID, STATION_INFO, MODE_SPEED]
 
     #TODO are more commands supported?
     # command types
