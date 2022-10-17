@@ -75,7 +75,7 @@ class Client:
         # if type not specified, register callback for all configured types
         if message_type == None:
             for message_type in self.callbacks.keys():
-                if callback not in self.callback[message_type]:
+                if callback not in self.callbacks[message_type]:
                     self.callbacks[message_type].append(callback)
 
             return None
@@ -83,7 +83,7 @@ class Client:
         if message_type not in self.callbacks.keys():
             self.callbacks[message_type] = []
 
-        self.callback[message_type].append(callback)
+        self.callbacks[message_type].append(callback)
 
     def _rx(self):
         while self.online:
