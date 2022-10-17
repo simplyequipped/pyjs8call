@@ -23,7 +23,6 @@ class JS8Call:
         self._socket_heartbeat_delay = 60 * 5 # seconds
         self._app = None
         self._debug = False
-        self.pending = False # rx pending
         self.connected = False
         self.spots = []
         self._recent_spots = []
@@ -203,11 +202,6 @@ class JS8Call:
                     print(msg)
 
                 self._process_message(msg)
-
-        if len(self._rx_queue) > 0:
-            self.pending = True
-        else:
-            self.pending = False
 
         time.sleep(0.1)
 

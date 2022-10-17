@@ -87,11 +87,11 @@ class Client:
 
     def _rx(self):
         while self.online:
-            if self.js8call.pending:
-                msg = self.js8call.get_next_message()
-                if msg['type'] in self.callbacks.keys():
-                    for callback in self.callbacks[msg['type']]:
-                        callback(msg)
+            msg = self.js8call.get_next_message()
+            if msg != None and msg['type'] in self.callbacks.keys():
+                for callback in self.callbacks[msg['type']]:
+                    print('calling callback')
+                    callback(msg)
 
             time.sleep(0.1)
 
