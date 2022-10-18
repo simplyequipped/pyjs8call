@@ -23,7 +23,7 @@ class Client:
 
         self.callbacks = {
             Message.RX_DIRECTED: [],
-            'message' : []
+            Message.ASSEMBLED : []
         }
         
     def set_config_profile(self, profile):
