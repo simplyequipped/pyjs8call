@@ -51,6 +51,8 @@ class Client:
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
         self.online = True
 
+        # initialize message assembler
+        self.message_assembler = pyjs8call.MessageAssembler(self)
         # initialize rx thread
         rx_thread = threading.Thread(target=self._rx)
         rx_thread.setDaemon(True)
@@ -72,7 +74,7 @@ class Client:
         time.sleep(1)
         self.start()
 
-    def register_rx_callback(self, callback, message_type=Message.RX.DIRECTED):
+    def register_rx_callback(self, callback, message_type=Message.RX_DIRECTED):
         if message_type not in self.callbacks.keys():
             self.callbacks[message_type] = []
 
@@ -81,6 +83,10 @@ class Client:
     def _rx(self):
         while self.online:
             msg = self.js8call.get_next_message()
+
+            if msg['type'] == Message.RX_DIRECTED:
+                self.message_assembler.process_rx_msg(msg)
+
             if msg != None and msg['type'] in self.callbacks.keys():
                 for callback in self.callbacks[msg['type']]:
                     print('calling callback')
@@ -375,18 +381,3 @@ class Client:
 
         return rx_messages
 
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-        
-        

@@ -1,7 +1,7 @@
 import pyjs8call
 
 
-class RxMonitor:
+class MessageAssembler:
     def __init__(self, client):
         self.client = client
         self.message_parts = {}
@@ -65,3 +65,4 @@ class RxMonitor:
             return True
         else:
             return False
+        
