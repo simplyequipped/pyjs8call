@@ -19,14 +19,12 @@ class RxMonitor:
                 self.message_parts[msg['from']].append(msg)
 
             # handle end of message
-            #TODO is msg['value'] where the message itself is stored?
             if pyjs8call.Message.EOM in msg['value']:
                 assembled_msg = self.assemble_message(self.message_parts[msg['from']])
                 del self.message_parts[msg['from']]
                 self.client.js8call.append_to_rx_queue(assembled_msg)
                 
         # no msg parts queued for callsign but message has EOM, must be a single window message
-        #TODO is msg['value'] where the message itself is stored?
         elif pyjs8call.Message.EOM in msg['value']:
             assembled_msg = self.assemble_message(msg)
             self.client.js8call.append_to_rx_queue(assembled_msg)
@@ -42,7 +40,6 @@ class RxMonitor:
             message = ''
             
             for msg in msg_parts:
-                #TODO is msg['value'] where the message itself is stored?
                 message.append(msg['value'])
             
             # modify last msg part to create assembled msg
