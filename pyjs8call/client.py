@@ -22,7 +22,8 @@ class Client:
         self.config = pyjs8call.ConfigHandler(config_path = config_path)
 
         self.callbacks = {
-            Message.RX_DIRECTED: []
+            Message.RX_DIRECTED: [],
+            'message' : []
         }
         
     def set_config_profile(self, profile):
@@ -71,15 +72,7 @@ class Client:
         time.sleep(1)
         self.start()
 
-    def register_rx_callback(self, callback, message_type=None):
-        # if type not specified, register callback for all configured types
-        if message_type == None:
-            for message_type in self.callbacks.keys():
-                if callback not in self.callbacks[message_type]:
-                    self.callbacks[message_type].append(callback)
-
-            return None
-
+    def register_rx_callback(self, callback, message_type=Message.RX.DIRECTED):
         if message_type not in self.callbacks.keys():
             self.callbacks[message_type] = []
 
