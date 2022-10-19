@@ -11,29 +11,26 @@ import pyjs8call
 
 
 class TxMonitor:
-    PENDING  = 1
-    ACTIVE   = 2
-    FINISHED = 3
-
     def __init__(self, client, msg, callback):
         self.client = client
-        self.msg = msg
-        self.state = TxMonitor.PENDING
-        self.callback = callback
+        self.monitor_text = []
+        self.tx_complete_callback = None
 
         monitor_thread = threading.Thread(target=self._monitor)
         monitor_thread.setDaemon(True)
         monitor_thread.start()
 
+    def set_tx_complete_callback(self, callback):
+        self.tx_complete_callback = callback
+
+    def monitor(self, text):
+        new_text = {'text': text, 'tx': False}
+        self.monitor_text.apoend(new_text)
+
     def _monitor(self):
         while self.client.online:
             tx_text = self.client.get_tx_text()
-            if self.state == TxMonitor.PENDING and self.msg['value'] in tx_text:
-                # text found in tx text, tx in progress
-                self.state = TxMonitor.ACTIVE
-            elif self.state == TxMonitor.ACTIVE and self.msg['value'] not in tx_text: 
-                # text removed from tx text, tx complete
-                self.state = TxMonitor.FINISHED
-                self.callback(self.msg)
-                
+
+            for text, tx in self.monitor_text:
+                if 
         time.sleep(1)
