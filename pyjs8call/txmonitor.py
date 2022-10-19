@@ -3,36 +3,37 @@ import threading
 
 import pyjs8call
 
+#TODO revise to be standalone monitor threat
+#TODO - store last X tx'd messages
+#TODO - monitor tx_text via thread
+#TODO - watch for given text, callback
+#TODO - check if given text has been sent
+
 
 class TxMonitor:
-    PENDING = 1
-    ACTIVE  = 2
-    SUCCESS = 3
-    TIMEOUT = 4
+    PENDING  = 1
+    ACTIVE   = 2
+    FINISHED = 3
 
-    def __init__(self, client, text):
+    def __init__(self, client, msg, callback):
         self.client = client
-        self.text = text
+        self.msg = msg
         self.state = TxMonitor.PENDING
+        self.callback = callback
 
-        #TODO timeout based on text length
-        next_window_end_timestamp = self.client.windowmonitor.next_window_end()
-
-        if next_window_end_timestamp == 0:
-            self.timeout = self.client.get_tx_window_size() * 2
-        else:
-            
+        monitor_thread = threading.Thread(target=self._monitor)
+        monitor_thread.setDaemon(True)
+        monitor_thread.start()
 
     def _monitor(self):
         while self.client.online:
             tx_text = self.client.get_tx_text()
-            if self.state == TxMonitor.PENDING and self.text in tx_text:
+            if self.state == TxMonitor.PENDING and self.msg['value'] in tx_text:
                 # text found in tx text, tx in progress
                 self.state = TxMonitor.ACTIVE
-            elif self.state == TxMonitor.ACTIVE and self.text not in tx_text: 
+            elif self.state == TxMonitor.ACTIVE and self.msg['value'] not in tx_text: 
                 # text removed from tx text, tx complete
-                self.state = TxMonitor.SUCCESS
-            elif timeout:
-                self.state = TxMonitor.TIMEOUT
+                self.state = TxMonitor.FINISHED
+                self.callback(self.msg)
                 
-        
+        time.sleep(1)
