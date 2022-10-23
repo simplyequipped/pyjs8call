@@ -13,7 +13,7 @@ class Client:
         self.host = host
         self.port = port
         self.headless = headless
-        self.rx_callback = None
+        self.clean_directed_text = True
         self.online = False
 
         # delay between setting value and getting updated value
@@ -109,7 +109,13 @@ class Client:
     def clean_rx_message_text(self, msg):
         if msg == None:
             return None
+
+        # nothing to clean
         elif 'value' not in msg.keys() or msg['value'] == None or msg['value'] == '':
+            return msg
+
+        # already cleaned
+        elif msg['value'] != msg['text']:
             return msg
 
         # start with msg ['value'] since pyjs8call.Message standardizes on this

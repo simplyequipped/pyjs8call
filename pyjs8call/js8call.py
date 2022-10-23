@@ -258,6 +258,10 @@ class JS8Call:
             self.spot(msg)
 
         elif msg['type'] == Message.RX_DIRECTED:
+            # clean msg text to remove callsigns, etc
+            if self._client.clean_directed_text:
+                msg = self._client.clean_rx_message_text(msg)
+
             # spot message
             self.spot(msg)
 
