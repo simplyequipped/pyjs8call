@@ -10,7 +10,7 @@ from pyjs8call import Message
 #TODO cull spots occasionally?
 
 class JS8Call:
-    
+
     def __init__(self, client, host='127.0.0.1', port=2442, headless=False):
         self._client = client
         self._host = host
