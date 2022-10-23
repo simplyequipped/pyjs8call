@@ -24,7 +24,7 @@ class TxMonitor:
         self.tx_complete_callback = callback
 
     def monitor(self, text):
-        new_text = {'text': text, 'state': TxMonitor.PENDING}
+        new_text = {'text': text.upper(), 'state': TxMonitor.PENDING}
 
         self.monitor_text_lock.acquire()
         self.monitor_text.append(new_text)
@@ -36,19 +36,25 @@ class TxMonitor:
 
     def _monitor(self):
         while self.client.online:
+            time.sleep(1)
             tx_text = self.client.get_tx_text()
+            tx_text.strip(' ' + pyjs8call.Message.EOM)
+
+            if tx_text == None:
+                continue
 
             self.monitor_text_lock.acquire()
-            
+
             for i in range(len(self.monitor_text)):
                 if self.monitor_text[i]['text'] in tx_text and self.monitor_text[i]['state'] == TxMonitor.PENDING:
-                    self.monitor_text[i]['state'] == TxMonitor.ACTIVE
+                    self.monitor_text[i]['state'] = TxMonitor.ACTIVE
                         
                 elif self.monitor_text[i]['text'] not in tx_text and self.monitor_text[i]['state'] == TxMonitor.ACTIVE:
-                    self.monitor_text[i]['state'] == TxMonitor.COMPLETE
+                    self.monitor_text[i]['state'] = TxMonitor.COMPLETE
                     if self.tx_complete_callback != None:
                         self.tx_complete_callback(self.monitor_text[i]['text'])
                         
             self.monitor_text_lock.release()
                         
             time.sleep(1)
+

@@ -14,6 +14,7 @@ class Client:
         self.port = port
         self.headless = headless
         self.clean_directed_text = True
+        self.monitor_directed_tx = True
         self.online = False
 
         # delay between setting value and getting updated value
@@ -38,9 +39,9 @@ class Client:
 
         # restart the app to apply new profile if already running
         if self.online:
-           self.stop()
-           time.sleep(0.25)
-           self.start()
+            self.stop()
+            time.sleep(0.25)
+            self.start()
 
     def start(self):
         # enable TCP connection
@@ -65,6 +66,8 @@ class Client:
         self.window_monitor = pyjs8call.WindowMonitor(self)
         # start auto offset monitor
         self.offset_monitor = pyjs8call.OffsetMonitor(self)
+        # start tx monitor
+        self.tx_monitor = pyjs8call.TxMonitor(self)
 
     def stop(self):
         self.online = False
@@ -95,17 +98,18 @@ class Client:
         return self.js8call.connected
 
     def send_message(self, message):
-        msg = Message()
-        msg.type = Message.TX_SEND_MESSAGE
-        msg.value = message
+        # msg.type = Message.TX_SEND_MESSAGE by default
+        msg = Message(value = message)
         self.js8call.send(msg)
     
     def send_directed_message(self, destination, message):
-        msg = Message()
-        msg.type = Message.TX_SEND_MESSAGE
-        msg.value = destination + ' ' + message
-        self.js8call.send(msg)
+        # msg.type = Message.TX_SEND_MESSAGE by default
+        msg = Message(destination = destination, value = message)
 
+        if self.monitor_directed_tx:
+            self.tx_monitor.monitor(msg.value)
+
+        self.js8call.send(msg)
     def clean_rx_message_text(self, msg):
         if msg == None:
             return None
@@ -153,7 +157,7 @@ class Client:
     # freq in kHz
     def send_aprs_pota_spot(self, park, freq, mode, message):
         callsign = self.get_callsign()
-        self.send_message('@APRSIS CMD :POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode+ ' ' + message)
+        self.send_message('@APRSIS CMD :POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode + ' ' + message)
     
     def get_inbox_messages(self):
         msg = Message()
@@ -245,6 +249,19 @@ class Client:
         self.js8call.send(msg)
         callsign = self.js8call.watch('callsign')
         return callsign
+
+    def set_station_callsign(self, callsign):
+        callsign = callsign.upper()
+
+        if len(callsign) <= 9 and any(char.isdigit() for char in callsign):
+            self.config.set('Configuration', 'MYCALL', callsign)
+            # restart the app to apply new config if already running
+            if self.online:
+                self.stop()
+                time.sleep(0.25)
+                self.start()
+        else:
+            raise ValueError('callsign must be <= 9 characters in length and contain at least 1 number')
 
     def get_station_grid(self):
         msg = Message()
@@ -381,7 +398,7 @@ class Client:
 
     def get_rx_messages(self, own=True):
         rx_text = self.get_rx_text()
-        mycall = self.get_callsign()
+        mycall = self.get_station_callsign()
         msgs = rx_text.split('\n')
         msgs = [m.strip() for m in msgs if len(m.strip()) > 0]
 

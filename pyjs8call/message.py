@@ -38,7 +38,7 @@ class Message:
     RX_BAND_ACTIVITY        = 'RX.BAND_ACTIVITY'
     RX_ACTIVITY             = 'RX.ACTIVITY'
     RX_TEXT                 = 'RX.TEXT'
-    TX_TEXT                 = 'RX.TEXT'
+    TX_TEXT                 = 'TX.TEXT'
     TX_FRAME                = 'TX.FRAME'
     RIG_FREQ                = 'RIG.FREQ'
     RIG_PTT                 = 'RIG.PTT'
@@ -58,11 +58,10 @@ class Message:
     COMMANDS = [CMD_SNR, CMD_GRID, CMD_HEARING, CMD_QUERY_CALL]
 
     # constants
-    EOM = '♢'
-    ERR = '…'
+    EOM = '♢'   # end of message, end of transmission
+    ERR = '…'   # error
 
-    def __init__(self, destination=None, value=None, raw=None):
-        self.raw = raw
+    def __init__(self, destination=None, value=None):
         self.type = Message.TX_SEND_MESSAGE
         self.destination = destination
         self.value = value
@@ -86,6 +85,12 @@ class Message:
             'SPEED'     : None,
             'EXTRA'     : None
         }
+
+        if self.destination != None:
+            self.destination = self.destination.upper()
+
+        if self.value != None:
+            self.value = self.value.upper()
 
     def data(self):
         data = {
