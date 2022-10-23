@@ -1,4 +1,3 @@
-from pyjs8call.messageassembler import MessageAssembler
 from pyjs8call.offsetmonitor import OffsetMonitor
 from pyjs8call.windowmonitor import WindowMonitor
 from pyjs8call.confighandler import ConfigHandler

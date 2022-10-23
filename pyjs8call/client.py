@@ -1,4 +1,5 @@
 import time
+import atexit
 import threading
 
 import pyjs8call
@@ -23,8 +24,10 @@ class Client:
 
         self.callbacks = {
             Message.RX_DIRECTED: [],
-            Message.ASSEMBLED : []
         }
+
+        # stop application and client at exit
+        atexit.register(self.stop)
         
     def set_config_profile(self, profile):
         if profile not in self.config.get_profile_list():
@@ -51,8 +54,6 @@ class Client:
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
         self.online = True
 
-        # initialize message assembler
-        self.message_assembler = pyjs8call.MessageAssembler(self)
         # initialize rx thread
         rx_thread = threading.Thread(target=self._rx)
         rx_thread.setDaemon(True)
@@ -84,12 +85,8 @@ class Client:
         while self.online:
             msg = self.js8call.get_next_message()
 
-            if msg['type'] == Message.RX_DIRECTED:
-                self.message_assembler.process_rx_msg(msg)
-
             if msg != None and msg['type'] in self.callbacks.keys():
                 for callback in self.callbacks[msg['type']]:
-                    print('calling callback')
                     callback(msg)
 
             time.sleep(0.1)
@@ -108,15 +105,34 @@ class Client:
         msg.type = Message.TX_SEND_MESSAGE
         msg.value = destination + ' ' + message
         self.js8call.send(msg)
+
+    def clean_rx_message_text(self, msg):
+        if msg == None:
+            return None
+        elif 'value' not in msg.keys() or msg['value'] == None or msg['value'] == '':
+            return msg
+
+        # start with msg ['value'] since pyjs8call.Message standardizes on this
+        message = msg['value']
+        # remove 'from' callsign
+        message = message.split(':')[1]
+        # strip whitespace
+        message = message.strip()
+        # remove 'to' callsign or group
+        message = ' '.join(message.split(' ')[1:])
+        # strip remaining spaces and end-of-message symbol
+        message = message.strip(' ' + Message.EOM)
+
+        msg['text'] = message
+        return msg
     
     def send_heartbeat(self, grid=None):
         if grid == None:
-            grid = self.get_grid()
+            grid = self.get_station_grid()
         if len(grid) > 4:
             grid = grid[:4]
 
-        callsign = self.get_callsign()
-        self.send_message(callsign + ': @HB HEARTBEAT ' + grid)
+        self.send_message('@HB HEARTBEAT ' + grid)
 
     def send_aprs_grid(self, grid):
         self.send_message('@APRSIS GRID ' + grid)

@@ -16,9 +16,9 @@ class JS8Call:
         self._host = host
         self._port = port
         self._rx_queue = []
-        self._rx_queue_locked = False
+        self._rx_queue_lock = threading.Lock()
         self._tx_queue = []
-        self._tx_queue_locked = False
+        self._tx_queue_lock = threading.Lock()
         self._socket = None
         self._watch_timeout = 3 # seconds
         self._last_rx_timestamp = 0
@@ -76,29 +76,24 @@ class JS8Call:
     def send(self, msg):
         packed = msg.pack()
         
-        while self._tx_queue_locked:
-            time.sleep(0.001)
-            
-        self._tx_queue_locked = True
+        self._tx_queue_lock.acquire()
         self._tx_queue.append(packed)
-        self._tx_queue_locked = False
+        self._tx_queue_lock.release()
         
     def append_to_rx_queue(self, msg):
-        while self._rx_queue_locked:
-            time.sleep(0.001)
-            
-        self._rx_queue_locked = True
+        self._rx_queue_lock.acquire()
         self._rx_queue.append(msg)
-        self._rx_queue_locked = False
+        self._rx_queue_lock.release()
 
     def get_next_message(self):
-        while self._rx_queue_locked:
-            time.sleep(0.001)
-            
-        self._rx_queue_locked = True
+        msg = None
+
         if len(self._rx_queue) > 0:
-            return self._rx_queue.pop(0)
-        self._rx_queue_locked = False
+            self._rx_queue_lock.acquire()
+            msg = self._rx_queue.pop(0)
+            self._rx_queue_lock.release()
+
+        return msg
 
     def watch(self, item):
         if item not in self.state.keys():
@@ -169,15 +164,12 @@ class JS8Call:
             while len(self._tx_queue) == 0:
                 time.sleep(0.1)
                 
-            while self._tx_queue_locked:
-                time.sleep(0.001)
-            
-            self._tx_queue_locked = True
+            self._tx_queue_lock.acquire()
             for i in range(len(self._tx_queue)):
                 item = self._tx_queue.pop(0)
                 self._socket.sendall(item)
                 time.sleep(0.25)
-            self._tx_queue_locked = False
+            self._tx_queue_lock.release()
                 
     def _rx(self):
         while self.online:
@@ -193,7 +185,7 @@ class JS8Call:
 
             try: 
                 data_str = data.decode('utf-8')
-            except:
+            except Exception as e:
                 # if decode fails, stop processing
                 continue
 
@@ -222,10 +214,10 @@ class JS8Call:
                 if msg['value'] != None and Message.ERR in msg['value']:
                     continue
 
-                # print each msg in debug mode
+                # print msg in debug mode, without None values
                 if self._debug:
-                    #print(msg_str)
-                    print(msg)
+                    min_msg = {key:value for key, value in msg.items() if value != None}
+                    print(min_msg)
 
                 self._process_message(msg)
 
@@ -315,11 +307,7 @@ class JS8Call:
         elif msg['type'] == Message.TX_FRAME:
             self._client.window_monitor.process_tx_frame(msg)
 
-            
-        while self._rx_queue_locked:
-            time.sleep(0.001)
-            
-        self._rx_queue_locked = True
+        self._rx_queue_lock.acquire()
         self._rx_queue.append(msg)
-        self._rx_queue_locked = False
+        self._rx_queue_lock.release()
 

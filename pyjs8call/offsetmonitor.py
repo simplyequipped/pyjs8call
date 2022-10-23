@@ -60,7 +60,7 @@ class OffsetMonitor:
 
         for i in range(len(offsets)):
             # station offset outide min/max offset range
-            if offsets[i] < self.min_offset or offset[i] > self.max_offset:
+            if offsets[i] < self.min_offset or offsets[i] > self.max_offset:
                 continue
 
             if i == 0:
@@ -68,7 +68,7 @@ class OffsetMonitor:
             else:
                 previous_offset = offsets[i-1]
 
-            if i == len(offsets):
+            if i == len(offsets) - 1:
                 next_offset = self.max_offset
             else:
                 next_offset = offsets[i+1]
@@ -184,15 +184,6 @@ class OffsetMonitor:
                 self.previous_offset = self.offset
                 self.offset = new_offset
 
-
-
-
-                
-
-
-
-
-
-
-
+                if self.enabled:
+                    self.client.set_offset(self.offset)
 
