@@ -21,6 +21,7 @@ class JS8Call:
         self._tx_queue_lock = threading.Lock()
         self._socket = None
         self._watch_timeout = 3 # seconds
+        self._watching = None
         self._last_rx_timestamp = 0
         self._socket_heartbeat_delay = 60 * 5 # seconds
         self._app = None
@@ -74,10 +75,8 @@ class JS8Call:
         self._socket.settimeout(1)
 
     def send(self, msg):
-        packed = msg.pack()
-        
         self._tx_queue_lock.acquire()
-        self._tx_queue.append(packed)
+        self._tx_queue.append(msg)
         self._tx_queue_lock.release()
         
     def append_to_rx_queue(self, msg):
@@ -99,6 +98,7 @@ class JS8Call:
         if item not in self.state.keys():
             return None
 
+        self._watching = item
         last_state = self.state[item]
         self.state[item] = None
         timeout = time.time() + self._watch_timeout
@@ -112,6 +112,7 @@ class JS8Call:
         if self.state[item] == None:
             self.state[item] = last_state
         
+        self._watching = None
         return self.state[item]
 
     def spot(self, msg):
@@ -160,17 +161,44 @@ class JS8Call:
             time.sleep(1)
 
     def _tx(self):
+        force_tx_text = False
+
         while self.online:
+            # just chill while the tx queue is empty
             while len(self._tx_queue) == 0:
                 time.sleep(0.1)
-                
+        
+            # tx_monitor updates self.state['tx_state'] every second
+            # do not attempt to update while value is being watched (i.e. updated)
+            if self._watching != 'tx_text':
+                if self.state['tx_text'] != None and len(self.state['tx_text']) > 0:
+                    tx_text = True
+                    force_tx_text = False
+                else:
+                    tx_text = False
+
             self._tx_queue_lock.acquire()
-            for i in range(len(self._tx_queue)):
-                item = self._tx_queue.pop(0)
-                self._socket.sendall(item)
-                time.sleep(0.25)
+
+            for msg in self._tx_queue.copy():
+
+                # hold off on tx'd messages while there is something being tx'd (text in the tx text field)
+                if msg.type == Message.TX_SEND_MESSAGE and (tx_text or force_tx_text):
+                    next
+                else:
+                    # pack and send msg via socket
+                    self._socket.sendall(msg.pack())
+                    # remove msg from queue
+                    self._tx_queue.remove(msg)
+
+                    # make sure the next queued msg doesn't get sent before the tx text state updates
+                    if msg.type == Message.TX_SEND_MESSAGE:
+                        force_tx_text = True
+
+                    time.sleep(0.1)
+
             self._tx_queue_lock.release()
-                
+            time.sleep(0.1)
+
     def _rx(self):
         while self.online:
             data = b''
