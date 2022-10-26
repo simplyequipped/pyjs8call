@@ -38,11 +38,11 @@ class TxMonitor:
         while self.client.online:
             time.sleep(1)
             tx_text = self.client.get_tx_text()
-            tx_text.strip(' ' + pyjs8call.Message.EOM)
 
             if tx_text == None:
                 continue
 
+            tx_text.strip(' ' + pyjs8call.Message.EOM)
             self.monitor_text_lock.acquire()
 
             for i in range(len(self.monitor_text)):
@@ -56,5 +56,3 @@ class TxMonitor:
                         
             self.monitor_text_lock.release()
                         
-            time.sleep(1)
-
