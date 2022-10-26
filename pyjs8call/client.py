@@ -342,6 +342,9 @@ class Client:
             self.js8call.send(msg)
             speed = self.js8call.watch('speed')
         else:
+            while self.js8call._watched == 'speed':
+                time.sleep(0.1)
+
             speed = self.js8call.state['speed']
 
         # map integer to useful text
