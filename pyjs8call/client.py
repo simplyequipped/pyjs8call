@@ -339,12 +339,13 @@ class Client:
         return self.get_tx_text()
 
     # speed: slow, normal, fast, turbo
-    def get_speed(self, update=True):
+    def get_speed(self, update=True, speed=None):
         if update or self.js8call.state['speed'] == None:
             msg = Message()
             msg.type = Message.MODE_GET_SPEED
             self.js8call.send(msg)
             speed = self.js8call.watch('speed')
+
         else:
             while self.js8call._watched == 'speed':
                 time.sleep(0.1)
@@ -353,6 +354,7 @@ class Client:
 
         # map integer to useful text
         speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo'}
+
         if speed in speeds.keys():
             return speeds[int(speed)]
         else:
@@ -377,6 +379,10 @@ class Client:
     def get_bandwidth(self, speed=None):
         if speed == None:
             speed = self.get_speed(update = False)
+        else:
+            if isinstance(speed, int):
+                speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo'}
+                speed = speeds[speed]
 
         bandwidths = {'slow':25, 'normal':50, 'fast':80, 'turbo':160}
 
