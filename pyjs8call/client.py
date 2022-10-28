@@ -347,7 +347,7 @@ class Client:
             speed = self.js8call.watch('speed')
 
         else:
-            while self.js8call._watched == 'speed':
+            while self.js8call._watching == 'speed':
                 time.sleep(0.1)
 
             speed = self.js8call.state['speed']
