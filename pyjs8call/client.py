@@ -71,7 +71,10 @@ class Client:
 
     def stop(self):
         self.online = False
-        self.js8call.stop()
+        try:
+            self.js8call.stop()
+        except:
+            pass
 
     def restart(self):
         self.stop()
