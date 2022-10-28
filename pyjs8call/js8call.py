@@ -125,6 +125,11 @@ class JS8Call:
             'grid'      : msg['grid'],
             'snr'       : msg['snr']
         }
+
+        try:
+            new_spot['speed'] = msg['speed']
+        except:
+            new_spot['speed'] = None
         
         if new_spot['time'] == None or new_spot['time'] == '':
             new_spot['time'] = datetime.now(timezone.utc).timestamp()
