@@ -335,6 +335,7 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_tx_text()
 
+    # speed: slow, normal, fast, turbo
     def get_speed(self, update=True):
         if update or self.js8call.state['speed'] == None:
             msg = Message()
@@ -349,15 +350,19 @@ class Client:
 
         # map integer to useful text
         speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo'}
-        speed = speeds[int(speed)]
-
-        return speed
+        if speed in speeds.keys():
+            return speeds[int(speed)]
+        else:
+            raise ValueError('Invalid speed ' + speed)
 
     # speed: slow, normal, fast, turbo
     def set_speed(self, speed):
-        speeds = {'slow':4, 'normal':0, 'fast':1, 'turbo':2}
         if isinstance(speed, str):
-            speed = speeds[speed]
+            speeds = {'slow':4, 'normal':0, 'fast':1, 'turbo':2}
+            if speed in speeds.keys():
+                speed = speeds[speed]
+            else:
+                raise ValueError('Invalid speed: ' + speed)
 
         msg = Message()
         msg.type = Message.MODE_SET_SPEED
@@ -366,19 +371,16 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_speed()
 
-    def get_bandwidth(self):
-        speed = self.get_speed(update = False)
+    def get_bandwidth(self, speed=None):
+        if speed == None:
+            speed = self.get_speed(update = False)
 
-        if speed == 'slow':
-            bandwidth = 25
-        elif speed == 'normal':
-            bandwidth = 50
-        elif speed == 'fast':
-            bandwidth = 80
-        elif speed == 'turbo':
-            bandwidth == 160
+        bandwidths = {'slow':25, 'normal':50, 'fast':80, 'turbo':160}
 
-        return bandwidth
+        if speed in bandwidths.keys():
+            return bandwidths[speed]
+        else:
+            raise ValueError('Invalid speed: ' + speed)
 
     def get_tx_window_duration(self):
         speed = self.get_speed(update = False)
