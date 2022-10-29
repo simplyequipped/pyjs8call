@@ -205,12 +205,15 @@ class Client:
         destinations = '>'.join(destinations)
         self.send_directed_message(destinations, message)
 
-    def get_station_spots(self, station=None, since_timestamp=0):
+    def get_station_spots(self, station=None, since_timestamp=0, from_only=False):
         spots = []
         for spot in self.js8call.spots:
             if spot['time'] >= since_timestamp:
                 if station == None or (station != None and station == spot['from']):
                     spots.append(spot)
+
+        if from_only:
+            spots = [spot['from'] for spot in spots]
 
         return spots
 
