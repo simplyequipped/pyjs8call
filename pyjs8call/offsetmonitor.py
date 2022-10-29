@@ -8,7 +8,7 @@ class OffsetMonitor:
         self.client = client
         self.min_offset = 1000
         self.max_offset = 2500
-        self.heard_station_age = 3 * 60 # seconds
+        self.heard_station_age = 100 # seconds
         self.bandwidth = self.client.get_bandwidth()
         self.bandwidth_safety_factor = 1.25
         self.offset = self.client.get_offset()
@@ -50,14 +50,16 @@ class OffsetMonitor:
         # build list of offsets and associated bandwidths
         for spot in activity:
             if spot['speed'] == None:
-                # assume worst case bandwidth: turbo mode
+                # assume worst case bandwidth: turbo mode = 160 Hz
                  signal = (spot['offset'], 160)
             else:
+                # map signal speed to signal bandwidth
                 bandwidth = self.client.get_bandwidth(speed = spot['speed'])
                 signal = (spot['offset'], bandwidth)
 
             signals.append(signal)
-
+        
+        # sort signals in ascending order by offset
         signals.sort(key = lambda signal: signal[0])
         return signals
 
@@ -124,36 +126,50 @@ class OffsetMonitor:
             
     def _monitor(self):
         while self.client.online and self.enabled:
-            # wait until the end of the tx window
-            delay = self.client.window_monitor.next_window_end() - time.time()
+            # wait until 0.5 seconds before the end of the tx window
+            delay = self.client.window_monitor.next_window_end() - time.time() - 0.5
 
-            # next window end = 0 until first tx frame
+            # next window end == 0 until first tx frame
             if delay < 0:
                 delay = 5
 
             time.sleep(delay)
 
+            # wait until tx_text is not being 'watched'
+            while self.client.js8call._watching == 'tx_text':
+                time.sleep(0.1)
+            
+            # skip processing if actively sending a message
+            if self.client.js8call.state['tx_text'] != None:
+                continue
+
             # get recent spots
             timestamp = time.time() - self.heard_station_age
             activity = self.client.get_station_spots(since_timestamp = timestamp) 
 
+            # skip processing if there is no activity
             if len(activity) == 0:
                 continue
 
+            # process activity into signal tuples (min_freq, max_freq)
             signals = self.parse_activity(activity)
             self.bandwidth = self.client.get_bandwidth()
             overlap = False
 
+            # check for signals overlapping our signal
             for signal in signals:
                 if self.signal_overlapping(*signal):
                     overlap = True
                     break
 
             if overlap:
+                # find unused spectrum (between heard signals)
                 unused_spectrum = self.find_unused_spectrum(signals)
+                # find nearest unused spectrum and determine new offset
                 new_offset = self.find_new_offset(unused_spectrum)
 
                 if new_offset != None:
+                    # set new offset
                     self.previous_offset = self.offset
                     self.offset = new_offset
                     self.client.set_offset(self.offset)
