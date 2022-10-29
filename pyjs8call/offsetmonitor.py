@@ -12,7 +12,6 @@ class OffsetMonitor:
         self.bandwidth = self.client.get_bandwidth()
         self.bandwidth_safety_factor = 1.25
         self.offset = self.client.get_offset()
-        self.previous_offset = self.offset
         self.enabled = True
 
         # start monitoring thread
@@ -21,12 +20,13 @@ class OffsetMonitor:
         monitor_thread.start()
 
     def min_signal_freq(self, offset, bandwidth):
-        return offset - (bandwidth / 2)
+        return int(offset)
 
     def max_signal_freq(self, offset, bandwidth):
-        return offset + (bandwidth / 2)
+        return int(offset + bandwidth)
 
     def signal_overlapping(self, offset, bandwidth):
+        # get min/max frequencies
         other_min_freq = self.min_signal_freq(offset, bandwidth)
         other_max_freq = self.max_signal_freq(offset, bandwidth)
         own_min_freq   = self.min_signal_freq(self.offset, self.bandwidth)
@@ -68,58 +68,107 @@ class OffsetMonitor:
 
         for i in range(len(signals)):
             min_signal_freq = self.min_signal_freq(*signals[i])
+            min_signal_freq = self.min_signal_freq(*signals[i])
             max_signal_freq = self.max_signal_freq(*signals[i])
+            lower_limit_below = None
+            upper_limit_below = None
+            lower_limit_above = None
+            upper_limit_above = None
 
             # signal outside min/max offset range
             if max_signal_freq < self.min_offset or min_signal_freq > self.max_offset:
                 continue
 
-            # handle first signal in list
-            if i == 0:
+            # only one signal
+            if len(signals) ==  1:
                 # use minimum offset as lower edge of unused section
-                lower_limit = self.min_offset
+                lower_limit_below = self.min_offset
+                # use current signal's lower edge as upper edge of unused section
+                upper_limit_below = min_signal_freq
+                # use current signal's upper edge as lower edge of unused section
+                lower_limit_above = max_signal_freq
+                # use maximum offset as upper edge of unused section
+                upper_limit_above = self.max_offset
+                
+            # first signal in list
+            elif i == 0:
+                # use minimum offset as lower edge of unused section
+                lower_limit_below = self.min_offset
+                # use current signal's lower edge as upper edge of unused section
+                upper_limit_below = min_signal_freq
+
+            # last signal in list
+            elif i == len(signals) - 1:
+                # use previous signal's upper edge as lower edge of unused section
+                lower_limit_below = self.max_signal_freq(*signals[i-1])
+                # use current signal's lower edge as upper edge of unused section
+                upper_limit_below = min_signal_freq
+                # use current signal's upper edge as lower edge of unused section
+                lower_limit_above = max_signal_freq
+                # use maximum offset as upper edge of unused section
+                upper_limit_above = self.max_offset
+
+            # signal somwhere else in the list
             else:
                 # use previous signal's upper edge as lower edge of unused section
-                lower_limit = self.get_max_signal_freq(*signals[i-1])
+                lower_limit_below = self.max_signal_freq(*signals[i-1])
+                # use current signal's lower edge as upper edge of unused section
+                upper_limit_below = min_signal_freq
 
-            # handle last signal in list
-            if i == len(signals) - 1:
-                # use maximum offset as upper edge of unused section
-                upper_limit = self.max_offset
-            else:
-                # use next signal's lower edge as upper edge of unused section
-                upper_limit = self.get_min_signal_freq(*signals[i+1])
 
-            # unused section is wide enough for current speed setting plus safety factor
-            if (upper_limit - lower_limit) >= (self.bandwidth * self.bandwidth_safety_factor):
-                unused_spectrum.append((lower_limit, upper_limit))
+            safe_bandwidth = self.bandwidth * self.bandwidth_safety_factor
+            
+            # unused section below is wide enough for current speed setting
+            if (
+                lower_limit_below != None and
+                upper_limit_below != None and
+                (upper_limit_below - lower_limit_below) >= safe_bandwidth
+            ):
+                unused_spectrum.append( (lower_limit_below, upper_limit_below) )
+
+            # unused section above is wide enough for current speed setting
+            if (
+                lower_limit_above != None and
+                upper_limit_above != None and
+                (upper_limit_above - lower_limit_above) >= safe_bandwidth
+            ):
+                unused_spectrum.append( (lower_limit_above, upper_limit_above) )
 
         return unused_spectrum
 
     def find_new_offset(self, unused_spectrum):
         # calculate distance from the current offset to each unused section
-        for i in range(len(unused_spectrum)):
+        distance = []
+
+        i = 0
+        for lower_limit, upper_limit in unused_spectrum:
             if upper_limit < self.offset:
                 # below the current offset
-                unused_spectrum[i] += (self.offset - upper_limit, )
+                distance.append( (i, self.offset - upper_limit) )
             elif lower_limit > self.offset:
                 # above the current offset
-                unused_spectrum[i] += (lower_limit - self.offset, )
+                distance.append( (i, lower_limit - self.offset) )
+
+            i += 1
 
         # sort by distance from current offset
-        unused_spectrum.sort(key = lambda section: section[2])
+        distance.sort(key = lambda dist: dist[1])
+        # index of nearest unused section
+        nearest = distance[0][0]
 
         # use nearest unused section
-        lower_limit = unused_spectrum[0][0]
-        upper_limit = unused_spectrum[0][1]
+        lower_limit = unused_spectrum[nearest][0]
+        upper_limit = unused_spectrum[nearest][1]
+
+        safe_bandwidth = self.bandwidth * self.bandwidth_safety_factor
 
         # move offset up the spectrum to the beginning of the next unused section
         if lower_limit > self.offset:
-            return lower_limit + ((self.bandwidth * self.bandwidth_safety_factor) / 2)
+            return int(lower_limit + (safe_bandwidth - self.bandwidth))
 
         # move offset down the spectrum to the end of the next unused section
         elif upper_limit < self.offset:
-            return upper_limit - ((self.bandwidth * self.bandwidth_safety_factor) / 2)
+            return int(upper_limit - safe_bandwidth)
 
         else:
             return None
@@ -136,11 +185,12 @@ class OffsetMonitor:
             time.sleep(delay)
 
             # wait until tx_text is not being 'watched'
+            # tx_monitor requests tx_text every second
             while self.client.js8call._watching == 'tx_text':
                 time.sleep(0.1)
             
             # skip processing if actively sending a message
-            if self.client.js8call.state['tx_text'] != None:
+            if self.client.js8call.state['tx_text'] != '':
                 continue
 
             # get recent spots
@@ -153,10 +203,16 @@ class OffsetMonitor:
 
             # process activity into signal tuples (min_freq, max_freq)
             signals = self.parse_activity(activity)
+
+            # get the current settings
             self.bandwidth = self.client.get_bandwidth()
-            overlap = False
+            current_offset = self.client.get_offset()
+
+            if int(current_offset) != int(self.offset):
+                self.offset = current_offset
 
             # check for signals overlapping our signal
+            overlap = False
             for signal in signals:
                 if self.signal_overlapping(*signal):
                     overlap = True
@@ -170,7 +226,6 @@ class OffsetMonitor:
 
                 if new_offset != None:
                     # set new offset
-                    self.previous_offset = self.offset
                     self.offset = new_offset
                     self.client.set_offset(self.offset)
 
