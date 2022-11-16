@@ -14,7 +14,7 @@ class Client:
         self.port = port
         self.headless = headless
         self.clean_directed_text = True
-        self.monitor_directed_tx = True
+        self.monitor_directed_tx = False
         self.online = False
 
         # delay between setting value and getting updated value
