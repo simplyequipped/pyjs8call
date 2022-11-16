@@ -23,8 +23,8 @@ class TxMonitor:
     def set_tx_complete_callback(self, callback):
         self.tx_complete_callback = callback
 
-    def monitor(self, text):
-        new_text = {'text': text.upper(), 'state': TxMonitor.PENDING}
+    def monitor(self, text, identifier=None):
+        new_text = {'text': text.upper(), 'state': TxMonitor.PENDING, 'id': identifier}
 
         self.monitor_text_lock.acquire()
         self.monitor_text.append(new_text)
@@ -52,7 +52,10 @@ class TxMonitor:
                 elif self.monitor_text[i]['text'] not in tx_text and self.monitor_text[i]['state'] == TxMonitor.ACTIVE:
                     self.monitor_text[i]['state'] = TxMonitor.COMPLETE
                     if self.tx_complete_callback != None:
-                        self.tx_complete_callback(self.monitor_text[i]['text'])
+                        if self.monitor_text[i]['id'] == None:
+                            self.tx_complete_callback(self.monitor_text[i]['text'])
+                        else:
+                            self.tx_complete_callback(self.monitor_text[i]['id'])
                         
             self.monitor_text_lock.release()
                         
