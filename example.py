@@ -61,18 +61,19 @@ def show_menu():
 
 
 # initialize the client object and start the js8call application
-client = pyjs8call.Client()
+js8call = pyjs8call.Client()
+js8call.start()
 # set callback functions
-client.set_rx_callback(rx_message)
-client.spot_monitor.set_new_spot_callback(new_spots)
+js8call.set_rx_callback(rx_message)
+js8call.spot_monitor.set_new_spot_callback(new_spots)
 
 # read current configuration values
-freq = client.get_freq()
-offset = client.get_offset()
-grid = client.get_station_grid()
-callsign = client.get_station_callsign()
+freq = js8call.get_freq()
+offset = js8call.get_offset()
+grid = js8call.get_station_grid()
+callsign = js8call.get_station_callsign()
 # check if connected to js8call
-connected = client.js8call_connected()
+connected = js8call.js8call_connected()
 
 # parse connected state
 if connected:
@@ -85,5 +86,5 @@ print('\nStation ' + callsign + ' (' + grid + ') - ' + state + ' ---------------
 print('Frequency: ' + str(freq / 1000000).format('0.000') + 'MHz (' + str(offset) + 'Hz)\n')
 
 # show the menu until the user exits
-while client.online:
+while js8call.online:
     show_menu()    
