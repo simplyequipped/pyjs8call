@@ -68,6 +68,7 @@ def station_spotted(spot):
   print(spot['from'] + ' spotted!')
     
 js8call = pyjs8call.Client()
+js8call.start()
 
 # set spot monitor callback
 js8call.spot_monitor.set_new_spot_callback(new_spots)
