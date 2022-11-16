@@ -282,7 +282,7 @@ class Client:
         msg.value = grid
         self.js8call.send(msg)
         time.sleep(self._set_get_delay)
-        return self.get_grid()
+        return self.get_station_grid()
 
     def get_station_info(self):
         msg = Message()
@@ -297,7 +297,7 @@ class Client:
         msg.value = info
         self.js8call.send(msg)
         time.sleep(self._set_get_delay)
-        return self.get_info()
+        return self.get_station_info()
 
     def get_call_activity(self):
         msg = Message()
