@@ -166,17 +166,14 @@ class JS8Call:
             time.sleep(1)
 
     def _tx(self):
+        tx_text = False
         force_tx_text = False
 
         while self.online:
-            # just chill while the tx queue is empty
-            while len(self._tx_queue) == 0:
-                time.sleep(0.1)
-        
-            # tx_monitor updates self.state['tx_state'] every second
+            # TxMonitor updates tx_text every second
             # do not attempt to update while value is being watched (i.e. updated)
-            if self._watching != 'tx_text':
-                if self.state['tx_text'] != None and len(self.state['tx_text']) > 0:
+            if self._watching != 'tx_text' and self.state['tx_text'] != None:
+                if len(self.state['tx_text'].strip()) > 0:
                     tx_text = True
                     force_tx_text = False
                 else:
@@ -186,7 +183,8 @@ class JS8Call:
 
             for msg in self._tx_queue.copy():
 
-                # hold off on tx'd messages while there is something being tx'd (text in the tx text field)
+                #TODO other msg types?
+                # hold off on sending messages while there is something being sent (text in the tx text field)
                 if msg.type == Message.TX_SEND_MESSAGE and (tx_text or force_tx_text):
                     next
                 else:

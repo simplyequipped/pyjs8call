@@ -263,9 +263,15 @@ class Client:
             self.config.set('Configuration', 'MYCALL', callsign)
             # restart the app to apply new config if already running
             if self.online:
+                freq = self.get_freq()
+                offset = self.get_offset()
+
                 self.stop()
                 time.sleep(0.25)
                 self.start()
+
+                self.set_offset(offset)
+                self.set_freq(freq)
         else:
             raise ValueError('callsign must be <= 9 characters in length and contain at least 1 number')
 
@@ -277,6 +283,7 @@ class Client:
         return grid
 
     def set_station_grid(self, grid):
+        grid = grid.upper()
         msg = Message()
         msg.type = Message.STATION_SET_GRID
         msg.value = grid
