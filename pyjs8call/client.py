@@ -260,7 +260,7 @@ class Client:
         callsign = callsign.upper()
 
         if len(callsign) <= 9 and any(char.isdigit() for char in callsign):
-            self.config.set('Configuration', 'MYCALL', callsign)
+            self.config.set('Configuration', 'MyCall', callsign)
             # restart the app to apply new config if already running
             if self.online:
                 freq = self.get_freq()
