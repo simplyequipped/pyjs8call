@@ -40,7 +40,7 @@ class AppMonitor:
             self._process = subprocess.Popen(cmd, stderr=devnull)
 
         # wait for connection to application via socket
-        timeout = time.time() + 15
+        timeout = time.time() + 30
         while True:
             try:
                 # this will error if unable to connect to the application
