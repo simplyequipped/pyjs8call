@@ -189,12 +189,7 @@ class JS8Call:
                     next
                 else:
                     # pack and send msg via socket
-
-                    #TODO
-                    #self._socket.sendall(msg.pack())
-                    packed = msg.pack()
-                    print(packed)
-                    self._socket.sendall(packed)
+                    self._socket.sendall(msg.pack())
 
                     # remove msg from queue
                     self._tx_queue.remove(msg)
