@@ -21,7 +21,6 @@ class AppMonitor:
         except subprocess.CalledProcessError:
             raise ProcessLookupError('JS8Call application not installed, on Debian systems try: sudo apt install js8call')
 
-    #TODO headless mode does not work, xvfb does not work by itself either
     def start(self, headless=False):
         cmd = [self._exec_path]
 
@@ -100,6 +99,14 @@ class AppMonitor:
 
         if code == None:
             code = self._process.kill()
+
+        try:
+            # errors due to non-zero return code if no running instances
+            subprocess.check_output(['pgrep', 'js8call'])
+            # if no error then the process is running, force kill process
+            subprocess.run(['killall', '-9', 'js8call'])
+        except subprocess.CalledProcessError:
+            pass
 
         return code
 
