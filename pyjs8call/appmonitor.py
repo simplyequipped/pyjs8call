@@ -101,11 +101,12 @@ class AppMonitor:
             code = self._process.kill()
 
         try:
+            devnull = open(os.devnull, 'w')
             # errors due to non-zero return code if no running instances
-            subprocess.check_output(['pgrep', 'js8call'])
+            subprocess.check_output(['pgrep', 'js8call'], stderr = devnull)
             # if no error then the process is running, force kill process
-            subprocess.run(['killall', '-9', 'js8call'])
-        except subprocess.CalledProcessError:
+            subprocess.run(['killall', '-9', 'js8call'], stderr = devnull)
+        except:
             pass
 
         return code
