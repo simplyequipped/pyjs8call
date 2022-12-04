@@ -19,7 +19,7 @@ class ConfigHandler:
         self.config.read(self.path)
 
     def write(self):
-        if not os.path.exists(self.path + '.original')):
+        if not os.path.exists(self.path + '.original'):
             # create a backup of the original config file before writing changes
             with open(self.path + '.original', 'w') as fd:
                 self.config.write(fd, space_around_delimiters = False)
