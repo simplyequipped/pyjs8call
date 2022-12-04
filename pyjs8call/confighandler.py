@@ -176,8 +176,7 @@ class ConfigHandler:
     def get_groups(self):
         groups = self.config.get('Configuration', 'MyGroups')
         groups = groups.split(',')
-        #strip spaces and @ symbol
-        groups = [group.strip(' @') for group in groups if len(group) > 0]
+        groups = ['@' + group.strip(' @') for group in groups if len(group.strip()) > 0]
         
         return groups
 
