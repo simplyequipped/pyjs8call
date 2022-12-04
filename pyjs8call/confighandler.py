@@ -176,26 +176,29 @@ class ConfigHandler:
     def get_groups(self):
         groups = self.config.get('Configuration', 'MyGroups')
         groups = groups.split(',')
+        # strip spaces, ensure a single @ symbol
         groups = ['@' + group.strip(' @') for group in groups if len(group.strip()) > 0]
         
         return groups
 
     def add_group(self, group):
-        #strip spaces and @ symbol
-        group = group.strip(' @')
+        # strip spaces, ensure a single @ symbol
+        group = '@' + group.strip(' @')
 
         if group not in self.get_groups():
             groups = self.config.get('Configuration', 'MyGroups')
-            groups += ', @@' + group
+            # add second @ symbol to match config file formatting
+            groups += ', @' + group
             self.config.set('Configuration', 'MyGroups', groups)
 
     def remove_group(self, group):
-        #strip spaces and @ symbol
-        remove_group = group.strip(' @')
+        # strip spaces, ensure a single @ symbol
+        remove_group = '@' + group.strip(' @')
         groups = self.get_groups()
 
         if remove_group in groups:
-            groups = ['@@' + group for group in groups if group != remove_group]
+            # add second @ symbol to match config file formatting
+            groups = ['@' + group for group in groups if group != remove_group]
             groups = ', '.join(groups)
             self.config.set('Configuration', 'MyGroups', groups)
 
