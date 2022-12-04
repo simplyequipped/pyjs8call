@@ -1,9 +1,8 @@
 import os
+import shutil
 import configparser
 
-import pyjs8call
-
-#TODO JS8Call requires callsign to contain at least one number, and max length is 9 characters
+# Note: Callsign (Configuration > MyCall) required to contain at least one number and have a max length of 9 characters
 
 class ConfigHandler:
     def __init__(self, config_path=None):
@@ -19,11 +18,14 @@ class ConfigHandler:
         self.config.optionxform = lambda option: option
         self.config.read(self.path)
 
-    def write(self, file_path=None):
-        if file_path == None:
-            file_path = self.path
+    def write(self):
+        if not os.path.exists(self.path + '.original')):
+            # create a backup of the original config file before writing changes
+            with open(self.path + '.original', 'w') as fd:
+                self.config.write(fd, space_around_delimiters = False)
 
-        with open(file_path, 'w') as fd:
+        with open(self.path, 'w') as fd:
+            # write current config object to the config file
             self.config.write(fd, space_around_delimiters = False)
 
     def set(self, section, option, value):
