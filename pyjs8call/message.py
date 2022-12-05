@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime, timezone
 import secrets
 
@@ -78,6 +79,7 @@ class Message:
         self.destination = destination
         self.value = value
         self.time = datetime.now(timezone.utc).timestamp()
+        self.timestamp = time.time()
         self.params = {}
         self.attributes = ['id', 'type', 'to', 'value', 'time', 'params']
         self.packed = None
