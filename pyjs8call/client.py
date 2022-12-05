@@ -39,9 +39,7 @@ class Client:
 
         # restart the app to apply new profile if already running
         if self.online:
-            self.stop()
-            time.sleep(0.25)
-            self.start()
+            self.restart()
 
     def start(self, debug=False):
         # enable TCP connection
@@ -83,8 +81,9 @@ class Client:
 
     def restart(self):
         self.stop()
+        self.js8call._socket.close()
         time.sleep(1)
-        self.start()
+        self.start(debug = self.js8call._debug)
 
     def register_rx_callback(self, callback, message_type=Message.RX_DIRECTED):
         if message_type not in self.callbacks.keys():
