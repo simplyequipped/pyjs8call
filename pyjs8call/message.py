@@ -63,8 +63,10 @@ class Message:
     STATUS_QUEUED           = 'queued'
     STATUS_SENDING          = 'sending'
     STATUS_SENT             = 'sent'
+    STATUS_FAILED           = 'failed'
     STATUS_RECEIVED         = 'received'
-    STATUSES = [STATUS_CREATED, STATUS_QUEUED, STATUS_SENDING, STATUS_SENT, STATUS_RECEIVED]
+    STATUS_ERROR            = 'error'
+    STATUSES = [STATUS_CREATED, STATUS_QUEUED, STATUS_SENDING, STATUS_SENT, STATUS_FAILED, STATUS_RECEIVED, STATUS_ERROR]
 
     # constants
     EOM = '♢'   # end of message, end of transmission
