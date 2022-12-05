@@ -43,7 +43,7 @@ class Client:
             time.sleep(0.25)
             self.start()
 
-    def start(self):
+    def start(self, debug=False):
         # enable TCP connection
         self.config.set('Configuration', 'TCPEnabled', 'true')
         self.config.set('Configuration', 'TCPServer', self.host)
@@ -55,10 +55,15 @@ class Client:
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
         self.online = True
 
+        if debug:
+            self.js8call._debug = True
+
         # initialize rx thread
         rx_thread = threading.Thread(target=self._rx)
         rx_thread.setDaemon(True)
         rx_thread.start()
+
+        time.sleep(0.5)
 
         # start station spot monitor
         self.spot_monitor = pyjs8call.SpotMonitor(self)
@@ -91,8 +96,8 @@ class Client:
         while self.online:
             msg = self.js8call.get_next_message()
 
-            if msg != None and msg['type'] in self.callbacks.keys():
-                for callback in self.callbacks[msg['type']]:
+            if msg != None and msg.type in self.callbacks.keys():
+                for callback in self.callbacks[msg.type]:
                     callback(msg)
 
             time.sleep(0.1)
@@ -113,30 +118,26 @@ class Client:
             self.tx_monitor.monitor(msg.value)
 
         self.js8call.send(msg)
+
     def clean_rx_message_text(self, msg):
         if msg == None:
             return None
-
-        # nothing to clean
-        elif 'value' not in msg.keys() or msg['value'] == None or msg['value'] == '':
+        elif msg.value == None or msg.value == '':
+            # nothing to clean
             return msg
-
         # already cleaned
-        elif msg['value'] != msg['text']:
+        elif msg.value != msg.text:
             return msg
 
-        # start with msg ['value'] since pyjs8call.Message standardizes on this
-        message = msg['value']
-        # remove 'from' callsign
-        message = message.split(':')[1]
-        # strip whitespace
-        message = message.strip()
-        # remove 'to' callsign or group
+        message = msg.value
+        # remove origin callsign
+        message = message.split(':')[1].strip()
+        # remove destination callsign or group
         message = ' '.join(message.split(' ')[1:])
         # strip remaining spaces and end-of-message symbol
         message = message.strip(' ' + Message.EOM)
 
-        msg['text'] = message
+        msg.set('text', message)
         return msg
     
     def send_heartbeat(self, grid=None):
@@ -368,7 +369,7 @@ class Client:
         if speed in speeds.keys():
             return speeds[int(speed)]
         else:
-            raise ValueError('Invalid speed ' + speed)
+            raise ValueError('Invalid speed ' + str(speed))
 
     # speed: slow, normal, fast, turbo
     def set_speed(self, speed):
@@ -377,7 +378,7 @@ class Client:
             if speed in speeds.keys():
                 speed = speeds[speed]
             else:
-                raise ValueError('Invalid speed: ' + speed)
+                raise ValueError('Invalid speed: ' + str(speed))
 
         msg = Message()
         msg.type = Message.MODE_SET_SPEED

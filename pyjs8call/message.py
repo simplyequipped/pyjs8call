@@ -1,6 +1,6 @@
 import json
-import time
 from datetime import datetime, timezone
+import secrets
 
 
 class Message:
@@ -45,6 +45,7 @@ class Message:
     STATION_CALLSIGN        = 'STATION.CALLSIGN'
     STATION_GRID            = 'STATION.GRID'
     STATION_INFO            = 'STATION.INFO'
+    STATION_STATUS          = 'STATION.STATUS'
     MODE_SPEED              = 'MODE.SPEED'
     
     RX_TYPES = [MESSAGES, INBOX_MESSAGES, RX_SPOT, RX_DIRECTED, RX_SELECTED_CALL, RX_CALL_ACTIVITY, RX_BAND_ACTIVITY, RX_ACTIVITY, RX_TEXT, TX_TEXT, TX_FRAME, RIG_FREQ, RIG_PTT, STATION_CALLSIGN, STATION_GRID, STATION_INFO, MODE_SPEED]
@@ -57,77 +58,112 @@ class Message:
     CMD_QUERY_CALL          = 'QUERY CALL'
     COMMANDS = [CMD_SNR, CMD_GRID, CMD_HEARING, CMD_QUERY_CALL]
 
+    # status types
+    STATUS_CREATED          = 'created'
+    STATUS_QUEUED           = 'queued'
+    STATUS_SENDING          = 'sending'
+    STATUS_SENT             = 'sent'
+    STATUS_RECEIVED         = 'received'
+    STATUSES = [STATUS_CREATED, STATUS_QUEUED, STATUS_SENDING, STATUS_SENT, STATUS_RECEIVED]
+
     # constants
     EOM = '♢'   # end of message, end of transmission
     ERR = '…'   # error
 
     def __init__(self, destination=None, value=None):
+        self.id = secrets.token_urlsafe(16)
         self.type = Message.TX_SEND_MESSAGE
         self.destination = destination
         self.value = value
         self.time = datetime.now(timezone.utc).timestamp()
-        self.snr = None
-        self.messages = None
-        self.band_activity = None
-        self.call_activity = None
-        self.params = {
-            'FREQ'      : None,
-            'DIAL'      : None,
-            'OFFSET'    : None,
-            'CALL'      : None,
-            'GRID'      : None,
-            'SNR'       : None,
-            'FROM'      : None,
-            'TO'        : None,
-            'UTC'       : None,
-            'CMD'       : None,
-            'TEXT'      : None,
-            'SPEED'     : None,
-            'EXTRA'     : None
-        }
+        self.params = {}
+        self.attributes = ['id', 'type', 'to', 'value', 'time', 'params']
+        self.packed = None
+        self.status = Message.STATUS_CREATED
+        
+        # initialize common msg fields
+        attrs = [
+            'freq',
+            'dial',
+            'offset',
+            'call',
+            'grid',
+            'snr',
+            'from',
+            'origin',
+            'utc',
+            'cmd',
+            'text',
+            'speed',
+            'extra',
+            'messages',
+            'band_activity',
+            'call_activity'
+        ]
 
+        for attr in attrs:
+            self.set(attr, None)
+
+        # uppercase values in tx msg
         if self.destination != None:
             self.destination = self.destination.upper()
-
         if self.value != None:
             self.value = self.value.upper()
 
-    def data(self):
-        data = {
-            'type' : self.type,
-            'value' : self.value,
-            'time' : self.time,
-            'messages' : self.messages,
-            'band_activity' : self.band_activity,
-            'call_activity' : self.call_activity
-        }
+    def set(self, attribute, value):
+        attribute = attribute.lower()
+        setattr(self, attribute, value)
 
-        for param, value in self.params.items():
-            data[param.lower()] = value
+        if attribute not in self.attributes:
+            self.attributes.append(attribute)
 
-        # handle CALL param for consistency
-        if data['call'] != None and data['from'] == None:
-            data['from'] = data['call']
+        # set 'from' = 'call' for consistency
+        if attribute == 'call' and value != None and self.get('from') == None:
+            self.set('from', value)
+
+        # Message.from cannot be called directly, use origin instead
+        if attribute == 'from':
+            self.set('origin', value)
+
+    def get(self, attribute):
+        return getattr(self, attribute, None)
+
+    def dict(self, exclude=[]):
+        data = {}
+        for attribute in self.attributes:
+            # skip attribues excluded or already in dict
+            if attribute in exclude or attribute in data.keys():
+                continue
+
+            value = self.get(attribute)
+
+            # handle special cases
+            if attribute == 'value':
+                # replace None with empty string, 'value' is always included
+                if value == None:
+                    value = ''
+                # build directed message
+                elif self.type == Message.TX_SEND_MESSAGE and self.destination != None:
+                    value = self.destination + ' ' + value
+
+            # add to dict if value is set
+            if value != None:
+                data[attribute] = value
 
         return data
 
-    def pack(self):
-        if self.value == None:
-            self.value = ''
-        # handle directed message value
-        elif self.type == Message.TX_SEND_MESSAGE and self.destination != None:
-            self.value = self.destination + ' ' + self.value
-
-        packed = {
-            'type' : self.type,
-            'value' : self.value,
-            'params' : {param.upper(): value for (param, value) in self.params.items() if value != None}
-        }
-
-        packed = json.dumps(packed) + '\r\n'
+    def pack(self, exclude=[]):
+        # exclude attributes from packed data
+        exclude.extend(['id', 'destination', 'time', 'from', 'origin'])
+        data = self.dict(exclude = exclude)
+        # convert dict to json string
+        packed = json.dumps(data) + '\r\n'
+        # return bytes
         return packed.encode('utf-8')
-        
+
+    # call using try/catch to handle parse errors during rx processing
     def parse(self, msg_str):
+        self.raw = msg_str
         msg = json.loads(msg_str)
 
         self.type = msg['type'].strip()
@@ -154,7 +190,7 @@ class Message:
                     continue
 
                 call = {
-                    'callsign' : key,
+                    'from' : key,
                     'grid' : value['GRID'],
                     'snr' : value['SNR'],
                     'time' : value['UTC']
@@ -162,7 +198,7 @@ class Message:
 
                 self.call_activity.append(call)
 
-        #handle band activity
+        # handle band activity
         elif self.type == Message.RX_BAND_ACTIVITY:
             self.band_activity = []
             for key, value in msg['params'].items():
@@ -175,7 +211,7 @@ class Message:
                         'offset' : value['OFFSET'],
                         'snr' : value['SNR'],
                         'time' : value['UTC'],
-                        'message' : value['TEXT']
+                        'text' : value['TEXT']
                     }
 
                     self.band_activity.append(data)
@@ -183,35 +219,28 @@ class Message:
                     continue
 
         else:
-
-            # get message time or set current UTC time
-            #if 'time' in msg:
-            #    self.time = msg['time']
-            #else:
-            #    self.time = datetime.now(timezone.utc).timestamp()
-
-            if 'value' in msg:
+            if 'value' in msg.keys():
                 self.value = msg['value'].strip()
 
-            # parse remaining message parameters
+            # parse remaining msg fields
             for param, value in msg['params'].items():
+                param = param.strip()
                 if isinstance(value, str):
-                    self.params[param.strip()] = value.strip()
-                else:
-                    self.params[param.strip()] = value
+                    value = value.strip()
 
-            #TODO review, not clear what is going on here
-            if self.params['CMD'] == 'GRID':
-                grid = self.params['TEXT'].split()
+                self.set(param, value)
+
+            #TODO copied from js8net, test
+            if self.cmd == 'GRID' and self.text != None:
+                grid = self.text.split()
                 if len(grid) >= 4:
                     grid = grid[3]
                 
-                #TODO expand error checking
                 if Message.ERR in grid:
-                    self.params['GRID'] = None
+                    self.set('grid', None)
                 else:
-                    self.params['GRID'] = grid
+                    self.set('grid', grid)
 
-        return self.data()
-                
-        
+        # allow usage like: msg = Message().parse(rx_str)
+        return self
+ 

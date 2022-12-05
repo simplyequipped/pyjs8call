@@ -75,24 +75,29 @@ class JS8Call:
         self._socket.settimeout(1)
 
     def send(self, msg):
+        msg.status = Message.STATUS_QUEUED
+
         self._tx_queue_lock.acquire()
         self._tx_queue.append(msg)
         self._tx_queue_lock.release()
         
     def append_to_rx_queue(self, msg):
+        msg.status = Message.STATUS_QUEUED
+
         self._rx_queue_lock.acquire()
         self._rx_queue.append(msg)
         self._rx_queue_lock.release()
 
     def get_next_message(self):
-        msg = None
-
         if len(self._rx_queue) > 0:
             self._rx_queue_lock.acquire()
             msg = self._rx_queue.pop(0)
             self._rx_queue_lock.release()
 
-        return msg
+            msg.status = Message.STATUS_RECEIVED
+            return msg
+        else:
+            return None
 
     def watch(self, item):
         if item not in self.state.keys():
@@ -117,23 +122,20 @@ class JS8Call:
 
     def spot(self, msg):
         new_spot = {
-            'from'      : msg['from'],
-            'to'        : msg['to'],
-            'freq'      : msg['dial'],
-            'offset'    : msg['offset'],
-            'time'      : msg['time'],
-            'grid'      : msg['grid'],
-            'snr'       : msg['snr']
+            'from'      : msg.origin,
+            'to'        : msg.destination,
+            'freq'      : msg.dial,
+            'offset'    : msg.offset,
+            'time'      : msg.time,
+            'grid'      : msg.grid,
+            'snr'       : msg.snr
         }
 
         try:
-            new_spot['speed'] = msg['speed']
+            new_spot['speed'] = msg.speed
         except:
             new_spot['speed'] = None
         
-        if new_spot['time'] == None or new_spot['time'] == '':
-            new_spot['time'] = datetime.now(timezone.utc).timestamp()
-
         duplicate = False
         for i in range(len(self._recent_spots)):
             recent_spot = self._recent_spots.pop(0)
@@ -183,17 +185,21 @@ class JS8Call:
 
             for msg in self._tx_queue.copy():
 
-                #TODO other msg types?
                 # hold off on sending messages while there is something being sent (text in the tx text field)
                 if msg.type == Message.TX_SEND_MESSAGE and (tx_text or force_tx_text):
-                    next
+                    continue
                 else:
-                    # pack and send msg via socket
-                    self._socket.sendall(msg.pack())
+                    # pack msg
+                    packed = msg.pack()
 
+                    # print packed msg in debug mode
+                    if self._debug:
+                        print('TX: ' + packed.decode('utf-8').strip())
+
+                    # send msg via socket
+                    self._socket.sendall(packed)
                     # remove msg from queue
                     self._tx_queue.remove(msg)
-
                     # make sure the next queued msg doesn't get sent before the tx text state updates
                     if msg.type == Message.TX_SEND_MESSAGE:
                         force_tx_text = True
@@ -228,7 +234,7 @@ class JS8Call:
             self._last_rx_timestamp = time.time()
             self.connected = True
 
-            #split received data into messages
+            # split received data into messages
             msgs = data_str.split('\n')
 
             for msg_str in msgs:
@@ -243,13 +249,12 @@ class JS8Call:
                     continue
 
                 # if error in message value, stop processing
-                if msg['value'] != None and Message.ERR in msg['value']:
+                if msg.value != None and Message.ERR in msg.value:
                     continue
 
-                # print msg in debug mode, without None values
+                # print msg in debug mode
                 if self._debug:
-                    min_msg = {key:value for key, value in msg.items() if value != None}
-                    print(min_msg)
+                    print('RX: ' + str(msg.dict()))
 
                 self._process_message(msg)
 
@@ -257,9 +262,9 @@ class JS8Call:
 
     def _process_message(self, msg):
 
-        ### command handling
+        ### command handling ###
 
-        if msg['cmd'] == Message.CMD_HEARING:
+        if msg.cmd == Message.CMD_HEARING:
             #TODO validate response structure
             #if not Message.ERR in msg.params['TEXT']:
             #    hearing = msg.params['TEXT'].split()[3:]
@@ -276,20 +281,21 @@ class JS8Call:
         #    # spot message
         #    self.spot(msg)
                 
-        elif msg['cmd'] in Message.COMMANDS:
+        elif msg.cmd in Message.COMMANDS:
             # spot message
             self.spot(msg)
 
-        ### message type handling
 
-        if msg['type'] == Message.INBOX_MESSAGES:
-            self.state['inbox'] = msg['messages']
+        ### message type handling ###
 
-        elif msg['type'] == Message.RX_SPOT:
+        if msg.type == Message.INBOX_MESSAGES:
+            self.state['inbox'] = msg.messages
+
+        elif msg.type == Message.RX_SPOT:
             # spot message
             self.spot(msg)
 
-        elif msg['type'] == Message.RX_DIRECTED:
+        elif msg.type == Message.RX_DIRECTED:
             # clean msg text to remove callsigns, etc
             if self._client.clean_directed_text:
                 msg = self._client.clean_rx_message_text(msg)
@@ -297,53 +303,57 @@ class JS8Call:
             # spot message
             self.spot(msg)
 
-        elif msg['type'] == Message.RIG_FREQ:
-            self.state['dial'] = msg['dial']
-            self.state['freq'] = msg['freq']
-            self.state['offset'] = msg['offset']
+        elif msg.type == Message.RIG_FREQ:
+            self.state['dial'] = msg.dial
+            self.state['freq'] = msg.freq
+            self.state['offset'] = msg.offset
 
-        elif msg['type'] == Message.RIG_PTT:
-            if msg['value'] == 'on':
+        elif msg.type == Message.RIG_PTT:
+            if msg.value == 'on':
                 self.state['ptt'] = True
             else:
                 self.state['ptt'] = False
 
-        elif msg['type'] == Message.STATION_CALLSIGN:
-            self.state['callsign'] = msg['value']
+        elif msg.type == Message.STATION_STATUS:
+            self.state['dial'] = msg.dial
+            self.state['freq'] = msg.freq
+            self.state['offset'] = msg.offset
+            self.state['speed'] = msg.speed
 
-        elif msg['type'] == Message.STATION_GRID:
-            self.state['grid'] = msg['value']
+        elif msg.type == Message.STATION_CALLSIGN:
+            self.state['callsign'] = msg.value
 
-        elif msg['type'] == Message.STATION_INFO:
-            self.state['info'] = msg['value']
+        elif msg.type == Message.STATION_GRID:
+            self.state['grid'] = msg.value
 
-        elif msg['type'] == Message.MODE_SPEED:
-            self.state['speed'] = msg['speed']
+        elif msg.type == Message.STATION_INFO:
+            self.state['info'] = msg.value
 
-        elif msg['type'] == Message.TX_TEXT:
-            self.state['tx_text'] = msg['value']
+        elif msg.type == Message.MODE_SPEED:
+            self.state['speed'] = msg.speed
 
-        elif msg['type'] == Message.RX_TEXT:
-            self.state['rx_text'] = msg['value']
+        elif msg.type == Message.TX_TEXT:
+            self.state['tx_text'] = msg.value
 
-        elif msg['type'] == Message.RX_SELECTED_CALL:
-            self.state['selected_call'] = msg['value']
+        elif msg.type == Message.RX_TEXT:
+            self.state['rx_text'] = msg.value
 
-        elif msg['type'] == Message.RX_CALL_ACTIVITY:
-            self.state['call_activity'] = msg['call_activity']
+        elif msg.type == Message.RX_SELECTED_CALL:
+            self.state['selected_call'] = msg.value
 
-        elif msg['type'] == Message.RX_BAND_ACTIVITY:
-            self.state['band_activity'] = msg['band_activity']
+        elif msg.type == Message.RX_CALL_ACTIVITY:
+            self.state['call_activity'] = msg.call_activity
+
+        elif msg.type == Message.RX_BAND_ACTIVITY:
+            self.state['band_activity'] = msg.band_activity
 
         #TODO should this be used? use RX.BAND_ACTIVITY for now
         #TODO note, RX.SPOT received immediately after RX.ACTIVITY in some cases
-        elif msg['type'] == Message.RX_ACTIVITY:
+        elif msg.type == Message.RX_ACTIVITY:
             pass
 
-        elif msg['type'] == Message.TX_FRAME:
+        elif msg.type == Message.TX_FRAME:
             self._client.window_monitor.process_tx_frame(msg)
 
-        self._rx_queue_lock.acquire()
-        self._rx_queue.append(msg)
-        self._rx_queue_lock.release()
+        self.append_to_rx_queue(msg)
 
