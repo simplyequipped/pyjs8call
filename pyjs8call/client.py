@@ -115,7 +115,7 @@ class Client:
         msg = Message(destination = destination, value = message)
 
         if self.monitor_directed_tx:
-            self.tx_monitor.monitor(msg.value)
+            self.tx_monitor.monitor(msg)
 
         self.js8call.send(msg)
 
