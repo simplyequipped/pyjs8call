@@ -2,8 +2,11 @@
 
 A Python package that interfaces with the JS8Call API to control the application. See the below examples, the code in example.py, and the code in pyjs8call/client.py for more information until additonal documentation is available.
 
-The following modules are loaded and enabled by default. Some setup (i.e. setting callback functions) is required to used certain features.
+&nbsp;  
 
+### Modules
+
+The following modules are loaded and enabled by default. Some setup (i.e. setting callback functions) is required to used certain features.
 
 **Application Monitor**
 
@@ -28,6 +31,8 @@ Monitor recent activity and automatically move the offset frequency to an unsed 
 **TX Monitor**
 
 Monitor the JS8Call transmit text box for given messages. Notification of a completed message transmission is handled via callback function.
+
+&nbsp;  
 
 ### Examples
 
@@ -87,11 +92,11 @@ Using the tx monitor:
 ```
 import pyjs8call
 
-# callback function for complete transmissions
+# callback function for complete tx
 def tx_complete(msg):
     print('Message ' + msg.id + ' to ' + msg.destination + ' sent')
     
-# callback function for failed transmissions
+# callback function for failed (timed out) tx
 def tx_failed(msg):
     print('Message ' + msg.id + ' to ' + msg.destination + ' failed')
     
@@ -106,7 +111,7 @@ js8call.tx_monitor.set_tx_failed_callback(tx_failed)
 msg = js8call.send_directed_message('KT1RUN', 'Thanks for the great content')
 js8call.tx_monitor.monitor(msg)
 
-# monitor tx for directed messages automatically
+# monitor directed message tx automatically
 js8call.monitor_directed_tx = True
 js8call.send_directed_message('OH8STN', 'Thanks for the great content')
 ```
