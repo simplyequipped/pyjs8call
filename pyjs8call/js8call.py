@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 
 import pyjs8call
 from pyjs8call import Message
+from pyjs8call import Spot
 
-#TODO cull spots occasionally?
 
 class JS8Call:
 
@@ -28,6 +28,7 @@ class JS8Call:
         self._debug = False
         self.connected = False
         self.spots = []
+        self.max_spots = 1000
         self._recent_spots = []
 
         self.state = {
@@ -96,8 +97,6 @@ class JS8Call:
 
             msg.status = Message.STATUS_RECEIVED
             return msg
-        else:
-            return None
 
     def watch(self, item):
         if item not in self.state.keys():
@@ -121,43 +120,21 @@ class JS8Call:
         return self.state[item]
 
     def spot(self, msg):
-        new_spot = {
-            'from'      : msg.origin,
-            'to'        : msg.destination,
-            'freq'      : msg.dial,
-            'offset'    : msg.offset,
-            'time'      : msg.time,
-            'grid'      : msg.grid,
-            'snr'       : msg.snr
-        }
+        # cull recent spots
+        self._recent_spots = [spot for spot in self._recent_spots if spot.age() < 10]
 
-        try:
-            new_spot['speed'] = msg.speed
-        except:
-            new_spot['speed'] = None
-        
-        duplicate = False
-        for i in range(len(self._recent_spots)):
-            recent_spot = self._recent_spots.pop(0)
-            # remove spots older than 10 seconds
-            if recent_spot['time'] > (datetime.now(timezone.utc).timestamp() - 10):
-                self._recent_spots.append(recent_spot)  
+        new_spot = Spot(msg)
 
-            # prevent duplicate spots
-            if (
-                recent_spot['from'] == new_spot['from'] and
-                recent_spot['offset'] == new_spot['offset'] and
-                recent_spot['snr'] == new_spot['snr']
-            ):
-                duplicate = True
-
-        if not duplicate:
+        if new_spot not in self._recent_spots:
             self._recent_spots.append(new_spot)
-            self.spots.append(new_spot)
+
+        # cull spots
+        if len(self.spots) > self.max_spots:
+            self.spots.pop(0)
 
     def _hb(self):
         while self.online:
-            # if no recent rx,check the connection by making a request
+            # if no recent rx, check the connection by making a request
             timeout = self._last_rx_timestamp + self._socket_heartbeat_delay
             if time.time() > timeout:
                 self.connected = False

@@ -42,7 +42,7 @@ class SpotMonitor:
 
                 if self._watch_callback != None:
                     for spot in self._new_spots:
-                        if spot['from'] in self._station_watch_list:
+                        if spot.origin in self._station_watch_list:
                             self._watch_callback(spot)
 
             time.sleep(self.spot_update_delay)
