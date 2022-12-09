@@ -108,6 +108,7 @@ class Client:
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(value = message)
         self.js8call.send(msg)
+        return msg
     
     def send_directed_message(self, destination, message):
         # msg.type = Message.TX_SEND_MESSAGE by default
@@ -117,6 +118,7 @@ class Client:
             self.tx_monitor.monitor(msg)
 
         self.js8call.send(msg)
+        return msg
 
     def clean_rx_message_text(self, msg):
         if msg == None:
@@ -145,22 +147,22 @@ class Client:
         if len(grid) > 4:
             grid = grid[:4]
 
-        self.send_message('@HB HEARTBEAT ' + grid)
+        return self.send_message('@HB HEARTBEAT ' + grid)
 
     def send_aprs_grid(self, grid):
-        self.send_message('@APRSIS GRID ' + grid)
+        return self.send_message('@APRSIS GRID ' + grid)
 
     def send_aprs_sms(self, phone, message):
         phone = str(phone).replace('-', '')
-        self.send_message('@APRSIS CMD :SMSGATE   :@' + phone + ' ' + message)
+        return self.send_message('@APRSIS CMD :SMSGATE   :@' + phone + ' ' + message)
     
     def send_aprs_email(self, email, message):
-        self.send_message('@APRSIS CMD :EMAIL-2   :' + email + ' ' + message)
+        return self.send_message('@APRSIS CMD :EMAIL-2   :' + email + ' ' + message)
     
     # freq in kHz
     def send_aprs_pota_spot(self, park, freq, mode, message):
         callsign = self.get_callsign()
-        self.send_message('@APRSIS CMD :POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode + ' ' + message)
+        return self.send_message('@APRSIS CMD :POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode + ' ' + message)
     
     def get_inbox_messages(self):
         msg = Message()
@@ -171,11 +173,11 @@ class Client:
 
     def send_inbox_message(self, destination, message):
         value = destination + ' MSG ' + message
-        self.send_message(value)
+        return self.send_message(value)
 
     def forward_inbox_message(self, destination, forward, message):
         value = destination + ' MSG TO:' + forward + ' ' + message
-        self.send_message(value)
+        return self.send_message(value)
 
     def store_local_inbox_message(self, destination, message):
         msg = Message()
@@ -188,22 +190,22 @@ class Client:
 
     def query_call(self, destination, callsign):
         message = 'QUERY CALL ' + callsign + '?'
-        self.send_directed_message(destination, message)
+        return self.send_directed_message(destination, message)
 
     def query_messages(self, destination):
-        self.send_directed_message(destination, 'QUERY MSGS')
+        return self.send_directed_message(destination, 'QUERY MSGS')
 
     def query_message_id(self, destination, msg_id):
         message = 'QUERY MSG ' + msg_id
-        self.send_directed_message(destination, message)
+        return self.send_directed_message(destination, message)
 
     def query_heard(self, destination):
-        self.send_directed_message(destination, 'HEARD?')
+        return self.send_directed_message(destination, 'HEARD?')
 
     # destinations is a list of callsigns in order (first relay, second relay, ...)
     def relay_message(self, destinations, message):
         destinations = '>'.join(destinations)
-        self.send_directed_message(destinations, message)
+        return self.send_directed_message(destinations, message)
 
     def get_station_spots(self, station=None, since_timestamp=0, from_only=False):
         spots = []
@@ -389,10 +391,9 @@ class Client:
     def get_bandwidth(self, speed=None):
         if speed == None:
             speed = self.get_speed(update = False)
-        else:
-            if isinstance(speed, int):
-                speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo'}
-                speed = speeds[speed]
+        elif isinstance(speed, int):
+            speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo'}
+            speed = speeds[speed]
 
         bandwidths = {'slow':25, 'normal':50, 'fast':80, 'turbo':160}
 
