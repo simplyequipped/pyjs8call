@@ -103,12 +103,12 @@ js8call.tx_monitor.set_tx_complete_callback(tx_complete)
 js8call.tx_monitor.set_tx_failed_callback(tx_failed)
 
 # monitor message tx manually
-msg = js8call.send_directed_message('KT1RUN', 'Thanks for the great content Gaston!')
+msg = js8call.send_directed_message('KT1RUN', 'Thanks for the great content')
 js8call.tx_monitor.monitor(msg)
 
 # monitor tx for directed messages automatically
 js8call.monitor_directed_tx = True
-js8call.send_directed_message('KT1RUN', 'Thanks for the great content Gaston!')
+js8call.send_directed_message('OH8STN', 'Thanks for the great content')
 ```
 
 ### Acknowledgements
