@@ -27,7 +27,7 @@ Monitor recent activity and automatically move the offset frequency to an unsed 
 
 **TX Monitor**
 
-Monitor the JS8Call transmit text box for given messages. Notification of a completed message transmission is handled via callback function. If only message text is provided, the text will be returned via callback. If a unique identifier is provided in addition to the text, the identifier will be returned via callback.
+Monitor the JS8Call transmit text box for given messages. Notification of a completed message transmission is handled via callback function.
 
 ### Examples
 
@@ -48,7 +48,7 @@ print('Offset: ' + str(offset))
 # get inbox messages
 inbox = js8call.get_inbox_messages()
 for message in inbox:
-  print(message)
+    print(message)
 
 # send a directed message
 js8call.send_directed_message('N0GQ', 'Thanks for your work on js8net')
@@ -60,12 +60,12 @@ import pyjs8call
 
 # callback function for all new spots
 def new_spots(spots):
-  for spot in spots:
-    print('Spotted ' + spot['from] + ' with a ' + str(spot['snr']) + 'dB SNR')
+    for spot in spots:
+        print('Spotted ' + spot['from] + ' with a ' + str(spot['snr']) + 'dB SNR')
     
 # callback function for watched station spots
 def station_spotted(spot):
-  print(spot['from'] + ' spotted!')
+    print(spot['from'] + ' spotted!')
     
 js8call = pyjs8call.Client()
 js8call.start()
@@ -81,6 +81,34 @@ js8call.spot_monitor.add_station_watch('K6ARK')
 
 # remove a station watcher, no hard feelings Adam :)
 js8call.spot_monitor.remove_station_watch('K6ARK')
+```
+
+Using the tx monitor:
+```
+import pyjs8call
+
+# callback function for complete transmissions
+def tx_complete(msg):
+    print('Message ' + str(msg.id) + ' to ' + msg.destination + ' sent')
+    
+# callback function for failed transmissions
+def tx_failed(msg):
+    print('Message ' + str(msg.id) + ' to ' + msg.destination + ' failed')
+    
+js8call = pyjs8call.Client()
+js8call.start()
+
+# set tx monitor callbacks
+js8call.tx_monitor.set_tx_complete_callback(tx_complete)
+js8call.tx_monitor.set_tx_failed_callback(tx_failed)
+
+# monitor message tx manually
+msg = js8call.send_directed_message('KT1RUN', 'Thanks for the great content Gaston!')
+js8call.tx_monitor.monitor(msg)
+
+# monitor tx for directed messages automatically
+js8call.monitor_directed_tx = True
+js8call.send_directed_message('KT1RUN', 'Thanks for the great content Gaston!')
 ```
 
 ### Acknowledgements
