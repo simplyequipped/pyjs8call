@@ -89,11 +89,11 @@ import pyjs8call
 
 # callback function for complete transmissions
 def tx_complete(msg):
-    print('Message ' + str(msg.id) + ' to ' + msg.destination + ' sent')
+    print('Message ' + msg.id + ' to ' + msg.destination + ' sent')
     
 # callback function for failed transmissions
 def tx_failed(msg):
-    print('Message ' + str(msg.id) + ' to ' + msg.destination + ' failed')
+    print('Message ' + msg.id + ' to ' + msg.destination + ' failed')
     
 js8call = pyjs8call.Client()
 js8call.start()
