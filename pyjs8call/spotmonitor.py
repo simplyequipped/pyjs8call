@@ -34,8 +34,10 @@ class SpotMonitor:
 
     def _monitor(self):
         while self._client.online:
-            self._new_spots = self._client.get_station_spots(since_timestamp = self._last_spot_update_timestamp)
-            self._last_spot_update_timestamp = datetime.now(timezone.utc).timestamp()
+            now = datetime.now(timezone.utc).timestamp()
+            time_since_last_update = now - self._last_spot_update_timestamp
+            self._new_spots = self._client.get_station_spots(max_age = time_since_last_update)
+            self._last_spot_update_timestamp = now
             if len(self._new_spots) > 0:
                 if self._new_spot_callback != None:
                     self._new_spot_callback(self._new_spots)
