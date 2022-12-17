@@ -20,7 +20,7 @@ class WindowMonitor:
         self.window_callback = callback
 
     def process_tx_frame(self, msg):
-        self.last_tx_frame_timestamp = msg['time']
+        self.last_tx_frame_timestamp = msg.time
 
     def next_window_start(self):
         if self.last_tx_frame_timestamp == 0:
