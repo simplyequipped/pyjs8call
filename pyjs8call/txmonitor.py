@@ -12,18 +12,22 @@ class TxMonitor:
         self.msg_queue_lock = threading.Lock()
         # initialize msg max age to 30 tx cycles in fast mode (10 sec cycles)
         self.msg_max_age = 10 * 30 # 5 minutes
-        self.tx_complete_callback = None
-        self.tx_failed_callback = None
+        self.status_change_callback = None
+        #self.tx_complete_callback = None
+        #self.tx_failed_callback = None
 
         monitor_thread = threading.Thread(target=self._monitor)
         monitor_thread.setDaemon(True)
         monitor_thread.start()
 
-    def set_tx_complete_callback(self, callback):
-        self.tx_complete_callback = callback
+    def set_status_change_callback(self, callback):
+        self.status_change_callback = callback
 
-    def set_tx_failed_callback(self, callback):
-        self.tx_failed_callback = callback
+    #def set_tx_complete_callback(self, callback):
+    #    self.tx_complete_callback = callback
+
+    #def set_tx_failed_callback(self, callback):
+    #    self.tx_failed_callback = callback
 
     def monitor(self, msg):
         msg.status = Message.STATUS_QUEUED
@@ -41,7 +45,10 @@ class TxMonitor:
             if tx_text == None:
                 continue
 
-            tx_text.strip(' ' + Message.EOM)
+            # when a msg is the tx text, drop the first callsign and strip spaces and end-of-message
+            # original format: 'callsign: callsign  message'
+            if ':' in tx_text:
+                tx_text = tx_text.split(':')[1].strip(' ' + Message.EOM)
             
             # update msg max age based on speed setting (30 tx cycles)
             #    3 min in turbo mode (6 sec cycles)
@@ -56,25 +63,31 @@ class TxMonitor:
             # process msg queue
             for i in range(len(self.msg_queue)):
                 msg = self.msg_queue.pop(0)
+                msg_value = msg.destination + '  ' + msg.value.strip()
                 drop = False
 
-                if msg.value in tx_text and msg.status == Message.STATUS_QUEUED:
+                if msg_value == tx_text and msg.status == Message.STATUS_QUEUED:
                     # msg text was added to js8call tx field, sending
                     msg.status = Message.STATUS_SENDING
+
+                    if self.status_change_callback != None:
+                        self.status_change_callback(msg)
                         
-                elif msg.value not in tx_text and msg.status == Message.STATUS_SENDING:
+                elif msg_value != tx_text and msg.status == Message.STATUS_SENDING:
                     # msg text was removed from js8call tx field, sent
                     msg.status = Message.STATUS_SENT
 
-                    if self.tx_complete_callback != None:
-                        self.tx_complete_callback(msg)
+                    if self.status_change_callback != None:
+                        self.status_change_callback(msg)
                         
                     drop = True
                        
                 elif time.time() > msg.timestamp + self.msg_max_age:
                     # msg sending failed
-                    if self.tx_failed_callback != None:
-                        self.tx_failed_callback(msg)
+                    msg.status = Message.STATUS_FAILED
+
+                    if self.status_change_callback != None:
+                        self.status_change_callback(msg)
                         
                     drop = True
 
