@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+import time
 
 
 class Spot:
@@ -9,6 +9,7 @@ class Spot:
         self.freq = msg.freq
         self.offset = msg.offset
         self.time = msg.time
+        self.timestamp = msg.timestamp
         self.grid = self.grid
         self.snr = self.snr
         self.speed = msg.speed
@@ -32,6 +33,5 @@ class Spot:
         return bool(self.time > spot.time)
 
     def age(self):
-        now = datetime.now(timezone.utc).timestamp()
-        return now - self.time
+        return time.time() - self.timestamp
 
