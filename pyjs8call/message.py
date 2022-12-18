@@ -113,6 +113,7 @@ class Message:
             self.destination = self.destination.upper()
         if self.value != None:
             self.value = self.value.upper()
+            self.text = self.value
 
     def set(self, attribute, value):
         attribute = attribute.lower()
@@ -157,8 +158,10 @@ class Message:
         return data
 
     def pack(self, exclude=[]):
+        #TODO make sure 'text' is not used!
+
         # exclude attributes from packed data
-        exclude.extend(['id', 'destination', 'time', 'from', 'origin'])
+        exclude.extend(['id', 'destination', 'time', 'from', 'origin', 'text'])
         data = self.dict(exclude = exclude)
         # convert dict to json string
         packed = json.dumps(data) + '\r\n'
