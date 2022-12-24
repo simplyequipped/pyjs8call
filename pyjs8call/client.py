@@ -54,7 +54,8 @@ class Client:
         self.online = True
 
         if debug:
-            self.js8call._debug = True
+            self.js8call._debug_rx = True
+            self.js8call._debug_tx = True
 
         # initialize rx thread
         rx_thread = threading.Thread(target=self._rx)

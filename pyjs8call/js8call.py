@@ -25,7 +25,8 @@ class JS8Call:
         self._last_rx_timestamp = 0
         self._socket_heartbeat_delay = 60 * 5 # seconds
         self._app = None
-        self._debug = False
+        self._debug_rx = False
+        self._debug_tx = False
         self.connected = False
         self.spots = []
         self.max_spots = 1000
@@ -170,7 +171,7 @@ class JS8Call:
                     packed = msg.pack()
 
                     # print packed msg in debug mode
-                    if self._debug:
+                    if self._debug_tx:
                         print('TX: ' + packed.decode('utf-8').strip())
 
                     # send msg via socket
@@ -230,7 +231,7 @@ class JS8Call:
                     continue
 
                 # print msg in debug mode
-                if self._debug:
+                if self._debug_rx:
                     print('RX: ' + str(msg.dict()))
 
                 self._process_message(msg)
