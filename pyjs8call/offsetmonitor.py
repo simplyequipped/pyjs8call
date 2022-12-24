@@ -49,13 +49,13 @@ class OffsetMonitor:
 
         # build list of offsets and associated bandwidths
         for spot in activity:
-            if spot['speed'] == None:
+            if spot.speed == None:
                 # assume worst case bandwidth: turbo mode = 160 Hz
-                 signal = (spot['offset'], 160)
+                 signal = (spot.offset, 160)
             else:
                 # map signal speed to signal bandwidth
-                bandwidth = self.client.get_bandwidth(speed = spot['speed'])
-                signal = (spot['offset'], bandwidth)
+                bandwidth = self.client.get_bandwidth(speed = spot.speed)
+                signal = (spot.offset, bandwidth)
 
             signals.append(signal)
         
