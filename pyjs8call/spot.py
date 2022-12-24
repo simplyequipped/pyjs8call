@@ -10,8 +10,8 @@ class Spot:
         self.offset = msg.offset
         self.time = msg.time
         self.timestamp = msg.timestamp
-        self.grid = self.grid
-        self.snr = self.snr
+        self.grid = msg.grid
+        self.snr = msg.snr
         self.speed = msg.speed
 
     def __eq__(self, spot):
