@@ -210,11 +210,6 @@ class Client:
     def get_station_spots(self, station=None, max_age=0):
         spots = []
         for spot in self.js8call.spots:
-
-            #TODO
-            print('age: ' + str(spot.age()))
-            print('origin: ' + str(spot.origin))
-
             if (max_age == 0 or spot.age() < max_age) and (station == None or station == spot.origin):
                 spots.append(spot)
 

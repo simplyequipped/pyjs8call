@@ -127,9 +127,6 @@ class JS8Call:
 
         new_spot = Spot(msg)
 
-        #TODO
-        #print('\tspot   age: ' + str(new_spot.age()) + ' origin: ' + str(new_spot.origin))
-
         if new_spot not in self._recent_spots:
             self._recent_spots.append(new_spot)
             self.spots.append(new_spot)
