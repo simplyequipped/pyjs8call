@@ -80,10 +80,22 @@ class Client:
             pass
 
     def restart(self):
+        # save callback settings
+        tx_monitor_status_change_callback = self.tx_monitor._status_change_callback
+        spot_monitor_new_spot_callback = self.spot_monitor._new_spot_callback
+        spot_monitor_watch_callback = self.spot_monitor._watch_callback
+        window_monitor_window_callback = self.window_monitor._window_callback
+
         self.stop()
         self.js8call._socket.close()
         time.sleep(1)
         self.start(debug = self.js8call._debug)
+
+        # restore callback settings
+        self.tx_monitor._status_change_callback = tx_monitor_status_change_callback
+        self.spot_monitor._new_spot_callback = spot_monitor_new_spot_callback
+        self.spot_monitor._watch_callback = spot_monitor_watch_callback
+        self.window_monitor._window_callback = window_monitor_window_callback
 
     def register_rx_callback(self, callback, message_type=Message.RX_DIRECTED):
         if message_type not in self.callbacks.keys():
