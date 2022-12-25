@@ -13,8 +13,6 @@ class TxMonitor:
         # initialize msg max age to 30 tx cycles in fast mode (10 sec cycles)
         self._msg_max_age = 10 * 30 # 5 minutes
         self._status_change_callback = None
-        #self.tx_complete_callback = None
-        #self.tx_failed_callback = None
 
         monitor_thread = threading.Thread(target=self._monitor)
         monitor_thread.setDaemon(True)
@@ -22,12 +20,6 @@ class TxMonitor:
 
     def set_status_change_callback(self, callback):
         self._status_change_callback = callback
-
-    #def set_tx_complete_callback(self, callback):
-    #    self.tx_complete_callback = callback
-
-    #def set_tx_failed_callback(self, callback):
-    #    self.tx_failed_callback = callback
 
     def monitor(self, msg):
         msg.status = Message.STATUS_QUEUED
