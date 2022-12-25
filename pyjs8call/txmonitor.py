@@ -12,7 +12,7 @@ class TxMonitor:
         self._msg_queue_lock = threading.Lock()
         # initialize msg max age to 30 tx cycles in fast mode (10 sec cycles)
         self._msg_max_age = 10 * 30 # 5 minutes
-        self.status_change_callback = None
+        self._status_change_callback = None
         #self.tx_complete_callback = None
         #self.tx_failed_callback = None
 
@@ -21,7 +21,7 @@ class TxMonitor:
         monitor_thread.start()
 
     def set_status_change_callback(self, callback):
-        self.status_change_callback = callback
+        self._status_change_callback = callback
 
     #def set_tx_complete_callback(self, callback):
     #    self.tx_complete_callback = callback
@@ -70,15 +70,15 @@ class TxMonitor:
                     # msg text was added to js8call tx field, sending
                     msg.status = Message.STATUS_SENDING
 
-                    if self.status_change_callback != None:
-                        self.status_change_callback(msg)
+                    if self._status_change_callback != None:
+                        self._status_change_callback(msg)
                         
                 elif msg_value != tx_text and msg.status == Message.STATUS_SENDING:
                     # msg text was removed from js8call tx field, sent
                     msg.status = Message.STATUS_SENT
 
-                    if self.status_change_callback != None:
-                        self.status_change_callback(msg)
+                    if self._status_change_callback != None:
+                        self._status_change_callback(msg)
                         
                     drop = True
                        
@@ -86,8 +86,8 @@ class TxMonitor:
                     # msg sending failed
                     msg.status = Message.STATUS_FAILED
 
-                    if self.status_change_callback != None:
-                        self.status_change_callback(msg)
+                    if self._status_change_callback != None:
+                        self._status_change_callback(msg)
                         
                     drop = True
 
