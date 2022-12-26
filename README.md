@@ -8,27 +8,31 @@ A Python package that interfaces with the JS8Call API to control the application
 
 The following modules are loaded and enabled by default. Some setup (i.e. setting callback functions) is required to used certain features.
 
-**Application Monitor**
+**Client** (pyjs8call.client)
+
+The main interface to the JS8Call application. Includes many functions for reading and writting settings as well as sending various types of messages.
+
+**Application Monitor** (pyjs8call.appmonitor)
 
 Manage the startup of the JS8Call application (if needed), as well as the restarting of the application if closed. 
 
-**JS8Call Configuration Handler**
+**JS8Call Configuration Handler** (pyjs8call.confighandler)
 
 Read from and write to the JS8Call.ini config file to change virtually any setting, including creating and activating configuration profiles. Specific knowledge of the configuration file options is required. Configuring options incorrectly may cause the JS8Call application not to start.
 
-**Station Spot Monitor**
+**Station Spot Monitor** (pyjs8call.spotmonitor)
 
 Store heard station data. Spot data can be queried for various uses, and spot callbacks can be set for all heard stations or for specific stations.
 
-**TX Window Monitor**
+**TX Window Monitor** (pyjs8call.windowmonitor)
 
 Monitor tx frames to calculate the beginning and end of the transmit window.
 
-**Offset Monitor**
+**Offset Monitor** (pyjs8call.offsetmonitor)
 
 Monitor recent activity and automatically move the offset frequency to an unsed portion of the pass band if a heard signal overlaps with the current offset. Signal bandwidth is calculated based on the speed of each heard signal. Only decoded signal data is available from JS8Call, so other QRM cannot be handled.
 
-**TX Monitor**
+**TX Monitor** (pyjs8call.txmonitor)
 
 Monitor the JS8Call transmit text box for given messages. Notification of a completed message transmission is handled via callback function.
 
@@ -119,4 +123,6 @@ js8call.send_directed_message('OH8STN', 'Thanks for the great content')
 ### Acknowledgements
 
 Inspired by [js8net](https://github.com/jfrancis42/js8net) by N0GQ.
+
+[JS8Call](http://js8call.com) by KN4CRD
 
