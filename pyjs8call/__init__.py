@@ -1,3 +1,8 @@
+'''
+.. include:: ../README.md
+'''
+__docformat__ = 'google'
+
 from pyjs8call.offsetmonitor import OffsetMonitor
 from pyjs8call.windowmonitor import WindowMonitor
 from pyjs8call.confighandler import ConfigHandler
