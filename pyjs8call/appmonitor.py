@@ -20,6 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+'''Manage start and stop of the JS8Call application.
+
+This module is initialized by pyjs8call.client via pyjs8call.js8call.
+
+The JS8Call application must be installed. On Debian systems try:
+`sudo apt install js8call`
+
+To run JS8Call headless on Linux xvfb must be installed. On Debian systems try:
+`sudo apt install xvfb`
+'''
+
 __docformat__ = 'google'
 
 
@@ -32,7 +43,28 @@ import pyjs8call
 
 
 class AppMonitor:
+    '''JS8Call application monitor.
+
+    Attributes:
+        headless (bool): Run JS8Call headless using xvfb (linux only, requies xvfb to be installed), defaults to False
+        running (bool): Whether the JS8Call application is running
+        restart (bool): Whether to restart the JS8Call application if it stops, defaults to True
+    '''
+
     def __init__(self, owner):
+        '''Initialize JS8Call application monitor.
+
+        Args:
+            owner (pyjs8call.js8call): The parent object
+
+        Returns:
+            pyjs8call.appmonitor.AppMonitor: Constructed application monitor object
+
+        Raises:
+            ProcessLookupError: JS8Call is not installed
+            ProcessLookupError: Attempting to run the application headless and xvfb is not installed (specifically xvfb-run)
+            RuntimeError: JS8Call application failed to start
+        '''
         self._exec_path = None
         self._process = None
         self.headless = False
@@ -90,6 +122,15 @@ class AppMonitor:
             raise RuntimeError('JS8Call application failed to start')
 
     def is_running(self):
+        '''Whether the JS8Call application is running.
+
+        If JS8Call was started before pyjs8call then *pgrep js8call* is used.
+
+        If JS8Call was started by pyjs8call (via subprocess) then *subprocess.poll()* is used.
+
+        Returns:
+            bool: True if the application is running, False otherwise
+        '''
         # handle process started externally
         if self._process == None:
             try:
@@ -111,6 +152,18 @@ class AppMonitor:
         return running
 
     def stop(self):
+        '''Stop the JS8Call application.
+
+        If JS8Call was started before pyjs8call it cannot be stopped by pyjs8call.
+
+        If JS8Call was started by pyjs8call the following steps are taken in order:
+            - *subprocess.terminate()* followed by *subprocess.wait(timeout = 2)*
+            - *subprocess.kill()*
+            - *pgrep js8call* followed by *killall -9 js8call* if running
+
+        Returns:
+            The return code of the terminated/killed subprocess or None if no return code was given.
+        '''
         if self._process == None:
             return None
 
@@ -137,6 +190,7 @@ class AppMonitor:
         return code
 
     def _monitor(self):
+        '''Application monitoring thread.'''
         while self._owner.online:
             if not self.is_running() and self.restart:
                 # restart the whole system and reconnect
