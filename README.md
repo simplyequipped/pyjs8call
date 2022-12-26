@@ -1,5 +1,3 @@
-# pyjs8call
-
 A Python package that interfaces with the JS8Call API.
 
 &nbsp;  
