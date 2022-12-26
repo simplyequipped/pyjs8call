@@ -4,35 +4,39 @@ A Python package that interfaces with the JS8Call API.
 
 ### Modules
 
-The following modules are loaded and enabled by default. Some setup (i.e. setting callback functions) is required to used certain features.
+Some setup (i.e. setting callback functions) is required to used certain module features. Most modules are initialized automatically by pyjs8call.client.
 
 **Client** (pyjs8call.client)
 
-The main interface to the JS8Call application. Includes many functions for reading and writting settings as well as sending various types of messages.
+The main JS8Call API interface. Includes many functions for reading and writting settings as well as sending various types of messages.
+
+**JS8Call** (pyjs8call.js8call)
+
+Manages the TCP socket communication with the JS8Call application.
 
 **Application Monitor** (pyjs8call.appmonitor)
 
-Manage the startup of the JS8Call application (if needed), as well as the restarting of the application if closed. 
+Manages the start and stop of the JS8Call application, as well as the restarting of the application if closed. 
 
-**JS8Call Configuration Handler** (pyjs8call.confighandler)
+**Configuration Handler** (pyjs8call.confighandler)
 
-Read from and write to the JS8Call.ini config file to change virtually any setting, including creating and activating configuration profiles. Specific knowledge of the configuration file options is required. Configuring options incorrectly may cause the JS8Call application not to start.
+Reads from and writes to the JS8Call.ini config file to change virtually any setting, including creating and activating configuration profiles. *Specific knowledge of the configuration file options is required. Configuring options incorrectly may cause the JS8Call application not to start.*
 
-**Station Spot Monitor** (pyjs8call.spotmonitor)
+**Spot Monitor** (pyjs8call.spotmonitor)
 
-Store heard station data. Spot data can be queried for various uses, and spot callbacks can be set for all heard stations or for specific stations.
+Monitors recent station spots. Spot data can be queried for various uses, and spot callbacks can be set for any heard stations and/or for specific stations.
 
-**TX Window Monitor** (pyjs8call.windowmonitor)
+**Window Monitor** (pyjs8call.windowmonitor)
 
-Monitor tx frames to calculate the beginning and end of the transmit window.
+Monitors the start and end of the next tx window. Tx frames are used to determine the start of a tx window, and the speed setting is used to determine the length of the tx window.
 
 **Offset Monitor** (pyjs8call.offsetmonitor)
 
-Monitor recent activity and automatically move the offset frequency to an unsed portion of the pass band if a heard signal overlaps with the current offset. Signal bandwidth is calculated based on the speed of each heard signal. Only decoded signal data is available from JS8Call, so other QRM cannot be handled.
+Manages JS8Call offset frequency relative to activity in the pass band. The offset frequency is automatically moved to an unsed portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the speed of each heard signal. Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
 
 **TX Monitor** (pyjs8call.txmonitor)
 
-Monitor the JS8Call transmit text box for given messages. Notification of a completed message transmission is handled via callback function.
+Monitors JS8Call tx text for queued messages. Notification of a message status change (sending, complete, failed) is handled via callback function.
 
 &nbsp;  
 
