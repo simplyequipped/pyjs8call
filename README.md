@@ -1,6 +1,6 @@
 # pyjs8call
 
-A Python package that interfaces with the JS8Call API to control the application. See the below examples, the code in example.py, and the code in pyjs8call/client.py for more information until additonal documentation is available.
+A Python package that interfaces with the JS8Call API.
 
 &nbsp;  
 
@@ -119,6 +119,8 @@ js8call.tx_monitor.monitor(msg)
 js8call.monitor_directed_tx = True
 js8call.send_directed_message('OH8STN', 'Thanks for the great content')
 ```
+
+&nbsp;
 
 ### Acknowledgements
 
