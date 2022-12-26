@@ -68,11 +68,11 @@ import pyjs8call
 # callback function for all new spots
 def new_spots(spots):
     for spot in spots:
-        print('Spotted ' + spot['from] + ' with a ' + str(spot['snr']) + 'dB SNR')
+        print('Spotted ' + spot.origin + ' with a ' + str(spot.snr) + 'dB SNR')
     
 # callback function for watched station spots
 def station_spotted(spot):
-    print(spot['from'] + ' spotted!')
+    print(spot.origin + ' spotted!')
     
 js8call = pyjs8call.Client()
 js8call.start()
@@ -95,27 +95,22 @@ Using the tx monitor:
 import pyjs8call
 
 # callback function for complete tx
-def tx_complete(msg):
-    print('Message ' + msg.id + ' to ' + msg.destination + ' sent')
-    
-# callback function for failed (timed out) tx
-def tx_failed(msg):
-    print('Message ' + msg.id + ' to ' + msg.destination + ' failed')
+def tx_status(msg):
+    print('Message ' + msg.id + ' status: ' + msg.status)
     
 js8call = pyjs8call.Client()
 js8call.start()
 
-# set tx monitor callbacks
-js8call.tx_monitor.set_tx_complete_callback(tx_complete)
-js8call.tx_monitor.set_tx_failed_callback(tx_failed)
+# set tx monitor callback
+js8call.tx_monitor.set_tx_status_change_callback(tx_status)
+
+# monitor directed message tx automatically (default)
+js8call.send_directed_message('OH8STN', 'Thanks for the great content')
 
 # monitor message tx manually
+js8call.monitor_directed_tx = False
 msg = js8call.send_directed_message('KT1RUN', 'Thanks for the great content')
 js8call.tx_monitor.monitor(msg)
-
-# monitor directed message tx automatically
-js8call.monitor_directed_tx = True
-js8call.send_directed_message('OH8STN', 'Thanks for the great content')
 ```
 
 &nbsp;
