@@ -1,5 +1,27 @@
-#! /usr/bin/python3
+# MIT License
+# 
+# Copyright (c) 2022-2023 Simply Equipped
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 __docformat__ = 'google'
+
 
 import time
 import atexit
@@ -7,7 +29,6 @@ import threading
 
 import pyjs8call
 from pyjs8call import Message
-
 
 
 class Client:
@@ -51,7 +72,7 @@ class Client:
             config_path (str): Non-standard JS8Call.ini configuration file path, defaults to None
 
         Returns:
-            **pyjs8call.client.Client:** Constructed client object
+            pyjs8call.client.Client: Constructed client object
         '''
         self.host = host
         self.port = port
@@ -209,7 +230,7 @@ class Client:
         '''Get the state of the connection to the JS8Call application.
 
         Returns:
-            **bool:** State of connection to JS8Call application
+            bool: State of connection to JS8Call application
         '''
         return self.js8call.connected
 
@@ -220,7 +241,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(value = message)
@@ -237,7 +258,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(destination = destination, value = message)
@@ -258,7 +279,7 @@ class Client:
             message (pyjs8call.message.Message): Message object to clean
 
         Returns:
-            **pyjs8call.message.Message:** Cleaned message object
+            pyjs8call.message.Message: Cleaned message object
         '''
         if msg == None:
             return None
@@ -289,7 +310,7 @@ class Client:
             grid (str): Grid square (truncated to 4 characters) to include with the heartbeat message, defaults to None
 
         Returns:
-            **pyjs8call.message.Message:** Constructed messsage object
+            pyjs8call.message.Message: Constructed messsage object
         '''
         if grid == None:
             grid = self.get_station_grid()
@@ -309,7 +330,7 @@ class Client:
             grid (str): Grid square (trucated to 4 characters) to include with the heartbeat message, defaults to None
 
         Returns:
-            **pyjs8call.message.Message:** Constructed messsage object
+            pyjs8call.message.Message: Constructed messsage object
 
         Raises:
             Exception: Grid square not given and JS8Call grid square not set
@@ -331,7 +352,7 @@ class Client:
             message (str): Message to be sent via SMS message
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         phone = str(phone).replace('-', '')
         return self.send_message('@APRSIS CMD :SMSGATE   :@' + phone + ' ' + message)
@@ -344,7 +365,7 @@ class Client:
             message (str): Message to be sent via email
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_message('@APRSIS CMD :EMAIL-2   :' + email + ' ' + message)
     
@@ -361,7 +382,7 @@ class Client:
             callsign (str): Callsign of operator activating the park, defaults to None
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         if callsign == None:
             callsign = self.get_station_callsign()
@@ -380,7 +401,7 @@ class Client:
             - text
 
         Returns:
-            **list:** List of messages where each message is a dictionary object
+            list: List of messages where each message is a dictionary object
         '''
         msg = Message()
         msg.type = Message.INBOX_GET_MESSAGES
@@ -396,7 +417,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         value = destination + ' MSG ' + message
         return self.send_message(value)
@@ -410,7 +431,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         value = destination + ' MSG TO:' + forward + ' ' + message
         return self.send_message(value)
@@ -423,7 +444,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         msg = Message()
         msg.set('type', Message.INBOX_STORE_MESSAGE)
@@ -440,7 +461,7 @@ class Client:
             callsign (str): Callsign to query for
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         message = 'QUERY CALL ' + callsign + '?'
         return self.send_directed_message(destination, message)
@@ -452,7 +473,7 @@ class Client:
             destination (str): Callsign to direct query to
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_directed_message(destination, 'QUERY MSGS')
 
@@ -464,7 +485,7 @@ class Client:
             msg_id (str): Message ID to query for
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         message = 'QUERY MSG ' + msg_id
         return self.send_directed_message(destination, message)
@@ -476,7 +497,7 @@ class Client:
             destination (str): Callsign to direct query to
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_directed_message(destination, 'HEARD?')
 
@@ -489,7 +510,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            **pyjs8call.message.Message:** Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         if isinstance(relay, str):
             relay = [relay]
@@ -509,7 +530,7 @@ class Client:
             max_age (int): Filter spots by maximum age in seconds
 
         Returns:
-            **list:** List of spots (see pyjs8call.spot.Spot) matching given criteria
+            list: List of spots (see pyjs8call.spot.Spot) matching given criteria
         '''
         spots = []
         for spot in self.js8call.spots:
@@ -522,7 +543,7 @@ class Client:
         '''Get JS8Call dial frequency.
 
         Returns:
-            **int:** Dial frequency in Hz.
+            int: Dial frequency in Hz.
         '''
         msg = Message()
         msg.type = Message.RIG_GET_FREQ
@@ -534,7 +555,7 @@ class Client:
         '''Get JS8Call offset frequency.
 
         Returns:
-            **int:** Offset frequency in Hz.
+            int: Offset frequency in Hz.
         '''
         msg = Message()
         msg.type = Message.RIG_GET_FREQ
@@ -549,7 +570,7 @@ class Client:
             freq (int): Dial frequency in Hz.
 
         Returns:
-            **int:** Dial frequency in Hz.
+            int: Dial frequency in Hz.
         '''
         msg = Message()
         msg.set('type', Message.RIG_SET_FREQ)
@@ -565,7 +586,7 @@ class Client:
             offset (int): Offset frequency in Hz.
 
         Returns:
-            **int:** Offset frequency in Hz.
+            int: Offset frequency in Hz.
         '''
         msg = Message()
         msg.set('type', Message.RIG_SET_FREQ)
@@ -578,7 +599,7 @@ class Client:
         '''Get JS8Call callsign.
 
         Returns:
-            **str:** JS8Call configured callsign
+            str: JS8Call configured callsign
         '''
         msg = Message()
         msg.type = Message.STATION_GET_CALLSIGN
@@ -597,7 +618,7 @@ class Client:
             callsign (str): Callsign to set
 
         Returns:
-            **str:** JS8Call configured callsign
+            str: JS8Call configured callsign
         '''
         callsign = callsign.upper()
 
@@ -613,7 +634,7 @@ class Client:
         '''Get JS8Call grid square.
 
         Returns:
-            **str:** JS8Call configured grid square
+            str: JS8Call configured grid square
         '''
         msg = Message()
         msg.type = Message.STATION_GET_GRID
@@ -628,7 +649,7 @@ class Client:
             grid (str): Grid square to set
 
         Returns:
-            **str:** JS8Call configured grid square
+            str: JS8Call configured grid square
         '''
         grid = grid.upper()
         msg = Message()
@@ -642,7 +663,7 @@ class Client:
         '''Get JS8Call station information.
 
         Returns:
-            **str:** JS8Call configured station information
+            str: JS8Call configured station information
         '''
         msg = Message()
         msg.type = Message.STATION_GET_INFO
@@ -657,7 +678,7 @@ class Client:
             info (str): Station information to set
 
         Returns:
-            **str:** JS8Call configured station information
+            str: JS8Call configured station information
         '''
         msg = Message()
         msg.type = Message.STATION_SET_INFO
@@ -676,7 +697,7 @@ class Client:
             - time
 
         Returns:
-            **list:** List of dictionaries where each dictionary is a call activity item
+            list: List of dictionaries where each dictionary is a call activity item
         '''
         msg = Message()
         msg.type = Message.RX_GET_CALL_ACTIVITY
@@ -695,7 +716,7 @@ class Client:
             - text
 
         Returns:
-            **list:** List of dictionaries where each dictionary is a band activity item
+            list: List of dictionaries where each dictionary is a band activity item
         '''
         msg = Message()
         msg.type = Message.RX_GET_BAND_ACTIVITY
@@ -707,7 +728,7 @@ class Client:
         '''Get JS8Call selected callsign.
 
         Returns:
-            **str:** Callsign selected on the JS8Call user interface
+            str: Callsign selected on the JS8Call user interface
         '''
         msg = Message()
         msg.type = Message.RX_GET_SELECTED_CALL
@@ -719,7 +740,7 @@ class Client:
         '''Get JS8Call rx text.
 
         Returns:
-            **str:** Text from the JS8Call rx text field
+            str: Text from the JS8Call rx text field
         '''
         msg = Message()
         msg.type = Message.RX_GET_TEXT
@@ -731,7 +752,7 @@ class Client:
         '''Get JS8Call tx text.
 
         Returns:
-            **str:** Text from the JS8Call tx text field
+            str: Text from the JS8Call tx text field
         '''
         msg = Message()
         msg.set('type', Message.TX_GET_TEXT)
@@ -746,7 +767,7 @@ class Client:
             text (str): Text to set
 
         Returns:
-            **str:** Text from the JS8Call tx text field
+            str: Text from the JS8Call tx text field
         '''
         msg = Message()
         msg.set('type', Message.TX_SET_TEXT)
@@ -772,7 +793,7 @@ class Client:
             speed (int): Speed integer to map to appropriate speed text, defaults to None
 
         Returns:
-            **str:** Speed setting as text
+            str: Speed setting as text
         '''
         if speed == None:
             if update or self.js8call.state['speed'] == None:
@@ -841,7 +862,7 @@ class Client:
             speed (str): Speed setting, defaults to None
 
         Returns:
-            **int:** Bandwidth of JS8Call signal
+            int: Bandwidth of JS8Call signal
         '''
         if speed == None:
             speed = self.get_speed(update = False)
@@ -870,7 +891,7 @@ class Client:
             speed (str): Speed setting, defaults to None
 
         Returns:
-            **int:** Duration of JS8Call tx window in seconds
+            int: Duration of JS8Call tx window in seconds
         '''
         if speed == None:
             speed = self.get_speed(update = False)
@@ -899,7 +920,7 @@ class Client:
             own (bool): Include tx messages listed in the rx text field, defaults to True
 
         Returns:
-            **list:** List of messages from the rx text field
+            list: List of messages from the rx text field
         '''
         rx_text = self.get_rx_text()
         mycall = self.get_station_callsign()
