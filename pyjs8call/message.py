@@ -183,10 +183,10 @@ class Message:
                 self.messages[i] = {
                     'id' : self.messages[i]['_ID'],
                     'time' : self.messages[i]['UTC'],
-                    'from' : self.messages[i]['FROM'],
-                    'to' : self.messages[i]['TO'],
+                    'origin' : self.messages[i]['FROM'],
+                    'destination' : self.messages[i]['TO'],
                     'path' : self.messages[i]['PATH'],
-                    'message' : self.messages[i]['TEXT']
+                    'text' : self.messages[i]['TEXT']
                 }
 
         # handle call activity
@@ -197,7 +197,7 @@ class Message:
                     continue
 
                 call = {
-                    'from' : key,
+                    'origin' : key,
                     'grid' : value['GRID'],
                     'snr' : value['SNR'],
                     'time' : value['UTC']
