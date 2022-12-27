@@ -153,11 +153,19 @@ class ConfigHandler:
         self.config.remove_section('CallActivity')
 
     def get_active_profile(self):
-        '''Get active JS8Call configuration profile.'''
+        '''Get active JS8Call configuration profile.
+
+        Returns:
+            str: Name of active configuration profile
+        '''
         return self.get('MultiSettings', 'CurrentName')
 
     def get_profile_list(self):
-        '''Get list of existing JS8Call configuration profiles.'''
+        '''Get list of existing JS8Call configuration profiles.
+
+        Returns:
+            list: List of profiles in the configuration file
+        '''
         profiles = []
         profiles.append(self.get_active_profile())
 
@@ -269,6 +277,9 @@ class ConfigHandler:
 
         Args:
             new_profile (str): Name of the profile to change to
+
+        Raises:
+            Exception: Specified profile does not exist
         '''
         if new_profile not in self.get_profile_list():
             raise Exception('Profile ' + new_profile + ' does not exist')
@@ -301,9 +312,11 @@ class ConfigHandler:
         Args:
             new_profile (str): Name of new profile to create
             copy_profile (str): Name of an existing profile to copy when creating the new profile
+
+        Raises:
+            Exception: Specified profile to be copied does not exist
         '''
         if copy_profile not in self.get_profile_list():
-            #TODO more specific exception
             raise Exception('Profile ' + copy_profile + ' cannot be copied because it does not exist')
 
         active_profile = self.get_active_profile()
