@@ -20,6 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+'''Manage TCP socket communication and local state associated with the JS8Call application.
+
+This module is initialized by pyjs8call.client.
+'''
+
 __docformat__ = 'google'
 
 
@@ -35,8 +40,30 @@ from pyjs8call import Spot
 
 
 class JS8Call:
+    '''Low-level JS8Call TCP socket and local state management.
+
+    Receives (constructs) and transmits pyjs8call.message objects, and generally manages the local state representation of the JS8Call application.
+
+    Initializes pyjs8call.appmonitor as well as rx, tx, and application heartbeat threads.
+
+    Attributes:
+        connected (bool): Whether the JS8Call TCP socket is connected
+        spots (list): List of station spots (see pyjs8call.spot and pyjs8call.client.Client.get_station_spots)
+        max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 1000
+    '''
 
     def __init__(self, client, host='127.0.0.1', port=2442, headless=False):
+        '''Initialize JS8Call TCP socket and local state.
+
+        Args:
+            client (pyjs8call.client): Parent client object
+            host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
+            port (int): JS8Call TCP port setting, defaults to 2442
+            headless (bool): Run JS8Call headless using xvfb (linux only, requires xvfb to be installed)
+
+        Returns:
+            pyjs8call.js8call.JS8Call: Constructed js8call object
+        '''
         self._client = client
         self._host = host
         self._port = port
@@ -94,15 +121,24 @@ class JS8Call:
         hb_thread.start()
 
     def stop(self):
+        '''Stop threads and JS8Call application.'''
         self.online = False
         self.app_monitor.stop()
 
     def _connect(self):
+        '''Connect to the TCP socket of the JS8Call application.'''
         self._socket = socket.socket()
         self._socket.connect((self._host, int(self._port)))
         self._socket.settimeout(1)
 
     def send(self, msg):
+        '''Queue message for transmission to the JS8Call application.
+
+        Sets the status of the message object to *queued* (see pyjs8call.message statuses).
+
+        Args:
+            msg (pyjs8call.message): Message object to be transmitted
+        '''
         msg.status = Message.STATUS_QUEUED
 
         self._tx_queue_lock.acquire()
@@ -110,6 +146,13 @@ class JS8Call:
         self._tx_queue_lock.release()
         
     def append_to_rx_queue(self, msg):
+        '''Queue received message from the JS8Call application for handling.
+
+        Sets the status of the message object to *queued* (see pyjs8call.message statuses).
+
+        Args:
+            msg (pyjs8call.message): Message object to be handled
+        '''
         msg.status = Message.STATUS_QUEUED
 
         self._rx_queue_lock.acquire()
@@ -117,6 +160,13 @@ class JS8Call:
         self._rx_queue_lock.release()
 
     def get_next_message(self):
+        '''Get next received message from the queue.
+
+        Sets the status of the message object to *received* (see pyjs8call.message statuses).
+
+        Returns:
+            pyjs8call.message: Message to be handled
+        '''
         if len(self._rx_queue) > 0:
             self._rx_queue_lock.acquire()
             msg = self._rx_queue.pop(0)
@@ -126,6 +176,23 @@ class JS8Call:
             return msg
 
     def watch(self, item):
+        '''Watch local state variable for updating based on a response from the JS8Call application.
+
+        The JS8Call application responds to requests asynchronously, which means responses may not be received in the same order as the requests or in a reasonable timeframe following the request. To handle these asynchronous reponses, the responses set local state variables as they are received. The process is as follows:
+            - Send a request to the JS8Call application
+            - Set local state variable associated with anticipated response to a known value (None)
+            - Wait for a response, timing out if a response is not received within 3 seconds
+            - Detect a change in the local state variable indicating that a response has been received
+            - Return the response (i.e. the current value of the updated local state variable)
+
+        If a timeout occurs while waiting for a response the local state variable is set back to its previous value.
+
+        Args:
+            item (str): Name of the local state variable to watch
+
+        Returns:
+            The value of the given local state variable
+        '''
         if item not in self.state.keys():
             return None
 
@@ -147,6 +214,17 @@ class JS8Call:
         return self.state[item]
 
     def spot(self, msg):
+        '''Store a local spot when a station is heard.
+
+        A spot object (see pyjs8call.spot) is constructed and stored. The new spot object is compared against a list of recent spot objects (heard within the last 10 seconds) to prevent duplicate spots from multiple JS8Call API messages associated with the same station event.
+
+        The list of stored spots is culled once it exceeeds the maximum size set by *max_spots* by dropping the oldest spot.
+
+        See pyjs8call.client.Client.get_station_spots to utilize stored spots.
+
+        Args:
+            msg (pyjs8call.message): Message to source spot data from
+        '''
         # cull recent spots
         self._recent_spots = [spot for spot in self._recent_spots if spot.age() < 10]
 
@@ -161,6 +239,10 @@ class JS8Call:
             self.spots.pop(0)
 
     def _hb(self):
+        '''JS8Call application heartbeat thread.
+
+        If no messages have been received from the JS8Call in the last 5 minutes, a request is issued to the application to make sure it is still connected and functioning as expected.
+        '''
         while self.online:
             # if no recent rx, check the connection by making a request
             timeout = self._last_rx_timestamp + self._socket_heartbeat_delay
@@ -173,6 +255,14 @@ class JS8Call:
             time.sleep(1)
 
     def _tx(self):
+        '''JS8Call application transmit thread.
+
+        The JS8Call tx text field is read every second by pyjs8call.txmonitor. This is utilized to reduce additional socket traffic by reading the local state variable directly without requesting additional updates from the application.
+
+        When processing the transmit message queue, if a transmission is in process (i.e. there is text in the tx text field) then transmission of additional messages is prevented until the current transmission is complete.
+
+        If debugging is enabled (see pyjs8call.client.Client.start) then the byte string of each message sent over the TCP socket is printed to the console. By default not all messages are printed in debug mode (see pyjs8call.js8call.JS8Call._debug_type_blacklist). Frequently sent and received messages used internal to pyjs8call are not printed.
+        '''
         tx_text = False
         force_tx_text = False
 
@@ -218,6 +308,18 @@ class JS8Call:
             time.sleep(0.1)
 
     def _rx(self):
+        '''JS8Call application receive thread.
+
+        A byte string is read from the TCP socket and parsed into a pyjs8call.message. Socket data is discarded in the following cases:
+            - Failure to decode received byte string to UTF-8 (likely due to corrupted or incomplete data)
+            - Length of received byte string is zero (no data received)
+            - Failure to parse received data into a pyjs8call.message (likely due to corrupted or incomplete data)
+            - Parsed message value contains the JS8Call error character (defaults to an ellipsis)
+
+        Received data that is successfully parsed is passed to *_process_message()* for further processing. 
+
+        If debugging is enabled (see pyjs8call.client.Client.start) then the byte string of each message sent over the TCP socket is printed to the console. By default not all messages are printed in debug mode (see pyjs8call.js8call.JS8Call._debug_type_blacklist). Frequently sent and received messages used internal to pyjs8call are not printed.
+        '''
         while self.online:
             data = b''
             data_str = ''
@@ -272,6 +374,17 @@ class JS8Call:
         time.sleep(0.1)
 
     def _process_message(self, msg):
+        '''Process received message.
+
+        Messages are processed based on their command and/or their type (see pyjs8call.message for commands and types). Messages are spotted when appropriate. Responses to JS8Call setting and state requests are handled to update the associated local state variables.
+
+        Automatic cleaning of directed message text is handled if enabled (see pyjs8call.client).
+
+        Tx frame messages are passed to pyjs8call.windowmonitor.
+
+        Args:
+            msg (pyjs8call.message): Message to process
+        '''
 
         ### command handling ###
 
