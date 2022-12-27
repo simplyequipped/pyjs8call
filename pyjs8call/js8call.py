@@ -179,11 +179,11 @@ class JS8Call:
         '''Watch local state variable for updating based on a response from the JS8Call application.
 
         The JS8Call application responds to requests asynchronously, which means responses may not be received in the same order as the requests or in a reasonable timeframe following the request. To handle these asynchronous reponses, the responses set local state variables as they are received. The process is as follows:
-            - Send a request to the JS8Call application
-            - Set local state variable associated with anticipated response to a known value (None)
-            - Wait for a response, timing out if a response is not received within 3 seconds
-            - Detect a change in the local state variable indicating that a response has been received
-            - Return the response (i.e. the current value of the updated local state variable)
+        - Send a request to the JS8Call application
+        - Set local state variable associated with anticipated response to a known value (None)
+        - Wait for a response, timing out if a response is not received within 3 seconds
+        - Detect a change in the local state variable indicating that a response has been received
+        - Return the response (i.e. the current value of the updated local state variable)
 
         If a timeout occurs while waiting for a response the local state variable is set back to its previous value.
 
