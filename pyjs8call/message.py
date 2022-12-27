@@ -20,6 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+'''Message object representing all rx and tx messages.
+
+Incoming and outgoing types, commands, and statuses are defined statically.
+'''
+
 __docformat__ = 'google'
 
 
@@ -30,6 +35,99 @@ import secrets
 
 
 class Message:
+    '''Message object for incoming and outgoing messages.
+
+    Static outgoing types:
+        RX_GET_TEXT
+        RX_GET_CALL_ACTIVITY
+        RX_GET_BAND_ACTIVITY
+        RX_GET_SELECTED_CALL
+        TX_SEND_MESSAGE
+        TX_GET_TEXT
+        TX_SET_TEXT
+        MODE_GET_SPEED
+        MODE_SET_SPEED
+        STATION_GET_INFO
+        STATION_SET_INFO
+        STATION_GET_GRID
+        STATION_SET_GRID
+        STATION_GET_CALLSIGN
+        INBOX_GET_MESSAGES
+        INBOX_STORE_MESSAGE
+        RIG_GET_FREQ
+        RIG_SET_FREQ
+        WINDOW_RAISE
+
+    Static incoming types:
+        MESSAGES
+        INBOX_MESSAGES
+        RX_SPOT
+        RX_DIRECTED
+        RX_SELECTED_CALL
+        RX_CALL_ACTIVITY
+        RX_BAND_ACTIVITY
+        RX_ACTIVITY
+        RX_TEXT
+        TX_TEXT
+        TX_FRAME
+        RIG_FREQ
+        RIG_PTT
+        STATION_CALLSIGN
+        STATION_GRID
+        STATION_INFO
+        STATION_STATUS
+        MODE_SPEED
+
+    Static commands:
+        CMD_SNR
+        CMD_GRID
+        CMD_HEARING
+        CMD_QUERY_CALL
+
+    Static statuses:
+        STATUS_CREATED
+        STATUS_QUEUED
+        STATUS_SENDING
+        STATUS_SENT
+        STATUS_FAILED
+        STATUS_RECEIVED
+        STATUS_ERROR
+
+    Static constants:
+        ERR
+        EOM
+
+
+    Most attributes with a default value of None are included so messages can be handled internally without worrying about the nuiances of JS8Call API message attributes, which varies greatly.
+
+    Attributes:
+        id (str): Random url-safe text string, 16 bytes in length
+        type (str): Message type (see static types), defaults to TX_SEND_MESSAGE
+        destination (str): Destination callsign
+        value (str): Message contents
+        time (str): UTC timestamp (see datetime.now(timezone.utc).timestamp)
+        timestamp (str): Local timestamp (see time.time)
+        params (dict): Dictioinary of message parameters used by certain JS8Call API messages
+        attributes (list): List of attributes for internal use (see *set*)
+        status (str): Message status (see static statuses), defaults to STATUS_CREATED
+        raw (str): Raw message string passed to *Message.parse*, defaults to None
+        freq (str): Dial frequency plus offset frequency in Hz, defaults to None
+        dial (str): Dial frequency in Hz, defaults to None
+        offset (str): Passband offset frequency in Hz, defaults to None
+        call (str): Callsign, used by certain JS8Call API messages, defaults to None
+        grid (str): Grid square, default to None
+        snr (str): Signal-to-noise ratio, defaults to None
+        from (str): Origin callsign, defaults to None
+        origin (str): Origin callsign, defaults to None
+        utc (str): UTC timestamp, defaults to None
+        cmd (str): JS8Call command (see static commands), defaults to None
+        text (str): Message text, used by certain JS8Call API messages, used for cleaned directed messages (see pyjs8call.client), defaults to None
+        speed (str): JS8Call modem speed of received signal
+        extra (str): Used by certain JS8Call API messages, defaults to None
+        messages (list): Inbox messages, defaults to None
+        band_activity (list): JS8Call band activity items, defaults to None
+        call_activity (list): JS8Call call activity items, defaults to None
+    '''
 
     # outgoing message types
     RX_GET_TEXT             = 'RX.GET_TEXT'
@@ -99,6 +197,15 @@ class Message:
     ERR = '…'   # error
 
     def __init__(self, destination=None, value=None):
+        '''Initialize message.
+
+        Args:
+            destination (bool): Callsign to send the message to, defaults to None
+            value (str): Message text to send, defaults to None
+
+        Returns:
+            pyjs8call.message: Constructed message object
+        '''
         self.id = secrets.token_urlsafe(16)
         self.type = Message.TX_SEND_MESSAGE
         self.destination = destination
@@ -106,9 +213,9 @@ class Message:
         self.time = datetime.now(timezone.utc).timestamp()
         self.timestamp = time.time()
         self.params = {}
-        self.attributes = ['id', 'type', 'to', 'value', 'time', 'params']
-        self.packed = None
+        self.attributes = ['id', 'type', 'destination', 'value', 'time', 'params']
         self.status = Message.STATUS_CREATED
+        self.raw = None
         
         # initialize common msg fields
         attrs = [
@@ -141,6 +248,20 @@ class Message:
             self.text = self.value
 
     def set(self, attribute, value):
+        '''Set message attribute value.
+
+        Uses *setattr* internally to add attributes to the message object. Added attributes are tracked in the *attributes* attribute. Attributes are converted to lowercase for consistency.
+
+        Special attribute handling for consistency:
+            *call*: also sets *from* to the same value if *call* is not None and *from* is None
+            *from*: also sets *origin* to the same value
+
+        Note that attempting to access Message.from results in an error.
+
+        Args:
+            attribute (str): Name of attribute to set
+            value (str): Value of attribute to set
+        '''
         attribute = attribute.lower()
         setattr(self, attribute, value)
 
@@ -156,9 +277,32 @@ class Message:
             self.set('origin', value)
 
     def get(self, attribute):
+        '''Get message attribute value.
+
+        Uses *getattr* internally.
+
+        Args:
+            attribute (str): Name of attribute to get
+
+        Returns:
+            Value of specified attribute, or None if the attribute does not exist
+        '''
         return getattr(self, attribute, None)
 
     def dict(self, exclude=[]):
+        '''Get dictionary representation of message object.
+
+        Message attributes set to None are not included in the returned dictionary.
+
+        Special attribute handling:
+            *value*: If None, set to '' (empty string); if set and Message.type is TX_SEND_MESSAGE and Message.destination is not None (i.e. directed message), set to Message.destination and Message.value joined with a space.
+
+        Args:
+            exclude (list): List of attribute names to exclude from the dictionary (see *pack*)
+
+        Returns:
+            dict: Dictionary of message attributes and values
+        '''
         data = {}
         for attribute in self.attributes:
             # skip attribues excluded or already in dict
@@ -183,7 +327,24 @@ class Message:
         return data
 
     def pack(self, exclude=[]):
-        #TODO make sure 'text' is not used!
+        '''Pack message for transmission over TCP socket.
+
+        The *exclude* argument is extended to include the following attributes since they are not used by the JS8Call API:
+            *id*
+            *destination*
+            *time*
+            *from*
+            *origin*
+            *text*
+
+        Args:
+            exclude (list): List of attribute names to exclude from the dictionary
+            
+        Returns:
+            UTF-8 encoded byte string. A dictionary representation of the message attributes is converted to a string using *json.dumps* before encoding.
+
+        '''
+        #TODO make sure 'text' is not used since it is being excluded here
 
         # exclude attributes from packed data
         exclude.extend(['id', 'destination', 'time', 'from', 'origin', 'text'])
@@ -193,8 +354,17 @@ class Message:
         # return bytes
         return packed.encode('utf-8')
 
-    # call using try/catch to handle parse errors during rx processing
     def parse(self, msg_str):
+        '''Load message string into message object.
+
+        *Message.parse* should be called inside a try/except block to catch parsing errors.
+
+        Args:
+            msg_str (str): Received message string to parse and load
+
+        Returns:
+            pyjs8call.message: Constructed messsage object
+        '''
         self.raw = msg_str
         msg = json.loads(msg_str)
 
