@@ -207,10 +207,10 @@ class Client:
     def register_rx_callback(self, callback, message_type=Message.RX_DIRECTED):
         '''Register a rx callback function.
 
-        Callback functions are associated with specific message types. The directed message type is assumed unless otherwise specified. See pyjs8call.message.Message for specific message types.
+        Callback functions are associated with specific message types. The directed message type is assumed unless otherwise specified. See pyjs8call.message for specific message types.
 
         Args:
-            callback (func): Callback function object with the signature func(msg) where msg is a pyjs8call.message.Message object
+            callback (func): Callback function object with the signature func(msg) where msg is a pyjs8call.message object
             message_type (str): The message type to associate with the callback funtion
         '''
         if message_type not in self.callbacks.keys():
@@ -244,7 +244,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(value = message)
@@ -261,7 +261,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(destination = destination, value = message)
@@ -279,10 +279,10 @@ class Client:
         The Message.text attribute stores the cleaned text while the Message.value attribute is unchanged.
 
         Args:
-            message (pyjs8call.message.Message): Message object to clean
+            message (pyjs8call.message): Message object to clean
 
         Returns:
-            pyjs8call.message.Message: Cleaned message object
+            pyjs8call.message: Cleaned message object
         '''
         if msg == None:
             return None
@@ -313,7 +313,7 @@ class Client:
             grid (str): Grid square (truncated to 4 characters) to include with the heartbeat message, defaults to None
 
         Returns:
-            pyjs8call.message.Message: Constructed messsage object
+            pyjs8call.message: Constructed messsage object
         '''
         if grid == None:
             grid = self.get_station_grid()
@@ -333,7 +333,7 @@ class Client:
             grid (str): Grid square (trucated to 4 characters) to include with the heartbeat message, defaults to None
 
         Returns:
-            pyjs8call.message.Message: Constructed messsage object
+            pyjs8call.message: Constructed messsage object
 
         Raises:
             Exception: Grid square not given and JS8Call grid square not set
@@ -355,7 +355,7 @@ class Client:
             message (str): Message to be sent via SMS message
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         phone = str(phone).replace('-', '')
         return self.send_message('@APRSIS CMD :SMSGATE   :@' + phone + ' ' + message)
@@ -368,7 +368,7 @@ class Client:
             message (str): Message to be sent via email
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         return self.send_message('@APRSIS CMD :EMAIL-2   :' + email + ' ' + message)
     
@@ -385,7 +385,7 @@ class Client:
             callsign (str): Callsign of operator activating the park, defaults to None
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         if callsign == None:
             callsign = self.get_station_callsign()
@@ -420,7 +420,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         value = destination + ' MSG ' + message
         return self.send_message(value)
@@ -434,7 +434,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         value = destination + ' MSG TO:' + forward + ' ' + message
         return self.send_message(value)
@@ -447,7 +447,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         msg = Message()
         msg.set('type', Message.INBOX_STORE_MESSAGE)
@@ -464,7 +464,7 @@ class Client:
             callsign (str): Callsign to query for
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         message = 'QUERY CALL ' + callsign + '?'
         return self.send_directed_message(destination, message)
@@ -476,7 +476,7 @@ class Client:
             destination (str): Callsign to direct query to
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         return self.send_directed_message(destination, 'QUERY MSGS')
 
@@ -488,7 +488,7 @@ class Client:
             msg_id (str): Message ID to query for
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         message = 'QUERY MSG ' + msg_id
         return self.send_directed_message(destination, message)
@@ -500,7 +500,7 @@ class Client:
             destination (str): Callsign to direct query to
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         return self.send_directed_message(destination, 'HEARD?')
 
@@ -513,7 +513,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message.Message: Constructed message object
+            pyjs8call.message: Constructed message object
         '''
         if isinstance(relay, str):
             relay = [relay]
