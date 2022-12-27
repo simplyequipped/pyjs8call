@@ -38,67 +38,68 @@ class Message:
     '''Message object for incoming and outgoing messages.
 
     Static outgoing types:
-        RX_GET_TEXT
-        RX_GET_CALL_ACTIVITY
-        RX_GET_BAND_ACTIVITY
-        RX_GET_SELECTED_CALL
-        TX_SEND_MESSAGE
-        TX_GET_TEXT
-        TX_SET_TEXT
-        MODE_GET_SPEED
-        MODE_SET_SPEED
-        STATION_GET_INFO
-        STATION_SET_INFO
-        STATION_GET_GRID
-        STATION_SET_GRID
-        STATION_GET_CALLSIGN
-        INBOX_GET_MESSAGES
-        INBOX_STORE_MESSAGE
-        RIG_GET_FREQ
-        RIG_SET_FREQ
-        WINDOW_RAISE
+    - RX_GET_TEXT
+    - RX_GET_CALL_ACTIVITY
+    - RX_GET_BAND_ACTIVITY
+    - RX_GET_SELECTED_CALL
+    - TX_SEND_MESSAGE
+    - TX_GET_TEXT
+    - TX_SET_TEXT
+    - MODE_GET_SPEED
+    - MODE_SET_SPEED
+    - STATION_GET_INFO
+    - STATION_SET_INFO
+    - STATION_GET_GRID
+    - STATION_SET_GRID
+    - STATION_GET_CALLSIGN
+    - INBOX_GET_MESSAGES
+    - INBOX_STORE_MESSAGE
+    - RIG_GET_FREQ
+    - RIG_SET_FREQ
+    - WINDOW_RAISE
 
     Static incoming types:
-        MESSAGES
-        INBOX_MESSAGES
-        RX_SPOT
-        RX_DIRECTED
-        RX_SELECTED_CALL
-        RX_CALL_ACTIVITY
-        RX_BAND_ACTIVITY
-        RX_ACTIVITY
-        RX_TEXT
-        TX_TEXT
-        TX_FRAME
-        RIG_FREQ
-        RIG_PTT
-        STATION_CALLSIGN
-        STATION_GRID
-        STATION_INFO
-        STATION_STATUS
-        MODE_SPEED
+    - MESSAGES
+    - INBOX_MESSAGES
+    - RX_SPOT
+    - RX_DIRECTED
+    - RX_SELECTED_CALL
+    - RX_CALL_ACTIVITY
+    - RX_BAND_ACTIVITY
+    - RX_ACTIVITY
+    - RX_TEXT
+    - TX_TEXT
+    - TX_FRAME
+    - RIG_FREQ
+    - RIG_PTT
+    - STATION_CALLSIGN
+    - STATION_GRID
+    - STATION_INFO
+    - STATION_STATUS
+    - MODE_SPEED
 
     Static commands:
-        CMD_SNR
-        CMD_GRID
-        CMD_HEARING
-        CMD_QUERY_CALL
+    - CMD_SNR
+    - CMD_GRID
+    - CMD_HEARING
+    - CMD_QUERY_CALL
 
     Static statuses:
-        STATUS_CREATED
-        STATUS_QUEUED
-        STATUS_SENDING
-        STATUS_SENT
-        STATUS_FAILED
-        STATUS_RECEIVED
-        STATUS_ERROR
+    - STATUS_CREATED
+    - STATUS_QUEUED
+    - STATUS_SENDING
+    - STATUS_SENT
+    - STATUS_FAILED
+    - STATUS_RECEIVED
+    - STATUS_ERROR
 
     Static constants:
-        ERR
-        EOM
+    - ERR
+    - EOM
 
+    &nbsp;
 
-    Most attributes with a default value of None are included so messages can be handled internally without worrying about the nuiances of JS8Call API message attributes, which varies greatly.
+    Most attributes with a default value of None are included so messages can be handled internally without worrying about the nuances of JS8Call API message attributes, which varies greatly.
 
     Attributes:
         id (str): Random url-safe text string, 16 bytes in length
@@ -326,28 +327,18 @@ class Message:
 
         return data
 
-    def pack(self, exclude=[]):
+    def pack(self, exclude=['id', 'destination', 'time', 'from', 'origin', 'text']):
         '''Pack message for transmission over TCP socket.
 
-        The *exclude* argument is extended to include the following attributes since they are not used by the JS8Call API:
-            *id*
-            *destination*
-            *time*
-            *from*
-            *origin*
-            *text*
-
         Args:
-            exclude (list): List of attribute names to exclude from the dictionary
+            exclude (list): List of attribute names to exclude from the dictionary, defaults to *['id', 'destination', 'time', 'from', 'origin', 'text']*
             
         Returns:
             UTF-8 encoded byte string. A dictionary representation of the message attributes is converted to a string using *json.dumps* before encoding.
 
         '''
-        #TODO make sure 'text' is not used since it is being excluded here
+        #TODO make sure 'text' is not used since it is excluded by default
 
-        # exclude attributes from packed data
-        exclude.extend(['id', 'destination', 'time', 'from', 'origin', 'text'])
         data = self.dict(exclude = exclude)
         # convert dict to json string
         packed = json.dumps(data) + '\r\n'
