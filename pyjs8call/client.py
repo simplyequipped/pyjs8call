@@ -20,6 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+'''Main JS8Call API interface.
+
+Includes many functions for reading/writing settings and sending various types of messages.
+
+Typical usage example:
+    
+    ```
+    js8call = pyjs8call.Client()
+    js8call.register_rx_callback(rx_func)
+    js8call.start()
+    
+    js8call.send_directed_message('KT1RUN', 'Great content thx')
+    ```
+'''
+
 __docformat__ = 'google'
 
 
@@ -34,8 +49,6 @@ from pyjs8call import Message
 class Client:
     '''JS8Call API client.
 
-    This is the main interface to the JS8Call application.
-
     Attributes:
         js8call (pyjs8call.js8call): Low-level object managing the JS8Call application and associated TCP socket communication
         spot_monitor (pyjs8call.spotmonitor): Low-level object monitoring station spots and associated callbacks
@@ -48,16 +61,6 @@ class Client:
         host (str): IP address matching the JS8Call *TCP Server Hostname* setting
         port (int): Port number matching the JS8Call *TCP Server Port* setting
         headless (bool): Run JS8Call headless using xvfb (linux only, requires xvfb to be installed)
-
-    Typical usage example:
-        
-        ```
-        js8call = pyjs8call.Client()
-        js8call.register_rx_callback(rx_func)
-        js8call.start()
-
-        js8call.send_directed_message('KT1RUN', 'Great content thx')
-        ```
     '''
     
     def __init__(self, host='127.0.0.1', port=2442, headless=False, config_path=None):
