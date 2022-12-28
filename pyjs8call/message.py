@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Message object representing all rx and tx messages.
+'''Message object for incoming and outgoing messages.
 
 Incoming and outgoing types, commands, and statuses are defined statically.
 '''
