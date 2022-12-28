@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+'''Monitor recent station spots.'''
+
 __docformat__ = 'google'
 
 
@@ -28,7 +30,20 @@ import time
 
 
 class SpotMonitor:
+    '''Monitor recent station spots.
+
+    Attributes:
+        spot_update_delay (int): Delay in seconds between checks for new spots
+    '''
     def __init__(self, client):
+        '''Initialize spot monitor.
+
+        Args:
+            client (pyjs8call.client): Parent client object
+
+        Returns:
+            pyjs8call.spotmonitor: Constructed spot monitor object
+        '''
         self._client = client
         self._new_spots = []
         self._last_spot_update_timestamp = 0
@@ -43,20 +58,48 @@ class SpotMonitor:
         monitor_thread.start()
 
     def set_new_spot_callback(self, callback):
+        '''Set new spot callback function.
+
+        Callback function signature: func(spots) where spots is a list of pyjs8call.spot objects heard since the last internal check for new spots.
+
+        Args:
+            callback (func): Function to call when new spots are heard
+        '''
         self._new_spot_callback = callback
 
     def set_watch_callback(self, callback):
+        '''Set station watch callback function.
+
+        Callback function signature: func(spot) where spot is a pyjs8call.spot object with spot.origin matching a watched station.
+
+        Args:
+            callback (func): Function to call when a watched station is heard
+        '''
         self._watch_callback = callback
 
     def add_station_watch(self, station):
+        '''Add new station to watch.
+
+        Args:
+            station (str): Callsign of station to watch for
+        '''
         if station not in self._station_watch_list:
             self._station_watch_list.append(station)
 
     def remove_station_watch(self, station):
+        '''Remove watched station.
+
+        Args:
+            station (str): Callsign of station to stop watching for
+        '''
         if station in self._station_watch_list:
             self._station_watch_list.remove(station)
 
     def _monitor(self):
+        '''Spot monitor thread.
+
+        Uses pyjs8call.client.Client.get_station_spots internally.
+        '''
         while self._client.online:
             now = time.time()
             time_since_last_update = now - self._last_spot_update_timestamp
@@ -72,5 +115,4 @@ class SpotMonitor:
                             self._watch_callback(spot)
 
             time.sleep(self.spot_update_delay)
-                    
 
