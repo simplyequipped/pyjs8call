@@ -20,6 +20,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+'''Manage offset frequency based on activity in the pass band.
+
+The offset frequency is automatically moved to an unused portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the speed of each heard signal.
+
+Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
+'''
+
 __docformat__ = 'google'
 
 
@@ -28,14 +35,34 @@ import threading
 
 
 class OffsetMonitor:
+    '''Monitor offset frequency based on activity in the pass band.
+
+    Attributes:
+    - min_offset (int): Minimum offset for adjustment and recent activity monitoring
+    - max_offset (int): Maximum offset for adjustment and recent activity monitoring
+    - heard_station_age (int): Maximum age of a heard station to be considered recent activity
+    - bandwidth (int): JS8Call tx signal bandwidth (see pyjs8call.client.Client.get_bandwidth)
+    - bandwidth_safety_factor (float): Safety factor to apply to tx bandwidth when looking for an unused portion of the pass band
+    - offset (int): Current JS8Call offset frequency in Hz
+    - enabled (bool): Whether to enable the offset monitor and automatically adjust the offset frequency, defaults to True
+    '''
+
     def __init__(self, client):
-        self.client = client
+        '''Initialize offset monitor.
+
+        Args:
+            client (pyjs8call.client): Parent client object
+
+        Returns:
+            pyjs8call.offsetmonitor: Constructed offset monitor object
+        '''
+        self._client = client
         self.min_offset = 1000
         self.max_offset = 2500
         self.heard_station_age = 100 # seconds
-        self.bandwidth = self.client.get_bandwidth()
+        self.bandwidth = self._client.get_bandwidth()
         self.bandwidth_safety_factor = 1.25
-        self.offset = self.client.get_offset()
+        self.offset = self._client.get_offset()
         self.enabled = True
 
         # start monitoring thread
@@ -43,18 +70,45 @@ class OffsetMonitor:
         monitor_thread.setDaemon(True)
         monitor_thread.start()
 
-    def min_signal_freq(self, offset, bandwidth):
+    def _min_signal_freq(self, offset, bandwidth):
+        '''Get lower edge of signal.
+
+        Args:
+            offset (int): Signal offset frequency in Hz
+            bandwidth (int): Signal bandwidth in Hz
+
+        Returns:
+            int: Minimum frequency of the signal in Hz
+        '''
         return int(offset)
 
-    def max_signal_freq(self, offset, bandwidth):
+    def _max_signal_freq(self, offset, bandwidth):
+        '''Get upper edge of signal.
+
+        Args:
+            offset (int): Signal offset frequency in Hz
+            bandwidth (int): Signal bandwidth in Hz
+
+        Returns:
+            int: Maximum frequency of the signal in Hz
+        '''
         return int(offset + bandwidth)
 
     def signal_overlapping(self, offset, bandwidth):
+        '''Determine if signal overlaps with current offset.
+
+        Args:
+            offset (int): Signal offset frequency in Hz
+            bandwidth (int): Signal bandwidth in Hz
+
+        Returns:
+            bool: Whether the given signal overlaps with the current offset frequency
+        '''
         # get min/max frequencies
-        other_min_freq = self.min_signal_freq(offset, bandwidth)
-        other_max_freq = self.max_signal_freq(offset, bandwidth)
-        own_min_freq   = self.min_signal_freq(self.offset, self.bandwidth)
-        own_max_freq   = self.max_signal_freq(self.offset, self.bandwidth)
+        other_min_freq = self._min_signal_freq(offset, bandwidth)
+        other_max_freq = self._max_signal_freq(offset, bandwidth)
+        own_min_freq   = self._min_signal_freq(self.offset, self.bandwidth)
+        own_max_freq   = self._max_signal_freq(self.offset, self.bandwidth)
 
         if (
             # signal offset within our signal bandwidth
@@ -69,6 +123,16 @@ class OffsetMonitor:
             return False
 
     def parse_activity(self, activity):
+        '''Parse recent activity into signal data.
+
+        Recent spot data is processed to generate tuples of the following structure: (offset, bandwidth). The returned list of tuples is sorted by in ascending order by offset frequency.
+
+        Args:
+            activity (list): List of recent spots to parse
+
+        Returns:
+            list: List of signal tuples
+        '''
         signals = []
 
         # build list of offsets and associated bandwidths
@@ -78,7 +142,7 @@ class OffsetMonitor:
                  signal = (spot.offset, 160)
             else:
                 # map signal speed to signal bandwidth
-                bandwidth = self.client.get_bandwidth(speed = spot.speed)
+                bandwidth = self._client.get_bandwidth(speed = spot.speed)
                 signal = (spot.offset, bandwidth)
 
             signals.append(signal)
@@ -88,12 +152,22 @@ class OffsetMonitor:
         return signals
 
     def find_unused_spectrum(self, signals):
+        '''Find available pass band sections.
+
+        Available sections of the pass band are sections that are wide enough for a transmitted signal based on the configured bandwidth (i.e. configured JS8Call modem speed) plus a safety margin. The returned tuples represent the lower and upper limits of available pass band sections.
+
+        Args:
+            signals (list): List of signal tuples
+
+        Returns:
+            list: A list of tuples of the following structure: (lower_freq, upper_freq)
+        '''
         unused_spectrum = []
 
         for i in range(len(signals)):
-            min_signal_freq = self.min_signal_freq(*signals[i])
-            min_signal_freq = self.min_signal_freq(*signals[i])
-            max_signal_freq = self.max_signal_freq(*signals[i])
+            min_signal_freq = self._min_signal_freq(*signals[i])
+            min_signal_freq = self._min_signal_freq(*signals[i])
+            max_signal_freq = self._max_signal_freq(*signals[i])
             lower_limit_below = None
             upper_limit_below = None
             lower_limit_above = None
@@ -124,7 +198,7 @@ class OffsetMonitor:
             # last signal in list
             elif i == len(signals) - 1:
                 # use previous signal's upper edge as lower edge of unused section
-                lower_limit_below = self.max_signal_freq(*signals[i-1])
+                lower_limit_below = self._max_signal_freq(*signals[i-1])
                 # use current signal's lower edge as upper edge of unused section
                 upper_limit_below = min_signal_freq
                 # use current signal's upper edge as lower edge of unused section
@@ -135,7 +209,7 @@ class OffsetMonitor:
             # signal somwhere else in the list
             else:
                 # use previous signal's upper edge as lower edge of unused section
-                lower_limit_below = self.max_signal_freq(*signals[i-1])
+                lower_limit_below = self._max_signal_freq(*signals[i-1])
                 # use current signal's lower edge as upper edge of unused section
                 upper_limit_below = min_signal_freq
 
@@ -161,6 +235,16 @@ class OffsetMonitor:
         return unused_spectrum
 
     def find_new_offset(self, unused_spectrum):
+        '''Get new offset frequency.
+
+        Find a new offset based on available sections in the pass band. The new offset is always moved to the next closed available section of the pass band.
+
+        Args:
+            unused_spectrum (list): List of tuples of available sections
+
+        Returns:
+            int or None: New offset frequency in Hz, or None if there are no available sections
+        '''
         # calculate distance from the current offset to each unused section
         distance = []
 
@@ -198,9 +282,13 @@ class OffsetMonitor:
             return None
             
     def _monitor(self):
-        while self.client.online and self.enabled:
+        '''Offset monitor thread.
+
+        Update activity 0.5 seconds before the end of the current tx window. This allows a new offset to be selected before the next tx window if new activity overlaps with the current offset. Activity is not updated if a message is being sent (i.e. there is text in the tx text box).
+        '''
+        while self._client.online and self.enabled:
             # wait until 0.5 seconds before the end of the tx window
-            delay = self.client.window_monitor.next_window_end() - time.time() - 0.5
+            delay = self._client.window_monitor.next_window_end() - time.time() - 0.5
 
             # next window end == 0 until first tx frame
             if delay < 0:
@@ -210,15 +298,15 @@ class OffsetMonitor:
 
             # wait until tx_text is not being 'watched'
             # tx_monitor requests tx_text every second
-            while self.client.js8call._watching == 'tx_text':
+            while self._client.js8call._watching == 'tx_text':
                 time.sleep(0.1)
             
             # skip processing if actively sending a message
-            if self.client.js8call.state['tx_text'] != '':
+            if self._client.js8call.state['tx_text'] != '':
                 continue
 
             # get recent spots
-            activity = self.client.get_station_spots(max_age = self.heard_station_age) 
+            activity = self._client.get_station_spots(max_age = self.heard_station_age) 
 
             # skip processing if there is no activity
             if len(activity) == 0:
@@ -228,8 +316,8 @@ class OffsetMonitor:
             signals = self.parse_activity(activity)
 
             # get the current settings
-            self.bandwidth = self.client.get_bandwidth()
-            current_offset = self.client.get_offset()
+            self.bandwidth = self._client.get_bandwidth()
+            current_offset = self._client.get_offset()
 
             if int(current_offset) != int(self.offset):
                 self.offset = current_offset
@@ -250,5 +338,5 @@ class OffsetMonitor:
                 if new_offset != None:
                     # set new offset
                     self.offset = new_offset
-                    self.client.set_offset(self.offset)
+                    self._client.set_offset(self.offset)
 
