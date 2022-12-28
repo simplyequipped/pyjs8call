@@ -10,6 +10,16 @@ See a simple example in the *example.py* file at the top level of the repo.
 
 &nbsp;  
 
+### Installation
+
+Install using pip3 (or pip if python3 is the default on your system):
+
+```
+pip install pyjs8call
+```
+
+&nbsp;
+
 ### Modules
 
 Some setup (i.e. setting callback functions) is required to used certain module features. Most modules are initialized automatically by pyjs8call.client.
