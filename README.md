@@ -32,7 +32,7 @@ Monitors the start and end of the next tx window. Tx frames are used to determin
 
 **Offset Monitor** (pyjs8call.offsetmonitor)
 
-Manages JS8Call offset frequency relative to activity in the pass band. The offset frequency is automatically moved to an unsed portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the speed of each heard signal. Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
+Manages JS8Call offset frequency based on activity in the pass band. The offset frequency is automatically moved to an unsed portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the speed of each heard signal. Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
 
 **TX Monitor** (pyjs8call.txmonitor)
 
