@@ -36,7 +36,7 @@ Manages JS8Call offset frequency based on activity in the pass band. The offset 
 
 **TX Monitor** (pyjs8call.txmonitor)
 
-Monitors JS8Call tx text for queued messages. Notification of a message status change (sending, complete, failed) is handled via callback function.
+Monitors JS8Call tx text for queued outgoing messages. Notification of a message status change (sending, complete, failed) is handled via callback function.
 
 &nbsp;  
 
