@@ -6,6 +6,8 @@ A Python package that interfaces with the JS8Call API.
 
 See the official [pyjs8call documentation](https://simplyequipped.github.io/pyjs8call).
 
+See a simple example in the *example.py* file at the top level of the repo.
+
 &nbsp;  
 
 ### Modules

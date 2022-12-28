@@ -1,49 +1,61 @@
 import time
 import pyjs8call
 
-# callback for received messages
+# callback for received directed messages (includes groups such as @HB)
 def rx_message(msg):
-    print('\t--- Message from ' + str(msg['from']) + ': ' + str(msg['text']))
+    print('\t--- Message from ' + str(msg.origin) + ': ' + str(msg.text))
 
-# callback for all new spots
+# callback for new spots
 def new_spots(spots):
     for spot in spots:
-        if spot['grid'] == '':
+        if spot.grid == '':
             grid = ' '
         else:
-            grid = ' (' + str(spot['grid']) + ') '
+            grid = ' (' + spot.grid + ') '
 
-        print('\t--- Spot: ' + str(spot['from']) + grid + '@ ' + str(spot['offset']) + ' Hz\t' + time.strftime('%x %X', time.localtime(spot['time'])))
+        print('\t--- Spot: ' + spot.origin + grid + '@ ' + str(spot.offset) + ' Hz\t' + time.strftime('%x %X', spot.timestamp))
 
-# function for sending a directed message
+# callback for tx monitor status change
+def tx_status(msg):
+    print('\n\tMessage ' + msg.id + ' status: ' + msg.status)
+
+# function to send a directed message
 def send_message():
-    global client
-    dest = input('\n\tEnter destination callsign: ')
-    msg = input('\tEnter message: ')
-    client.send_directed_message(dest, msg)
-    print('\n\tSending message on next transmit cycle\n')
+    global js8call
+    destination = input('\n\tEnter destination callsign: ')
+    text = input('\tEnter message: ')
+    msg = js8call.send_directed_message(destination, text)
+    print('\n\tSending message ' + msg.id + ' on next transmit cycle\n')
 
-# function for showing inbox messages
+# function to show JS8Call inbox messages
 def show_inbox():
-    global client
-    messages = client.get_inbox_messages()
+    global js8call
+    messages = js8call.get_inbox_messages()
     print('\n--- Inbox Messages: ' + str(len(messages)))
 
     if len(messages) > 0:
         print('')
         for msg in messages:
-            print('\tFrom: ' + str(msg['from']) + '\t\tTo: ' + str(msg['to']) + '\t\tPath: ' + str(msg['path']))
-            print('\tDate/Time (UTC): ' + str(msg['time']))
-            print('\tMessage: ' + str(msg['message']))
+            print('\tFrom: ' + msg.origin + '\t\tTo: ' + msg.destination + '\t\tPath: ' + msg.path)
+            print('\tDate/Time: ' + time.strftime('%c', msg.timestamp))
+            print('\tMessage: ' + msg.text)
             print('')
     else:
         print('')
 
+# function to set JS8Call dial frequency
+def set_freq():
+    global js8call
+    new_freq = input('\n\tEnter new dial frequency in Hz: ')
+    freq = js8call.set_freq(new_freq)
+    print('\nNew dial frequency: ' + str(freq / 1000000).format('0.000') + ' MHz (' + str(offset) + ' Hz)\n')
+
 # function for printing the menu and handling selections
 def show_menu():
     menu =  '\n---------------  Menu  ---------------'
-    menu += '\n   m)     Send message'
-    menu += '\n   i)     Inbox messages'
+    menu += '\n   m)     Send directed message'
+    menu += '\n   i)     Show inbox messages'
+    menu += '\n   f)     Set new dial frequency'
     menu += '\n   x)     Exit'
     menu += '\n   Enter) Show menu'
     menu += '\n\nType a menu option and press enter: '
@@ -54,9 +66,11 @@ def show_menu():
         send_message()
     if user_input == 'i':
         show_inbox()
+    if user_input == 'f':
+        set_freq()
     if user_input == 'x':
-        global client
-        client.stop()
+        global js8call
+        js8call.stop()
         exit()
 
 
@@ -64,8 +78,9 @@ def show_menu():
 js8call = pyjs8call.Client()
 js8call.start()
 # set callback functions
-js8call.set_rx_callback(rx_message)
+js8call.register_rx_callback(rx_message)
 js8call.spot_monitor.set_new_spot_callback(new_spots)
+js8call.tx_monitor.set_status_change_callback(tx_status)
 
 # read current configuration values
 freq = js8call.get_freq()
@@ -73,7 +88,7 @@ offset = js8call.get_offset()
 grid = js8call.get_station_grid()
 callsign = js8call.get_station_callsign()
 # check if connected to js8call
-connected = js8call.js8call_connected()
+connected = js8call.connected()
 
 # parse connected state
 if connected:
@@ -83,8 +98,9 @@ else:
 
 # print a summary of this station
 print('\nStation ' + callsign + ' (' + grid + ') - ' + state + ' ---------------------------------------------')
-print('Frequency: ' + str(freq / 1000000).format('0.000') + 'MHz (' + str(offset) + 'Hz)\n')
+print('Frequency: ' + str(freq / 1000000).format('0.000') + ' MHz (' + str(offset) + ' Hz)\n')
 
 # show the menu until the user exits
 while js8call.online:
-    show_menu()    
+    show_menu()
+
