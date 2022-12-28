@@ -20,6 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+'''Monitor JS8Call tx text for queued outgoing messages.
+
+Directed messages are monitored by default (see pyjs8call.client.Client.monitor_directed_tx).
+'''
+
 __docformat__ = 'google'
 
 
@@ -31,7 +36,38 @@ from pyjs8call import Message
 
 
 class TxMonitor:
+    '''Monitor JS8Call tx text for queued outgoing messages.
+    
+    Monitored messages can have the the following status:
+    - STATUS_QUEUED
+    - STATUS_SENDING
+    - STATUS_SENT
+    - STATUS_FAILED
+
+    A message changes to STATUS_QUEUED when monitoring begins.
+
+    A message changes to STATUS_SENDING when the destination and value are seen in the JS8Call tx text field and the status of the message is STATUS_QUEUED.
+
+    A message changes to STATUS_SENT when the destination and value are no longer seen in the JS8Call tx text field and the status of the message is STATUS_SENDING.
+
+    A message changes to STATUS_FAILED when the message is not sent within 30 tx cycles. Therefore the maximum age of a monitored message depends on the JS8Call modem speed setting:
+    - 3 minutes in turbo mode which has 6 second tx cycles
+    - 5 minutes in fast mode which has 10 second tx cycles
+    - 7.5 minutes in normal mode which has 15 second cycles
+    - 15 minutes in slow mode which has 30 second tx cycles
+
+    A message is dropped from the monitoring queue once the status is set to STATUS_SENT or STATUS_FAILED.
+    '''
+
     def __init__(self, client):
+        '''Initialize tx monitor.
+
+        Args:
+            client (pyjs8call.client): Parent client object
+
+        Returns:
+            pyjs8call.txmonitor: Constructed tx monitor object
+        '''
         self._client = client
         self._msg_queue = []
         self._msg_queue_lock = threading.Lock()
@@ -44,9 +80,23 @@ class TxMonitor:
         monitor_thread.start()
 
     def set_status_change_callback(self, callback):
+        '''Set callback for monitored message status change.
+    
+        Callback function signature: func(msg) where msg is the monitored pyjs8call.message object.
+
+        Args:
+            callback (func): Function to call when the status of a monitored message changes
+        '''
         self._status_change_callback = callback
 
     def monitor(self, msg):
+        '''Monitor a new message.
+
+        The message status is set to STATUS_QUEUED (see pyjs8call.message) when monitoring begins.
+
+        Args:
+            msg (pyjs8call.message): Message to look for in the JS8Call tx text field
+        '''
         msg.status = Message.STATUS_QUEUED
 
         self._msg_queue_lock.acquire()
@@ -54,6 +104,7 @@ class TxMonitor:
         self._msg_queue_lock.release()
 
     def _monitor(self):
+        '''Tx monitor thread.'''
         while self._client.online:
             time.sleep(1)
             tx_text = self._client.get_tx_text()
