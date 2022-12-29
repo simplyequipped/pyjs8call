@@ -128,10 +128,10 @@ class Client:
         '''Start and connect to the the JS8Call application.
 
         Starts monitoring objects and associated threads:
-            - Spot monitor (see pyjs8call.spotmonitor)
-            - Window monitor (see pyjs8call.windowmonitor)
-            - Offset monitor (see pyjs8call.offsetmonitor)
-            - Tx monitor (see pyjs8call.txmonitor)
+        - Spot monitor (see pyjs8call.spotmonitor)
+        - Window monitor (see pyjs8call.windowmonitor)
+        - Offset monitor (see pyjs8call.offsetmonitor)
+        - Tx monitor (see pyjs8call.txmonitor)
 
         Args:
             debug (bool): Print rx and tx messages to the console for debugging, defaults to False
@@ -396,12 +396,12 @@ class Client:
         '''Get JS8Call inbox messages.
 
         Each inbox message (dict) has the following keys:
-            - id
-            - time
-            - origin
-            - destination
-            - path
-            - text
+        - id
+        - time
+        - origin
+        - destination
+        - path
+        - text
 
         Returns:
             list: List of messages where each message is a dictionary object
@@ -694,10 +694,10 @@ class Client:
         '''Get JS8Call call activity.
 
         Each call activity item (dict) has the following keys:
-            - origin
-            - grid
-            - snr
-            - time
+        - origin
+        - grid
+        - snr
+        - time
 
         Returns:
             list: List of dictionaries where each dictionary is a call activity item
@@ -712,11 +712,11 @@ class Client:
         '''Get JS8Call band activity.
 
         Each band activity item (dict) has the following keys:
-            - freq
-            - offset
-            - snr
-            - time
-            - text
+        - freq
+        - offset
+        - snr
+        - time
+        - text
 
         Returns:
             list: List of dictionaries where each dictionary is a band activity item
@@ -782,14 +782,14 @@ class Client:
         '''Get JS8Call modem speed or map known speed from an integer to text.
 
         This function has two use cases:
-            a) get_speed() without arguments: get JS8Call configured speed
-            b) get_speed(speed=1) with given speed integer: get speed as text
+        1. get_speed() without arguments: get JS8Call configured speed
+        2. get_speed(speed=1) with given speed as an int: get speed as text
 
-        Possible speed settings are:
-            - slow (4)
-            - normal (0)
-            - fast (1)
-            - turbo (2)
+        Possible speed settings as str and (int):
+        - 'slow' (4)
+        - 'normal' (0)
+        - 'fast' (1)
+        - 'turbo' (2)
 
         Args:
             update (bool): Request speed from JS8Call or use current setting, defaults to True
@@ -822,13 +822,13 @@ class Client:
     def set_speed(self, speed):
         '''Set JS8Call modem speed.
 
-        NOTE: The JS8Call API only sets the modem speed in the UI menu without changing the configured modem speed, which makes this function useless.
+        **NOTE: The JS8Call API only sets the modem speed in the UI menu without changing the configured modem speed, which makes this function useless. This is a JS8Call API issue.**
 
         Possible speed settings are:
-            - slow
-            - normal
-            - fast
-            - turbo
+        - 'slow'
+        - 'normal'
+        - 'fast'
+        - 'turbo'
 
         Args:
             speed (str): Speed to set
@@ -855,11 +855,11 @@ class Client:
 
         Uses JS8Call configured speed if no speed is given.
 
-        Possible speed settings are:
-            - slow (25 Hz)
-            - normal (50 Hz)
-            - fast (80 Hz)
-            - turbo (160 Hz)
+        Possible speed settings and corresponding bandwidths:
+        - 'slow' (25 Hz)
+        - 'normal' (50 Hz)
+        - 'fast' (80 Hz)
+        - 'turbo' (160 Hz)
 
         Args:
             speed (str): Speed setting, defaults to None
@@ -884,11 +884,11 @@ class Client:
 
         Uses JS8Call configured speed if no speed is given.
 
-        Possible speed settings are:
-            - slow (30 seconds)
-            - normal (15 seconds)
-            - fast (10 seconds)
-            - turbo (5 seconds)
+        Possible speed settings and corresponding tx window durations:
+        - 'slow' (30 seconds)
+        - 'normal' (15 seconds)
+        - 'fast' (10 seconds)
+        - 'turbo' (5 seconds)
 
         Args:
             speed (str): Speed setting, defaults to None
@@ -914,10 +914,10 @@ class Client:
         '''Get a list of JS8Call messages from the rx text field.
 
         Each message (dict) has the following keys:
-            - time
-            - offset
-            - origin
-            - text
+        - time
+        - offset
+        - origin
+        - text
 
         Args:
             own (bool): Include tx messages listed in the rx text field, defaults to True
