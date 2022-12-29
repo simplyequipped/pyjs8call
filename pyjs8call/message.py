@@ -254,8 +254,8 @@ class Message:
         Uses *setattr* internally to add attributes to the message object. Added attributes are tracked in the *attributes* attribute. Attributes are converted to lowercase for consistency.
 
         Special attribute handling for consistency:
-            *call*: also sets *from* to the same value if *call* is not None and *from* is None
-            *from*: also sets *origin* to the same value
+        - *call*: also sets *from* to the same value if *call* is not None and *from* is None
+        - *from*: also sets *origin* to the same value
 
         Note that attempting to access Message.from results in an error.
 
@@ -296,7 +296,7 @@ class Message:
         Message attributes set to None are not included in the returned dictionary.
 
         Special attribute handling:
-            *value*: If None, set to '' (empty string); if set and Message.type is TX_SEND_MESSAGE and Message.destination is not None (i.e. directed message), set to Message.destination and Message.value joined with a space.
+        - *value*: If None, set to '' (empty string); if set and Message.type is TX_SEND_MESSAGE and Message.destination is not None (i.e. directed message), set to Message.destination and Message.value joined with a space.
 
         Args:
             exclude (list): List of attribute names to exclude from the dictionary (see *pack*)
