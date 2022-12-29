@@ -786,10 +786,10 @@ class Client:
         2. get_speed(speed=1) with given speed as an int: get speed as text
 
         Possible speed settings as str and (int):
-        - 'slow' (4)
-        - 'normal' (0)
-        - 'fast' (1)
-        - 'turbo' (2)
+        - slow (4)
+        - normal (0)
+        - fast (1)
+        - turbo (2)
 
         Args:
             update (bool): Request speed from JS8Call or use current setting, defaults to True
@@ -825,10 +825,10 @@ class Client:
         **NOTE: The JS8Call API only sets the modem speed in the UI menu without changing the configured modem speed, which makes this function useless. This is a JS8Call API issue.**
 
         Possible speed settings are:
-        - 'slow'
-        - 'normal'
-        - 'fast'
-        - 'turbo'
+        - slow
+        - normal
+        - fast
+        - turbo
 
         Args:
             speed (str): Speed to set
@@ -856,10 +856,10 @@ class Client:
         Uses JS8Call configured speed if no speed is given.
 
         Possible speed settings and corresponding bandwidths:
-        - 'slow' (25 Hz)
-        - 'normal' (50 Hz)
-        - 'fast' (80 Hz)
-        - 'turbo' (160 Hz)
+        - slow (25 Hz)
+        - normal (50 Hz)
+        - fast (80 Hz)
+        - turbo (160 Hz)
 
         Args:
             speed (str): Speed setting, defaults to None
@@ -885,10 +885,10 @@ class Client:
         Uses JS8Call configured speed if no speed is given.
 
         Possible speed settings and corresponding tx window durations:
-        - 'slow' (30 seconds)
-        - 'normal' (15 seconds)
-        - 'fast' (10 seconds)
-        - 'turbo' (5 seconds)
+        - slow (30 seconds)
+        - normal (15 seconds)
+        - fast (10 seconds)
+        - turbo (5 seconds)
 
         Args:
             speed (str): Speed setting, defaults to None
