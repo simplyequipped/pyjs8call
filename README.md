@@ -19,7 +19,7 @@ See a simple example in the *example.py* file at the top level of the repo.
     sudo dpkg -i js8call_2.2.0_armhf.deb
     ```
     
-    See the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of repo.
+    See the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the repo.
 
 2. Install pyjs8call using pip3 (or pip if python3 is the default on your system):
     
