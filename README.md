@@ -109,9 +109,9 @@ js8call = pyjs8call.Client()
 js8call.start()
 
 # set spot monitor callback
-js8call.spot_monitor.set_new_spot_callback(new_spots)
+js8call.callback.spots = new_spots
 # set station watcher callback
-js8call.spot_monitor.set_watch_callback(station_spotted)
+js8call.callback.station_spot = station_spotted
 
 # watch multiple stations
 js8call.spot_monitor.add_station_watch('N0GQ')
@@ -133,7 +133,7 @@ js8call = pyjs8call.Client()
 js8call.start()
 
 # set tx monitor callback
-js8call.tx_monitor.set_tx_status_change_callback(tx_status)
+js8call.callback.outgoing = tx_status
 
 # monitor directed message tx automatically (default)
 js8call.send_directed_message('OH8STN', 'Thanks for the great content')
@@ -151,4 +151,6 @@ js8call.tx_monitor.monitor(msg)
 Inspired by [js8net](https://github.com/jfrancis42/js8net) by N0GQ.
 
 [JS8Call](http://js8call.com) by KN4CRD
+
+&nbsp;
 
