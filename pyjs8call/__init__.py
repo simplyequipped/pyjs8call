@@ -22,6 +22,7 @@
 
 '''
 .. include:: ../README.md
+.. include:: ../VERSION.md
 '''
 
 __docformat__ = 'google'
