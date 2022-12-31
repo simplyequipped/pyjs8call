@@ -30,11 +30,8 @@ import time
 
 
 class SpotMonitor:
-    '''Monitor recent station spots.
+    '''Monitor recent station spots.'''
 
-    Attributes:
-        spot_update_delay (int): Delay in seconds between checks for new spots
-    '''
     def __init__(self, client):
         '''Initialize spot monitor.
 
@@ -48,7 +45,6 @@ class SpotMonitor:
         self._new_spots = []
         self._last_spot_update_timestamp = 0
         self._new_spot_callback = None
-        self.spot_update_delay = 3 # seconds
 
         self._station_watch_list = []
         self._watch_callback = None
@@ -101,10 +97,22 @@ class SpotMonitor:
         Uses pyjs8call.client.Client.get_station_spots internally.
         '''
         while self._client.online:
+            next_tx_window = self._client.window_monitor.next_window_start()
+
+            if next_tx_window == 0:
+                # use tx window duration if tx window timestamp is not available yet
+                time.sleep(self._client.get_tx_window_duration() / 3)
+            else:
+                # sleep until next tx window
+                time.sleep(next_tx_window - time.time())
+
+            # update timestamps
             now = time.time()
             time_since_last_update = now - self._last_spot_update_timestamp
+            # get new spots since last update
             self._new_spots = self._client.get_station_spots(max_age = time_since_last_update)
             self._last_spot_update_timestamp = now
+
             if len(self._new_spots) > 0:
                 if self._new_spot_callback != None:
                     self._new_spot_callback(self._new_spots)
@@ -113,6 +121,4 @@ class SpotMonitor:
                     for spot in self._new_spots:
                         if spot.origin in self._station_watch_list:
                             self._watch_callback(spot)
-
-            time.sleep(self.spot_update_delay)
 
