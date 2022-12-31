@@ -28,7 +28,7 @@ Typical usage example:
     
     ```
     js8call = pyjs8call.Client()
-    js8call.register_rx_callback(rx_func)
+    js8call.callback.register_incoming(rx_func)
     js8call.start()
     
     js8call.send_directed_message('KT1RUN', 'Great content thx')
@@ -41,6 +41,7 @@ __docformat__ = 'google'
 import time
 import atexit
 import threading
+import subprocess
 
 import pyjs8call
 from pyjs8call import Message
@@ -75,8 +76,16 @@ class Client:
             config_path (str): Non-standard JS8Call.ini configuration file path, defaults to None
 
         Returns:
-            pyjs8call.client.Client: Constructed client object
+            pyjs8call.client: Constructed client object
+
+        Raises:
+            ProcessLookupError: JS8Call application is not installed
         '''
+        try:
+            subprocess.check_output(['which', 'js8call'])
+        except subprocess.CalledProcessError:
+            raise ProcessLookupError('JS8Call application not installed')
+
         self.host = host
         self.port = port
         self.headless = headless
@@ -96,9 +105,8 @@ class Client:
         # initialize the config file handler
         self.config = pyjs8call.ConfigHandler(config_path = config_path)
 
-        self.callbacks = {
-            Message.RX_DIRECTED: [],
-        }
+        # initialize callback object
+        self.callback = Callbacks()
 
         # stop application and client at exit
         atexit.register(self.stop)
@@ -112,10 +120,10 @@ class Client:
             profile (str): Profile name
 
         Raises:
-            Exception: Given profile name does not exist (see pyjs8call.confighandler.ConfigHandler.create_new_profile)
+            ValueError: Given profile name does not exist (see pyjs8call.confighandler.ConfigHandler.create_new_profile)
         '''
         if profile not in self.config.get_profile_list():
-            raise Exception('Config profile ' + profile + ' does not exist')
+            raise ValueError('Config profile ' + profile + ' does not exist')
 
         # set the profile as active
         self.config.change_profile(profile)
@@ -157,10 +165,10 @@ class Client:
 
         time.sleep(0.5)
 
-        # start station spot monitor
-        self.spot_monitor = pyjs8call.SpotMonitor(self)
         # start tx window monitor
         self.window_monitor = pyjs8call.WindowMonitor(self)
+        # start station spot monitor
+        self.spot_monitor = pyjs8call.SpotMonitor(self)
         # start auto offset monitor
         self.offset_monitor = pyjs8call.OffsetMonitor(self)
         # start tx monitor
@@ -179,52 +187,25 @@ class Client:
 
         Dial frequency, offset frequency, and all callback functions are preserved.
         '''
-        # save callback settings
-        tx_monitor_status_change_callback = self.tx_monitor._status_change_callback
-        spot_monitor_new_spot_callback = self.spot_monitor._new_spot_callback
-        spot_monitor_watch_callback = self.spot_monitor._watch_callback
-        window_monitor_window_callback = self.window_monitor._window_callback
-
         # save freq and offset
         freq = self.get_freq()
         offset = self.get_offset()
 
         self.stop()
-        self.js8call._socket.close()
         time.sleep(1)
         self.start(debug = self.js8call._debug)
-
-        # restore callback settings
-        self.tx_monitor._status_change_callback = tx_monitor_status_change_callback
-        self.spot_monitor._new_spot_callback = spot_monitor_new_spot_callback
-        self.spot_monitor._watch_callback = spot_monitor_watch_callback
-        self.window_monitor._window_callback = window_monitor_window_callback
 
         # restore freq and offset
         self.set_offset(offset)
         self.set_freq(freq)
-
-    def register_rx_callback(self, callback, message_type=Message.RX_DIRECTED):
-        '''Register a rx callback function.
-
-        Callback functions are associated with specific message types. The directed message type is assumed unless otherwise specified. See pyjs8call.message for specific message types.
-
-        Args:
-            callback (func): Callback function object with the signature func(msg) where msg is a pyjs8call.message object
-            message_type (str): The message type to associate with the callback funtion
-        '''
-        if message_type not in self.callbacks.keys():
-            self.callbacks[message_type] = []
-
-        self.callbacks[message_type].append(callback)
 
     def _rx(self):
         '''Rx thread function.'''
         while self.online:
             msg = self.js8call.get_next_message()
 
-            if msg != None and msg.type in self.callbacks.keys():
-                for callback in self.callbacks[msg.type]:
+            if msg != None:
+                for callback in self.callback.incoming_type(msg.type):
                     callback(msg)
 
             time.sleep(0.1)
@@ -336,12 +317,12 @@ class Client:
             pyjs8call.message: Constructed messsage object
 
         Raises:
-            Exception: Grid square not given and JS8Call grid square not set
+            ValueError: Grid square not given and JS8Call grid square not set
         '''
         if grid == None:
             grid = self.get_station_grid()
         if grid == None or grid == '':
-            raise Exception('Grid square cannot be None when sending an APRS grid message')
+            raise ValueError('Grid square cannot be None when sending an APRS grid message')
         if len(grid) > 4:
             grid = grid[:4]
 
@@ -947,4 +928,68 @@ class Client:
             rx_messages.append(data)
 
         return rx_messages
+
+
+class Callbacks:
+    '''Callback functions.
+
+    Attributes:
+    - incoming (dict): Dictionary of incoming message callback function lists organized by message type with the following format: *{message_type: [callback_function, ...], ...}* where *callback_function* has a signature *func(msg)* where *msg* is a pyjs8call.message object
+    - outgoing (func): Outgoing message status callback function with a signature *func(msg)* where *msg* is a pyjs8call.message object, called by pyjs8call.txmonitor, defaults to None
+    - spots (func): New spots callback funtion with a signature *func( list(msg, ...) )* where *msg* is a pyjs8call.message object, called by pyjs8call.spotmonitor, defaults to None
+    - station_spot (func): Specific station spot callback function with a signature *func(msg)* where *msg* is a pyjs8call.message object, called by pyjs8call.spotmonitor, defaults to None
+    - window (func): Transmit window transition callback function with a signature *func()*, called by pyjs8call.windowmonitor, defaults to None
+    '''
+
+    def __init__(self):
+        '''Initialize callback object.
+
+        Returns:
+            pyjs8call.client.Callbacks: Constructed callback object
+        '''
+        self.outgoing = None
+        self.spots = None
+        self.station_spot = None
+        self.window = None
+        self.incoming = {
+            Message.RX_DIRECTED: [],
+        }
+
+    def register_incoming(self, callback, message_type=Message.RX_DIRECTED):
+        '''Register incoming message callback function.
+
+        Incoming message callback functions are associated with specific message types. The directed message type is assumed unless otherwise specified. See pyjs8call.message for more information on message types.
+
+        Note that pyjs8call internal modules may register callback functions for specific message type handling.
+
+        Args:
+            callback (func): Callback function object with the signature func(msg) where msg is a pyjs8call.message object
+            message_type (str): The message type to associate with the callback funtion, defaults to RX_DIRECTED
+
+        Raises:
+            TypeError: An invaid message type is specified
+        '''
+        if message_type not in Message.RX_TYPES:
+            raise TypeError('Invalid message type \'' + str(message_type) + '\', see pyjs8call.Message.RX_TYPES')
+
+        if message_type not in self.incoming.keys():
+            self.incoming[message_type] = []
+
+        self.incoming[message_type].append(callback)
+
+    def incoming_type(self, message_type=Message.RX_DIRECTED):
+        '''Get incoming message callback functions.
+        
+        See pyjs8call.message for more information on message types.
+        
+        Args:
+            message_type (str): Message type to get callback functions for, defaults to RX_DIRECTED
+        
+        Returns:
+            list: List of callback functions associated with the specified message type
+        '''
+        if message_type in self.incoming.keys():
+            return self.incoming[message_type]
+        else:
+            return []
 
