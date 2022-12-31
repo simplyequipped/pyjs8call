@@ -70,10 +70,10 @@ class JS8Call:
         self._rx_queue_lock = threading.Lock()
         self._tx_queue = []
         self._tx_queue_lock = threading.Lock()
-        self._socket = None
         self._watch_timeout = 3 # seconds
         self._watching = None
         self._last_rx_timestamp = 0
+        self._socket = None
         self._socket_heartbeat_delay = 60 * 5 # seconds
         self._app = None
         self._debug = False
@@ -123,6 +123,7 @@ class JS8Call:
         '''Stop threads and JS8Call application.'''
         self.online = False
         self.app_monitor.stop()
+        self._socket.close()
 
     def _connect(self):
         '''Connect to the TCP socket of the JS8Call application.'''
