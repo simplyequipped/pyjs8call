@@ -445,11 +445,11 @@ class Message:
         return self
  
     def age(self):
-    '''Message age in seconds.
-
-    Returns:
-        float: Message age in seconds
-    '''
+        '''Message age in seconds.
+        
+        Returns:
+            float: Message age in seconds
+        '''
         return time.time() - self.timestamp
 
     def __eq__(self, msg):
