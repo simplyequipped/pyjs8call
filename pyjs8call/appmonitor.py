@@ -55,14 +55,14 @@ class AppMonitor:
         '''Initialize JS8Call application monitor.
 
         Args:
-            owner (pyjs8call.js8call): The parent object
+            owner (pyjs8call.js8call): The parent js8call object
 
         Returns:
             pyjs8call.appmonitor.AppMonitor: Constructed application monitor object
 
         Raises:
             ProcessLookupError: JS8Call is not installed
-            ProcessLookupError: Attempting to run the application headless and xvfb is not installed (specifically xvfb-run)
+            ProcessLookupError: Application run headless and xvfb is not installed
             RuntimeError: JS8Call application failed to start
         '''
         self._exec_path = None
@@ -76,7 +76,7 @@ class AppMonitor:
         try:
             self._exec_path = subprocess.check_output(['which', 'js8call']).decode('utf-8').strip()
         except subprocess.CalledProcessError:
-            raise ProcessLookupError('JS8Call application not installed, on Debian systems try: sudo apt install js8call')
+            raise ProcessLookupError('JS8Call application not installed')
 
     def start(self, headless=False):
         cmd = [self._exec_path]
@@ -85,7 +85,7 @@ class AppMonitor:
             try:
                 subprocess.check_output(['which', 'xvfb-run'])
             except subprocess.CalledProcessError:
-                raise ProcessLookupError('Cannot run headless since xvfb-run (virtual x server) not installed, on Debian systems try: sudo apt install xvfb')
+                raise ProcessLookupError('Cannot run headless since xvfb-run is not installed, on Debian systems try: sudo apt install xvfb')
 
             self.headless = True
             cmd.insert(0, 'xvfb-run')
