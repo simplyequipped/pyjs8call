@@ -78,6 +78,11 @@ class Message:
     - STATION_STATUS
     - MODE_SPEED
 
+    Static message types:
+    - TX_TYPES (outgoing types)
+    - RX_TYPES (incoming types)
+    - TYPES (outgoing and incoming types)
+
     Static commands:
     - CMD_SNR
     - CMD_GRID
@@ -174,6 +179,8 @@ class Message:
     MODE_SPEED              = 'MODE.SPEED'
     
     RX_TYPES = [MESSAGES, INBOX_MESSAGES, RX_SPOT, RX_DIRECTED, RX_SELECTED_CALL, RX_CALL_ACTIVITY, RX_BAND_ACTIVITY, RX_ACTIVITY, RX_TEXT, TX_TEXT, TX_FRAME, RIG_FREQ, RIG_PTT, STATION_CALLSIGN, STATION_GRID, STATION_INFO, MODE_SPEED]
+
+    TYPES = TX_TYPES.extend(RX_TYPES)
 
     #TODO are more commands supported?
     # command types
