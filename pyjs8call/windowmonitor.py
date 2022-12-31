@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Monitor start/end of next tx window.
+'''Monitor transition of next tx window.
 
 JS8Call tx frames and speed setting are used to calculate the start and end of the next tx window.
 '''
@@ -35,9 +35,9 @@ import pyjs8call
 
 
 class WindowMonitor:
-    '''Monitor start/end of next tx window.
+    '''Monitor transition of next tx window.
 
-    The JS8Call API sends a tx frame message immediately at the beginning of a tx cycle when a message is being sent. The timestamp of th tx frame message is used to calculate the beginning and end of future tx windows. The lenght of the tx window is based on the JS8Call modem speed setting (see pyjs8call.client.Client.get_tx_window_duration).
+    The JS8Call API sends a tx frame message immediately at the beginning of a tx cycle when a message is being sent. The timestamp of the tx frame message is used to calculate the beginning and end of future tx windows. The lenght of the tx window is based on the JS8Call modem speed setting (see pyjs8call.client.Client.get_tx_window_duration).
 
     Since a tx frame is only sent by the JS8Call API when a message is being sent, the timing of the tx window is unknown until a message is sent.
     '''
@@ -54,23 +54,15 @@ class WindowMonitor:
         self._last_tx_frame_timestamp = 0
         self._next_window_timestamp = 0
         self._window_duration = self._client.get_tx_window_duration()
-        self._window_callback = None
 
         monitor_thread = threading.Thread(target = self._monitor)
         monitor_thread.setDaemon(True)
         monitor_thread.start()
 
-    def set_window_callback(self, callback):
-        '''Set window callback function.
-
-        Callback function signature: func()
-
-        The callback function is called within 1 millisecond of the beginning of each tx window.
-
-        Args:
-            callback (func): The function to call at the beginning of each tx window
-        '''
-        self._window_callback = callback
+    def _callback(self):
+        '''Window transition callback function handling.'''
+        if self._client.callback.window != None:
+            self.client.callback.window()
 
     def process_tx_frame(self, msg):
         '''Process received tx frame message.
@@ -108,11 +100,8 @@ class WindowMonitor:
             # wait for first tx frame
             if self._last_tx_frame_timestamp == 0:
                 pass
-
-            # within 1 millisecond of window start
             elif self._next_window_timestamp < time.time():
-                if self._window_callback != None:
-                    self._window_callback()
+                self._callback()
 
                 self._window_duration = self._client.get_tx_window_duration()
 

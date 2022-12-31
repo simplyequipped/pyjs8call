@@ -42,39 +42,31 @@ class SpotMonitor:
             pyjs8call.spotmonitor: Constructed spot monitor object
         '''
         self._client = client
-        self._new_spots = []
         self._last_spot_update_timestamp = 0
-        self._new_spot_callback = None
-
         self._station_watch_list = []
-        self._watch_callback = None
 
         monitor_thread = threading.Thread(target=self._monitor)
         monitor_thread.setDaemon(True)
         monitor_thread.start()
 
-    def set_new_spot_callback(self, callback):
-        '''Set new spot callback function.
+    def _spots_callback(self, spots):
+        '''New spots callback function handling.
 
-        Callback function signature: func(spots) where spots is a list of pyjs8call.spot objects heard since the last internal check for new spots.
-
-        Args:
-            callback (func): Function to call when new spots are heard
-        '''
-        self._new_spot_callback = callback
-
-    def set_watch_callback(self, callback):
-        '''Set station watch callback function.
-
-        Callback function signature: func(spot) where spot is a pyjs8call.spot object with spot.origin matching a watched station.
+        Calls the *pyjs8call.client.callback.spots* and *pyjs8call.client.callback.station_spot* callback functions.
 
         Args:
-            callback (func): Function to call when a watched station is heard
+            spots (list): List of new spots
         '''
-        self._watch_callback = callback
+        if self._client.callback.spots != None:
+            self._client.callback.spots(spots)
+
+        if self._client.callback.station_spot != None:
+            for spot in spots:
+                if spot.origin in self._station_watch_list:
+                    self._client.callback.station_spot(spot)
 
     def add_station_watch(self, station):
-        '''Add new station to watch.
+        '''Add watched station.
 
         Args:
             station (str): Callsign of station to watch for
@@ -90,6 +82,14 @@ class SpotMonitor:
         '''
         if station in self._station_watch_list:
             self._station_watch_list.remove(station)
+
+    def get_watched_stations(self):
+        '''Get watched stations.
+
+        Returns:
+            list: List of watched station callsigns
+        '''
+        return self._station_watch_list
 
     def _monitor(self):
         '''Spot monitor thread.
@@ -110,15 +110,9 @@ class SpotMonitor:
             now = time.time()
             time_since_last_update = now - self._last_spot_update_timestamp
             # get new spots since last update
-            self._new_spots = self._client.get_station_spots(max_age = time_since_last_update)
+            new_spots = self._client.get_station_spots(max_age = time_since_last_update)
             self._last_spot_update_timestamp = now
 
-            if len(self._new_spots) > 0:
-                if self._new_spot_callback != None:
-                    self._new_spot_callback(self._new_spots)
-
-                if self._watch_callback != None:
-                    for spot in self._new_spots:
-                        if spot.origin in self._station_watch_list:
-                            self._watch_callback(spot)
+            if len(new_spots) > 0:
+                self._spots_callback(new_spots)
 

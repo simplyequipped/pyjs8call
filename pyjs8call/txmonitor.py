@@ -73,21 +73,21 @@ class TxMonitor:
         self._msg_queue_lock = threading.Lock()
         # initialize msg max age to 30 tx cycles in fast mode (10 sec cycles)
         self._msg_max_age = 10 * 30 # 5 minutes
-        self._status_change_callback = None
 
         monitor_thread = threading.Thread(target=self._monitor)
         monitor_thread.setDaemon(True)
         monitor_thread.start()
 
-    def set_status_change_callback(self, callback):
-        '''Set callback for monitored message status change.
-    
-        Callback function signature: func(msg) where msg is the monitored pyjs8call.message object.
+    def _callback(self, msg):
+        '''Handle callback for monitored message status change.
+
+        Calls the *pyjs8call.client.callback.outgoing* callback function.
 
         Args:
-            callback (func): Function to call when the status of a monitored message changes
+            msg (pyjs8call.message): Monitored message with changed status
         '''
-        self._status_change_callback = callback
+        if self._client.callback.outgoing != None:
+            self._client.callback.outgoing(msg)
 
     def monitor(self, msg):
         '''Monitor a new message.
@@ -137,26 +137,18 @@ class TxMonitor:
                 if msg_value == tx_text and msg.status == Message.STATUS_QUEUED:
                     # msg text was added to js8call tx field, sending
                     msg.status = Message.STATUS_SENDING
-
-                    if self._status_change_callback != None:
-                        self._status_change_callback(msg)
+                    self._callback(msg)
                         
                 elif msg_value != tx_text and msg.status == Message.STATUS_SENDING:
                     # msg text was removed from js8call tx field, sent
                     msg.status = Message.STATUS_SENT
-
-                    if self._status_change_callback != None:
-                        self._status_change_callback(msg)
-                        
+                    self._callback(msg)
                     drop = True
                        
                 elif time.time() > msg.timestamp + self._msg_max_age:
                     # msg sending failed
                     msg.status = Message.STATUS_FAILED
-
-                    if self._status_change_callback != None:
-                        self._status_change_callback(msg)
-                        
+                    self._callback(msg)
                     drop = True
 
                 if not drop:
