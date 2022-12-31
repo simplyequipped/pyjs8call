@@ -437,3 +437,61 @@ class Message:
         # allow usage like: msg = Message().parse(rx_str)
         return self
  
+    def age(self):
+    '''Message age in seconds.
+
+    Returns:
+        float: Message age in seconds
+    '''
+        return time.time() - self.timestamp
+
+    def __eq__(self, msg):
+        '''Whether another message is considered equal to self.
+
+        There are two cases where spots are considered equal:
+        - When both messages have the same timestamps (literally the same message)
+        - When both messages have the same origin, offset frequency, and snr (same station event reported by differnt JS8Call API messages at slightly differnt times) 
+
+        Args:
+            msg (pyjs8call.message): Message to compare
+
+        Returns:
+            bool: Whether the two messages are considered equal
+        '''
+        # comparing origin, offset, and snr allows equating the same message sent more than once
+        # from the js8call application (likely as different message types) at slightly different
+        # times (likely milliseconds apart)
+        if (
+            self.timestamp == msg.timestamp or
+            (msg.origin == self.origin and msg.offset == self.offset and msg.snr == self.snr)
+        ):
+            return True
+        else:
+            return False
+
+    def __lt__(self, msg):
+        '''Whether another message is less than self.
+
+        Timestamps are compared.
+
+        Args:
+            msg (pyjs8call.message): Message to compare
+
+        Returns:
+            bool: Whether self.timestamp is less than the specified msg.timestamp
+        '''
+        return bool(self.timestamp < msg.timestamp)
+
+    def __gt__(self, msg):
+        '''Whether another message is greater than self.
+
+        Timestamps are compared.
+
+        Args:
+            msg (pyjs8call.message): Message to compare
+
+        Returns:
+            bool: Whether self.timestamp is greater than the specified msg.timestamp
+        '''
+        return bool(self.timestamp > msg.timestamp)
+
