@@ -111,8 +111,18 @@ class ConfigHandler:
 
         Returns:
             str: Value of the specified option in the specified section, or None if value is a type other than those listed above
+
+        Raises:
+            RuntimeError: JS8Call onfig file does not contain a 'Configuration' section, likely because JS8Call has not be run before using pyjs8call
         '''
-        self.config.set(section, option, str(value))
+        try:
+            self.config.set(section, option, str(value))
+        except configparser.NoSectionError as e:
+            if section == 'Configuration':
+                raise RuntimeError('JS8Call config file section \'Configuration\' does not exist, try running and configuring the JS8Call application normally before attempting to use pyjs8call') from e
+            else:
+                raise e
+
         if isinstance(value, (str, int, float, bool)):
             return self.get(section, option, value_type=type(value))
         else:
