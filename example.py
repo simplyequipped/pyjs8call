@@ -78,9 +78,9 @@ def show_menu():
 js8call = pyjs8call.Client()
 js8call.start()
 # set callback functions
-js8call.register_rx_callback(rx_message)
-js8call.spot_monitor.set_new_spot_callback(new_spots)
-js8call.tx_monitor.set_status_change_callback(tx_status)
+js8call.callback.register_incoming(rx_message)
+js8call.callback.spots = new_spots
+js8call.callback.outgoing = tx_status
 
 # read current configuration values
 freq = js8call.get_freq()
