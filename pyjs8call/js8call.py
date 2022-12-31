@@ -36,7 +36,6 @@ from datetime import datetime, timezone
 
 import pyjs8call
 from pyjs8call import Message
-from pyjs8call import Spot
 
 
 class JS8Call:
@@ -48,8 +47,8 @@ class JS8Call:
 
     Attributes:
         connected (bool): Whether the JS8Call TCP socket is connected
-        spots (list): List of station spots (see pyjs8call.spot and pyjs8call.client.Client.get_station_spots)
-        max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 1000
+        spots (list): List of station spots (see pyjs8call.client.Client.get_station_spots)
+        max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442, headless=False):
@@ -82,7 +81,7 @@ class JS8Call:
         self._debug_type_blacklist = [Message.TX_GET_TEXT, Message.TX_TEXT]
         self.connected = False
         self.spots = []
-        self.max_spots = 1000
+        self.max_spots = 5000
         self._recent_spots = []
 
         self.state = {
@@ -214,25 +213,23 @@ class JS8Call:
         return self.state[item]
 
     def spot(self, msg):
-        '''Store a local spot when a station is heard.
+        '''Store a message when a station is heard.
 
-        A spot object (see pyjs8call.spot) is constructed and stored. The new spot object is compared against a list of recent spot objects (heard within the last 10 seconds) to prevent duplicate spots from multiple JS8Call API messages associated with the same station event.
+        The message is compared to a list of recent messages (heard within the last 10 seconds) to prevent duplicate spots from multiple JS8Call API messages associated with the same station event.
 
-        The list of stored spots is culled once it exceeeds the maximum size set by *max_spots* by dropping the oldest spot.
+        The list of stored messages is culled once it exceeeds the maximum size set by *max_spots* by dropping the oldest message.
 
-        See pyjs8call.client.Client.get_station_spots to utilize stored spots.
+        See pyjs8call.client.Client.get_station_spots to utilize spots.
 
         Args:
-            msg (pyjs8call.message): Message to source spot data from
+            msg (pyjs8call.message): Message to spot
         '''
         # cull recent spots
         self._recent_spots = [spot for spot in self._recent_spots if spot.age() < 10]
 
-        new_spot = Spot(msg)
-
-        if new_spot not in self._recent_spots:
-            self._recent_spots.append(new_spot)
-            self.spots.append(new_spot)
+        if msg not in self._recent_spots:
+            self._recent_spots.append(msg)
+            self.spots.append(msg)
 
         # cull spots
         if len(self.spots) > self.max_spots:
