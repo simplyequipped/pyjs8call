@@ -61,7 +61,7 @@ class JS8Call:
             headless (bool): Run JS8Call headless using xvfb (linux only, requires xvfb to be installed)
 
         Returns:
-            pyjs8call.js8call.JS8Call: Constructed js8call object
+            pyjs8call.js8call: Constructed js8call object
         '''
         self._client = client
         self._host = host
