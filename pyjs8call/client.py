@@ -524,16 +524,16 @@ class Client:
         return self.send_message(message)
 
     def get_station_spots(self, station=None, max_age=0):
-        '''Get list of spotted stations.
+        '''Get list of spotted messages.
 
-        All spots are returned if no filter criteria is given.
+        Spots are *pyjs8call.message* objects. All spots are returned if no filter criteria is given.
 
         Args:
             station (str): Filter spots by station callsign
             max_age (int): Filter spots by maximum age in seconds
 
         Returns:
-            list: List of spots (see pyjs8call.spot.Spot) matching given criteria
+            list: List of spotted messages matching given criteria
         '''
         spots = []
         for spot in self.js8call.spots:
