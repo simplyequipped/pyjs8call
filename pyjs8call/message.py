@@ -465,6 +465,9 @@ class Message:
         Returns:
             bool: Whether the two messages are considered equal
         '''
+        if not isinstance(msg, Message):
+            return False
+
         # comparing origin, offset, and snr allows equating the same message sent more than once
         # from the js8call application (likely as different message types) at slightly different
         # times (likely milliseconds apart)
