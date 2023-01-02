@@ -24,7 +24,7 @@ See a simple example in the *example.py* file at the top level of the repo.
 2. Install pyjs8call using pip3 (or pip if python3 is the default on your system):
     
     ```
-    pip install pyjs8call
+    pip3 install pyjs8call
     ```
 
 &nbsp;
@@ -39,7 +39,7 @@ The main JS8Call API interface. Includes many functions for reading and writting
 
 **JS8Call** (pyjs8call.js8call)
 
-Manages the TCP socket communication with the JS8Call application.
+Manages TCP socket communication with the JS8Call application.
 
 **Application Monitor** (pyjs8call.appmonitor)
 
@@ -47,23 +47,23 @@ Manages the start and stop of the JS8Call application, as well as the restarting
 
 **Configuration Handler** (pyjs8call.confighandler)
 
-Reads from and writes to the JS8Call.ini config file to change virtually any setting, including creating and activating configuration profiles. *Specific knowledge of the configuration file options is required. Configuring options incorrectly may cause the JS8Call application not to start.*
+Reads from and writes to the JS8Call.ini config file to change virtually any setting, including creating and activating configuration profiles. **Specific knowledge of configuration file options is required. Configuring options incorrectly may cause the JS8Call application to not run.**
 
 **Spot Monitor** (pyjs8call.spotmonitor)
 
-Monitors recent station spots. Spot data can be queried for various uses, and spot callbacks can be set for any heard stations and/or for specific stations.
+Monitors recent station spots. Spot data can be queried for various uses, and spot callbacks can be set for all heard stations and/or for specific stations.
 
 **Window Monitor** (pyjs8call.windowmonitor)
 
-Monitors the start and end of the next tx window. Tx frames are used to determine the start of a tx window, and the speed setting is used to determine the length of the tx window.
+Monitors the next rx/tx window transition. JS8Call API messages associated with incoming and outgoing messages are used to determine the start or end of a window, and the modem speed setting is used to determine the duration of the window. Notification of a window transition is handled via callback function.
 
 **Offset Monitor** (pyjs8call.offsetmonitor)
 
-Manages JS8Call offset frequency based on activity in the pass band. The offset frequency is automatically moved to an unsed portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the speed of each heard signal. Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
+Manages JS8Call offset frequency based on activity in the pass band. The offset frequency is automatically moved to an unsed portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the modem speed of each heard signal. Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
 
 **TX Monitor** (pyjs8call.txmonitor)
 
-Monitors JS8Call tx text for queued outgoing messages. Notification of a message status change (sending, complete, failed) is handled via callback function.
+Monitors JS8Call tx text for queued outgoing messages. Notification of a message status change is handled via callback function.
 
 &nbsp;  
 
@@ -125,7 +125,7 @@ Using the tx monitor:
 ```
 import pyjs8call
 
-# callback function for complete tx
+# callback function for message status change
 def tx_status(msg):
     print('Message ' + msg.id + ' status: ' + msg.status)
     
