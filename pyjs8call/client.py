@@ -206,7 +206,9 @@ class Client:
 
             if msg != None:
                 for callback in self.callback.incoming_type(msg.type):
-                    callback(msg)
+                    thread = threading.Thread(target=callback, args=[msg])
+                    thread.setDaemon(True)
+                    thread.start()
 
             time.sleep(0.1)
 
