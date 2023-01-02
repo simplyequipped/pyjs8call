@@ -87,7 +87,9 @@ class TxMonitor:
             msg (pyjs8call.message): Monitored message with changed status
         '''
         if self._client.callback.outgoing != None:
-            self._client.callback.outgoing(msg)
+            thread = threading.Thread(target=self._client.callback.outgoing, args=[msg])
+            thread.setDaemon(True)
+            thread.start()
 
     def monitor(self, msg):
         '''Monitor a new message.
