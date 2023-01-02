@@ -20,9 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Monitor transition of next tx window.
+'''Monitor transition of next rx/tx window.
 
-JS8Call tx frames and speed setting are used to calculate the start and end of the next tx window.
+JS8Call incoming and outgoing messages are used to calculate the next rx/tx window transition.
 '''
 
 __docformat__ = 'google'
