@@ -292,12 +292,8 @@ class OffsetMonitor:
                 time.sleep(1)
 
             # wait until 0.5 seconds before the end of the tx window
-            delay = self._client.window_monitor.next_window_end() - time.time() - 0.5
-
-            # next window end == 0 until first tx frame
-            if delay < 0:
-                delay = 5
-
+            default_delay = self._client.get_tx_window_duration() / 2
+            delay = self._client.window_monitor.next_transition_seconds(count = 1, fallback = default_delay) - 0.5
             time.sleep(delay)
 
             # wait until tx_text is not being 'watched'
@@ -341,6 +337,5 @@ class OffsetMonitor:
 
                 if new_offset != None:
                     # set new offset
-                    self.offset = new_offset
-                    self._client.set_offset(self.offset)
+                    self.offset = self._client.set_offset(new_offset)
 
