@@ -52,18 +52,22 @@ class SpotMonitor:
     def _spots_callback(self, spots):
         '''New spots callback function handling.
 
-        Calls the *pyjs8call.client.callback.spots* and *pyjs8call.client.callback.station_spot* callback functions.
+        Calls the *pyjs8call.client.callback.spots* and *pyjs8call.client.callback.station_spot* callback functions using *threading.Thread*.
 
         Args:
             spots (list): List of new spots
         '''
         if self._client.callback.spots != None:
-            self._client.callback.spots(spots)
+            thread = threading.Thread(target=self._client.callback.spots, args=[spots])
+            thread.setDaemon(True)
+            thread.start()
 
         if self._client.callback.station_spot != None:
             for spot in spots:
                 if spot.origin in self._station_watch_list:
-                    self._client.callback.station_spot(spot)
+                    thread = threading.Thread(target=self._client.callback.station_spot, args=[spot])
+                    thread.setDaemon(True)
+                    thread.start()
 
     def add_station_watch(self, station):
         '''Add watched station.
@@ -94,17 +98,12 @@ class SpotMonitor:
     def _monitor(self):
         '''Spot monitor thread.
 
-        Uses pyjs8call.client.Client.get_station_spots internally.
+        Uses *pyjs8call.client.get_station_spots* internally.
         '''
         while self._client.online:
-            next_tx_window = self._client.window_monitor.next_window_start()
-
-            if next_tx_window == 0:
-                # use tx window duration if tx window timestamp is not available yet
-                time.sleep(self._client.get_tx_window_duration() / 3)
-            else:
-                # sleep until next tx window
-                time.sleep(next_tx_window - time.time())
+            default_delay = self._client.get_tx_window_duration() / 3
+            delay = self._client.window_monitor.next_transition_seconds(count = 1, fallback = default_delay)
+            time.sleep(delay)
 
             # update timestamps
             now = time.time()
