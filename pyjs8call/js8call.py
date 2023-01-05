@@ -28,6 +28,7 @@ This module is initialized by pyjs8call.client.
 __docformat__ = 'google'
 
 
+import os
 import time
 import json
 import socket
@@ -43,7 +44,7 @@ class JS8Call:
 
     Receives (constructs) and transmits pyjs8call.message objects, and generally manages the local state representation of the JS8Call application.
 
-    Initializes pyjs8call.appmonitor as well as rx, tx, and application heartbeat threads.
+    Initializes pyjs8call.appmonitor as well as rx, tx, logging, and application heartbeat threads.
 
     Attributes:
         connected (bool): Whether the JS8Call TCP socket is connected
@@ -78,7 +79,17 @@ class JS8Call:
         self._app = None
         self._debug = False
         self._debug_all = False
-        self._debug_type_blacklist = [Message.TX_GET_TEXT, Message.TX_TEXT]
+        self._log = False
+        self._log_all = False
+        self._log_path = os.path.join(os.path.expanduser('~'), 'pyjs8call.log')
+        self._log_queue = ''
+        self._log_queue_lock = threading.Lock()
+        self._debug_log_type_blacklist = [
+            Message.TX_GET_TEXT,
+            Message.TX_TEXT,
+            Message.RIG_PTT,
+            Message.TX_FRAME
+        ]
         self.connected = False
         self.spots = []
         self.max_spots = 5000
@@ -118,6 +129,10 @@ class JS8Call:
         hb_thread = threading.Thread(target=self._hb)
         hb_thread.setDaemon(True)
         hb_thread.start()
+
+        log_thread = threading.Thread(target=self._log_monitor)
+        log_thread.setDaemon(True)
+        log_thread.start()
 
     def stop(self):
         '''Stop threads and JS8Call application.'''
@@ -236,6 +251,35 @@ class JS8Call:
         if len(self.spots) > self.max_spots:
             self.spots.pop(0)
 
+    def _log_msg(self, msg):
+        '''Add message to log queue.'''
+        if msg.type in Message.TX_TYPES:
+            msg_type = 'TX'
+            msg_content = msg.pack().decode('utf-8').strip()
+        elif msg.type in Message.RX_TYPES:
+            msg_type = 'RX'
+            msg_content = json.dumps(msg.dict())
+
+        msg_time = time.strftime('%x %X', time.localtime(msg.timestamp))
+
+        self._log_queue_lock.acquire()
+        self._log_queue += msg_time + '  ' + msg_type + '  ' + msg_content + '\n'
+        self._log_queue_lock.release()
+
+    def _log_monitor(self):
+        '''Log queue monitor thread.'''
+        while self.online:
+            if len(self._log_queue) > 0:
+                self._log_queue_lock.acquire()
+
+                with open(self._log_path, 'a') as fd:
+                    fd.write(self._log_queue)
+
+                self._log_queue = ''
+                self._log_queue_lock.release()
+
+            time.sleep(1)
+
     def _hb(self):
         '''JS8Call application heartbeat thread.
 
@@ -285,12 +329,13 @@ class JS8Call:
                     # pack msg
                     packed = msg.pack()
 
-                    # print packed msg in debug mode
-                    if self._debug:
-                        if self._debug_all:
+                    # print msg in debug mode
+                    if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
                             print('TX: ' + packed.decode('utf-8').strip())
-                        elif msg.type not in self._debug_type_blacklist:
-                            print('TX: ' + packed.decode('utf-8').strip())
+
+                    # log msg
+                    if self._log and (self._log_all or (msg.type not in self._debug_log_type_blacklist)):
+                        self._log_msg(msg)
 
                     # send msg via socket
                     self._socket.sendall(packed)
@@ -361,11 +406,12 @@ class JS8Call:
                     continue
 
                 # print msg in debug mode
-                if self._debug:
-                    if self._debug_all:
-                        print('RX: ' + str(msg.dict()))
-                    elif msg.type not in self._debug_type_blacklist:
-                        print('RX: ' + str(msg.dict()))
+                if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
+                        print('RX: ' + json.dumps(msg.dict()))
+
+                # log msg
+                if self._log and (self._log_all or (msg.type not in self._debug_log_type_blacklist)):
+                    self._log_msg(msg)
 
                 self._process_message(msg)
 

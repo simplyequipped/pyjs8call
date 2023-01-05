@@ -132,7 +132,7 @@ class Client:
         if self.online:
             self.restart()
 
-    def start(self, debug=False):
+    def start(self, debug=False, log=False):
         '''Start and connect to the the JS8Call application.
 
         Starts monitoring objects and associated threads:
@@ -142,7 +142,8 @@ class Client:
         - Tx monitor (see pyjs8call.txmonitor)
 
         Args:
-            debug (bool): Print rx and tx messages to the console for debugging, defaults to False
+            debug (bool): Print incoming and outgoing message data to the console, defaults to False
+            log (bool): Print incoming and outgoing message data to ~/pyjs8call.log, defaults to False
         '''
         # enable TCP connection
         self.config.set('Configuration', 'TCPEnabled', 'true')
@@ -157,6 +158,9 @@ class Client:
 
         if debug:
             self.js8call._debug = True
+
+        if log:
+            self.js8call._log = True
 
         # initialize rx thread
         rx_thread = threading.Thread(target=self._rx)
@@ -187,17 +191,33 @@ class Client:
 
         Dial frequency, offset frequency, and all callback functions are preserved.
         '''
-        # save freq and offset
+        # save current settings
+        spots = self.js8call.spots
+        max_spots = self.js8call.max_spots
+        tx_queue = self.js8call._tx_queue
         freq = self.get_freq()
         offset = self.get_offset()
+        debug = self.js8call._debug
+        debug_all = self.js8call._debug_all
+        debug_log_type_blacklist = self.js8call._debug_log_type_blacklist
+        log = self.js8call._log
+        log_all = self.js8call._log_all
 
         self.stop()
         time.sleep(1)
-        self.start(debug = self.js8call._debug)
+        self.start()
 
-        # restore freq and offset
-        self.set_offset(offset)
+        # restore settings
+        self.js8cacll.spots = spots
+        self.js8call.max_spots = max_spots
+        self.js8call._tx_queue = tx_queue
         self.set_freq(freq)
+        self.set_offset(offset)
+        self.js8call._debug = debug
+        self.js8call._debug_all = debug_all
+        self.js8call._debug_log_type_blacklist = debug_log_type_blacklist
+        self.js8call._log = log
+        self.js8call._log_all = log_all
 
     def _rx(self):
         '''Rx thread function.'''
