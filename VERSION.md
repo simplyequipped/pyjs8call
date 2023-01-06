@@ -4,7 +4,7 @@
 
 Initial publicly released version.
 
-**0.1.1**
+**0.1.1** (WIP)
 
 - Increase pyjs8call.js8call default maximum spots to 5000
 - Replace pyjs8call.spot with pyjs8call.message, eliminating pyjs8call.spot
