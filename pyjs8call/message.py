@@ -104,7 +104,7 @@ class Message:
 
     &nbsp;
 
-    Most attributes with a default value of None are included so messages can be handled internally without worrying about the nuances of JS8Call API message attributes, which varies greatly.
+    Most attributes with a default value of None are included so messages can be handled internally without worrying about the nuances of JS8Call API message attributes, which vary greatly.
 
     Attributes:
         id (str): Random url-safe text string, 16 bytes in length
