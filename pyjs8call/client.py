@@ -278,8 +278,9 @@ class Client:
     def clean_rx_message_text(self, msg):
         '''Clean rx message text.
 
-        Remove origin callsign, remove destination callsign or group, and strip whitespace and end-of-message characters. This leaves only the message text.
-        The Message.text attribute stores the cleaned text while the Message.value attribute is unchanged.
+        Remove origin callsign, destination callsign or group (including relays), whitespace, and end-of-message characters. This leaves only the message text.
+        
+        The *pyjs8call.message.text* attribute stores the cleaned text while the *pyjs8call.message.value* attribute is unchanged.
 
         Args:
             message (pyjs8call.message): Message object to clean
@@ -288,9 +289,9 @@ class Client:
             pyjs8call.message: Cleaned message object
         '''
         if msg == None:
-            return None
+            return msg
+        # nothing to clean
         elif msg.value == None or msg.value == '':
-            # nothing to clean
             return msg
         # already cleaned
         elif msg.value != msg.text:
@@ -299,8 +300,23 @@ class Client:
         message = msg.value
         # remove origin callsign
         message = message.split(':')[1].strip()
-        # remove destination callsign or group
-        message = ' '.join(message.split(' ')[1:])
+        
+        # find first space, default to end of message if no spaces
+        first_space_index = message.find(' ')
+        if first_space_index == -1:
+            first_space_index = len(message)
+
+        # find last relay character before message text
+        # avoid finding '>' in the actual message text
+        last_relay_index = message.rfind('>', 0, first_space_index)
+
+        if last_relay_index != -1
+            # remove relay callsigns
+            message = message[last_relay_index:]
+        else:
+            # remove destination callsign or group
+            message = ' '.join(message.split(' ')[1:])
+            
         # strip remaining spaces and end-of-message symbol
         message = message.strip(' ' + Message.EOM)
 
