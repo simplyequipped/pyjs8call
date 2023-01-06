@@ -240,45 +240,6 @@ class Client:
         '''
         return self.js8call.connected
 
-    def send_message(self, message):
-        '''Send a raw JS8Call message.
-        
-        Message format: *MESSAGE*
-
-        Args:
-            message (str): Message text to send
-
-        Returns:
-            pyjs8call.message: Constructed message object
-        '''
-        # msg.type = Message.TX_SEND_MESSAGE by default
-        msg = Message(value = message)
-        self.js8call.send(msg)
-        return msg
-    
-    def send_directed_message(self, destination, message):
-        '''Send a directed JS8Call message.
-        
-        Message format: *DESTINATION* *MESSAGE*
-
-        The constructed message object is passed to the tx monitor (see pyjs8call.txmonitor) if Client.monitor_directed_tx is True (default).
-
-        Args:
-            destination (str): Callsign to direct the message to
-            message (str): Message text to send
-
-        Returns:
-            pyjs8call.message: Constructed message object
-        '''
-        # msg.type = Message.TX_SEND_MESSAGE by default
-        msg = Message(destination = destination, value = message)
-
-        if self.monitor_directed_tx:
-            self.tx_monitor.monitor(msg)
-
-        self.js8call.send(msg)
-        return msg
-
     def clean_rx_message_text(self, msg):
         '''Clean rx message text.
 
@@ -327,6 +288,45 @@ class Client:
         msg.set('text', message)
         return msg
     
+    def send_message(self, message):
+        '''Send a raw JS8Call message.
+        
+        Message format: *MESSAGE*
+
+        Args:
+            message (str): Message text to send
+
+        Returns:
+            pyjs8call.message: Constructed message object
+        '''
+        # msg.type = Message.TX_SEND_MESSAGE by default
+        msg = Message(value = message)
+        self.js8call.send(msg)
+        return msg
+    
+    def send_directed_message(self, destination, message):
+        '''Send a directed JS8Call message.
+        
+        Message format: *DESTINATION* *MESSAGE*
+
+        The constructed message object is passed to the tx monitor (see pyjs8call.txmonitor) if Client.monitor_directed_tx is True (default).
+
+        Args:
+            destination (str): Callsign to direct the message to
+            message (str): Message text to send
+
+        Returns:
+            pyjs8call.message: Constructed message object
+        '''
+        # msg.type = Message.TX_SEND_MESSAGE by default
+        msg = Message(destination = destination, value = message)
+
+        if self.monitor_directed_tx:
+            self.tx_monitor.monitor(msg)
+
+        self.js8call.send(msg)
+        return msg
+
     def send_heartbeat(self, grid=None):
         '''Send a JS8Call heartbeat message.
 
@@ -377,7 +377,7 @@ class Client:
     def send_aprs_sms(self, phone, message):
         '''Send a JS8Call APRS message via a SMS gateway.
         
-        Message format: @APRSIS CMD :SMSGATE   :@1234567890 *MESSAGE*
+        Message format: @APRSIS CMD :SMSGATE&nbsp;&nbsp;&nbsp;:@1234567890 *MESSAGE*
 
         Args:
             phone (str): Phone number to send SMS message to
@@ -392,7 +392,7 @@ class Client:
     def send_aprs_email(self, email, message):
         '''Send a JS8Call APRS message via an e-mail gateway.
         
-        Message format: @APRSIS CMD :EMAIL-2   :EMAIL@DOMAIN.COM *MESSAGE*
+        Message format: @APRSIS CMD :EMAIL-2&nbsp;&nbsp;&nbsp;:EMAIL@DOMAIN.COM *MESSAGE*
 
         Args:
             email (str): Email address to send message to
@@ -406,7 +406,7 @@ class Client:
     def send_aprs_pota_spot(self, park, freq, mode, message, callsign=None):
         '''Send JS8Call APRS POTA spot message.
         
-        Message format: @APRSIS CMD :POTAGW   :*CALLSIGN* *PARK* *FREQ* *MODE* *MESSAGE*
+        Message format: @APRSIS CMD :POTAGW&nbsp;&nbsp;&nbsp;:*CALLSIGN* *PARK* *FREQ* *MODE* *MESSAGE*
 
         JS8Call configured callsign is used if no callsign is given.
 
