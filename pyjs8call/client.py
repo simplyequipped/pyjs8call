@@ -189,7 +189,7 @@ class Client:
     def restart(self):
         '''Stop and restart all threads, the JS8Call application, and the TCP socket.
 
-        Dial frequency, offset frequency, and all callback functions are preserved.
+        Spots, max spots, dial frequency, offset frequency, outgoing message queue, debugging settings, and logging setting are preserved.
         '''
         # save current settings
         spots = self.js8call.spots
