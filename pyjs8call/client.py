@@ -314,7 +314,7 @@ class Client:
         # avoid finding '>' in the actual message text
         last_relay_index = message.rfind('>', 0, first_space_index)
 
-        if last_relay_index != -1
+        if last_relay_index != -1:
             # remove relay callsigns
             message = message[last_relay_index:]
         else:
