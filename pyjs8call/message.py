@@ -361,7 +361,7 @@ class Message:
             msg_str (str): Received message string to parse and load
 
         Returns:
-            pyjs8call.message: Constructed messsage object
+            pyjs8call.message: self
         '''
         self.raw = msg_str
         msg = json.loads(msg_str)
