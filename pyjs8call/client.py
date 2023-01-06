@@ -242,6 +242,8 @@ class Client:
 
     def send_message(self, message):
         '''Send a raw JS8Call message.
+        
+        Message format: *MESSAGE*
 
         Args:
             message (str): Message text to send
@@ -256,6 +258,8 @@ class Client:
     
     def send_directed_message(self, destination, message):
         '''Send a directed JS8Call message.
+        
+        Message format: *DESTINATION* *MESSAGE*
 
         The constructed message object is passed to the tx monitor (see pyjs8call.txmonitor) if Client.monitor_directed_tx is True (default).
 
@@ -326,6 +330,8 @@ class Client:
     def send_heartbeat(self, grid=None):
         '''Send a JS8Call heartbeat message.
 
+        Message format: @HB HEARTBEAT *GRID*
+
         If no grid square is given the configured JS8Call grid square is used.
 
         Args:
@@ -345,6 +351,8 @@ class Client:
 
     def send_aprs_grid(self, grid=None):
         '''Send a JS8Call message with APRS grid square.
+        
+        Message format: @APRSIS GRID *GRID*
 
         If no grid square is given the configured JS8Call grid square is used.
 
@@ -368,6 +376,8 @@ class Client:
 
     def send_aprs_sms(self, phone, message):
         '''Send a JS8Call APRS message via a SMS gateway.
+        
+        Message format: @APRSIS CMD :SMSGATE   :@1234567890 *MESSAGE*
 
         Args:
             phone (str): Phone number to send SMS message to
@@ -381,6 +391,8 @@ class Client:
     
     def send_aprs_email(self, email, message):
         '''Send a JS8Call APRS message via an e-mail gateway.
+        
+        Message format: @APRSIS CMD :EMAIL-2   :EMAIL@DOMAIN.COM *MESSAGE*
 
         Args:
             email (str): Email address to send message to
@@ -393,6 +405,8 @@ class Client:
     
     def send_aprs_pota_spot(self, park, freq, mode, message, callsign=None):
         '''Send JS8Call APRS POTA spot message.
+        
+        Message format: @APRSIS CMD :POTAGW   :*CALLSIGN* *PARK* *FREQ* *MODE* *MESSAGE*
 
         JS8Call configured callsign is used if no callsign is given.
 
@@ -434,6 +448,8 @@ class Client:
     def send_inbox_message(self, destination, message):
         '''Send JS8Call inbox message.
 
+        Message format: *DESTINATION* MSG *MESSAGE*
+
         Args:
             destination (str): Callsign to direct inbox message to
             message (str): Message text to send
@@ -446,6 +462,8 @@ class Client:
 
     def forward_inbox_message(self, destination, forward, message):
         '''Send JS8Call inbox message to be forwarded.
+
+        Message format: *DESTINATION* MSG TO:*FORWARD* *MESSAGE*
 
         Args:
             destination (str): Callsign to direct inbox message to
@@ -477,6 +495,8 @@ class Client:
 
     def query_call(self, destination, callsign):
         '''Send JS8Call callsign query.
+        
+        Message format: *DESTINATION* QUERY CALL *CALLSIGN*?
 
         Args:
             destination (str): Callsign to direct query to
@@ -490,6 +510,8 @@ class Client:
 
     def query_messages(self, destination):
         '''Send JS8Call stored message query.
+        
+        Message format: *DESTINATION* QUERY MSGS
 
         Args:
             destination (str): Callsign to direct query to
@@ -501,6 +523,8 @@ class Client:
 
     def query_message_id(self, destination, msg_id):
         '''Send JS8Call stored message ID query.
+        
+        Message format: *DESTINATION* QUERY MSG *ID*
 
         Args:
             destination (str): Callsign to direct query to
@@ -514,6 +538,8 @@ class Client:
 
     def query_heard(self, destination):
         '''Send JS8Call heard query.
+        
+        Message format: *DESTINATION* HEARD?
 
         Args:
             destination (str): Callsign to direct query to
@@ -525,6 +551,8 @@ class Client:
 
     def relay_message(self, destination, relay, message):
         '''Send JS8Call directed message via relay.
+        
+        Message format: *RELAY>RELAY>DESTINATION>MESSAGE*
 
         Args:
             destination (str): Callsign to direct message to
@@ -841,7 +869,7 @@ class Client:
     def set_speed(self, speed):
         '''Set JS8Call modem speed.
 
-        **NOTE: The JS8Call API only sets the modem speed in the UI menu without changing the configured modem speed, which makes this function useless. This is a JS8Call API issue.**
+        **NOTE: The JS8Call API only sets the modem speed in the menu without changing the configured modem speed, which makes this function useless. This is a JS8Call API issue.**
 
         Possible speed settings are:
         - slow
