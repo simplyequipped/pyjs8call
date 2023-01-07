@@ -103,20 +103,21 @@ class OffsetMonitor:
             bandwidth (int): Signal bandwidth in Hz
 
         Returns:
-            bool: Whether the given signal overlaps with the current offset frequency
+            bool: Whether the given signal overlaps with the transmit signal space
         '''
         # get min/max frequencies
         other_min_freq = self._min_signal_freq(offset, bandwidth)
         other_max_freq = self._max_signal_freq(offset, bandwidth)
-        own_min_freq   = self._min_signal_freq(self.offset, self.bandwidth)
-        own_max_freq   = self._max_signal_freq(self.offset, self.bandwidth)
+        other_center_freq = ((other_max_freq - other_min_freq) / 2) + other_min_freq
+        own_min_freq = self._min_signal_freq(self.offset, self.bandwidth)
+        own_max_freq = self._max_signal_freq(self.offset, self.bandwidth)
 
-        # signal offset within our signal bandwidth
-        inside = bool(offset > own_min_freq and offset < own_max_freq)
+        # signal center freq within transmit bandwidth
+        inside = bool(own_min_freq < other_center_freq < own_max_freq)
         # signal overlapping from above
-        above = bool (other_min_freq > own_min_freq and other_min_freq < own_max_freq)
+        above = bool(own_min_freq < other_min_freq < own_max_freq)
         # signal overlapping from below
-        below = bool(other_max_freq > own_min_freq and other_max_freq < own_max_freq)
+        below = bool(own_min_freq < other_max_freq < own_max_freq)
 
         return any([inside, above, below])
 
@@ -296,7 +297,7 @@ class OffsetMonitor:
 
             # wait until tx_text is not being 'watched'
             # tx_monitor requests tx_text every second
-            while self._client.js8call.watching == 'tx_text':
+            while self._client.js8call.watching() == 'tx_text':
                 time.sleep(0.1)
             
             # skip processing if actively sending a message
