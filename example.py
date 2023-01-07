@@ -13,11 +13,11 @@ def new_spots(spots):
         else:
             grid = ' (' + spot.grid + ') '
 
-        print('\t--- Spot: ' + spot.origin + grid + '@ ' + str(spot.offset) + ' Hz\t' + time.strftime('%x %X', spot.timestamp))
+        print('\t--- Spot: ' + spot.origin + grid + '@ ' + str(spot.offset) + ' Hz\t' + time.strftime('%x %X', time.localtime(spot.timestamp)))
 
 # callback for tx monitor status change
 def tx_status(msg):
-    print('\n\tMessage ' + msg.id + ' status: ' + msg.status)
+    print('\tMessage ' + msg.id + ' status: ' + msg.status)
 
 # function to send a directed message
 def send_message():
@@ -25,7 +25,8 @@ def send_message():
     destination = input('\n\tEnter destination callsign: ')
     text = input('\tEnter message: ')
     msg = js8call.send_directed_message(destination, text)
-    print('\n\tSending message ' + msg.id + ' on next transmit cycle\n')
+    print('\n\tSending message ' + msg.id + ' on next transmit cycle')
+    input()
 
 # function to show JS8Call inbox messages
 def show_inbox():
