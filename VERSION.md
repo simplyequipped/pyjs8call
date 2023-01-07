@@ -12,6 +12,7 @@ Initial publicly released version.
 - Replace various callback functions with the pyjs8call.client.Callbacks class
 - Improve callback handling by calling functions using *threading.Thread*
 - Revise pyjs8call.windowmointor to utilize incoming messages in addition to outgoing messages
-- Minor documentation improvements
+- Improvements per pylint
+- Documentation improvements
 - Update examples and example.py
 
