@@ -49,7 +49,6 @@ class JS8Call:
         connected (bool): Whether the JS8Call TCP socket is connected
         spots (list): List of station spots (see pyjs8call.client.Client.get_station_spots)
         max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
-        watching (str): Setting currently monitored for async JS8Call response, internal use only
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442, headless=False):
@@ -88,7 +87,7 @@ class JS8Call:
             Message.RIG_PTT,
             Message.TX_FRAME
         ]
-        self.watching = None
+        self._watching = None
         self._watch_timeout = 3 # seconds
         self.spots = []
         self.max_spots = 5000
@@ -137,6 +136,8 @@ class JS8Call:
     def reinitialize(self, settings):
         '''Re-initialize internal settings after restart.
 
+        Used internally.
+
         Args:
             settings (dict): Settings to re-initialize
         '''
@@ -145,6 +146,8 @@ class JS8Call:
 
     def restart_settings(self):
         '''Get certain internal settings.
+
+        Used internally.
 
         Returns:
             dict: Settings used to re-initialize on restart
@@ -161,6 +164,16 @@ class JS8Call:
         ]
 
         return {setting: getattr(self, setting) for setting in settings}
+
+    def watching(self):
+        '''Get active asynchronous setting name.
+
+        Used internally.
+
+        Returns:
+            str: Name of internal setting waiting for async JS8Call response
+        '''
+        return self._watching
 
     def stop(self):
         '''Stop threads and JS8Call application.'''
@@ -263,7 +276,7 @@ class JS8Call:
         if item not in self.state:
             return None
 
-        self.watching = item
+        self._watching = item
         last_state = self.state[item]
         self.state[item] = None
         timeout = time.time() + self._watch_timeout
@@ -277,7 +290,7 @@ class JS8Call:
         if self.state[item] is None:
             self.state[item] = last_state
         
-        self.watching = None
+        self._watching = None
         return self.state[item]
 
     def spot(self, msg):
@@ -358,7 +371,7 @@ class JS8Call:
         while self.online:
             # TxMonitor updates tx_text every second
             # do not attempt to update while value is being watched (i.e. updated)
-            if self.watching != 'tx_text' and self.state['tx_text'] is not None:
+            if self._watching != 'tx_text' and self.state['tx_text'] is not None:
                 if len(self.state['tx_text'].strip()) > 0:
                     tx_text = True
                     force_tx_text = False
