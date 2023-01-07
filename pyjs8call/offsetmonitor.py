@@ -67,7 +67,7 @@ class OffsetMonitor:
 
         # start monitoring thread
         monitor_thread = threading.Thread(target=self._monitor)
-        monitor_thread.setDaemon(True)
+        monitor_thread.daemon = True
         monitor_thread.start()
 
     def _min_signal_freq(self, offset, bandwidth):
@@ -80,6 +80,7 @@ class OffsetMonitor:
         Returns:
             int: Minimum frequency of the signal in Hz
         '''
+        # bandwidth unused, included to support expanding tuple into args
         return int(offset)
 
     def _max_signal_freq(self, offset, bandwidth):
@@ -110,17 +111,14 @@ class OffsetMonitor:
         own_min_freq   = self._min_signal_freq(self.offset, self.bandwidth)
         own_max_freq   = self._max_signal_freq(self.offset, self.bandwidth)
 
-        if (
-            # signal offset within our signal bandwidth
-            (offset > own_min_freq and offset < own_max_freq) or
-            # signal overlapping from above
-            (other_min_freq > own_min_freq and other_min_freq < own_max_freq) or
-            # signal overlapping from below
-            (other_max_freq > own_min_freq and other_max_freq < own_max_freq)
-        ):
-            return True
-        else:
-            return False
+        # signal offset within our signal bandwidth
+        inside = bool(offset > own_min_freq and offset < own_max_freq)
+        # signal overlapping from above
+        above = bool (other_min_freq > own_min_freq and other_min_freq < own_max_freq)
+        # signal overlapping from below
+        below = bool(other_max_freq > own_min_freq and other_max_freq < own_max_freq)
+
+        return any([inside, above, below])
 
     def parse_activity(self, activity):
         '''Parse recent activity into signal data.
@@ -137,9 +135,9 @@ class OffsetMonitor:
 
         # build list of offsets and associated bandwidths
         for spot in activity:
-            if spot.speed == None:
+            if spot.speed is None:
                 # assume worst case bandwidth: turbo mode = 160 Hz
-                 signal = (spot.offset, 160)
+                signal = (spot.offset, 160)
             else:
                 # map signal speed to signal bandwidth
                 bandwidth = self._client.get_bandwidth(speed = spot.speed)
@@ -218,16 +216,16 @@ class OffsetMonitor:
             
             # unused section below is wide enough for current speed setting
             if (
-                lower_limit_below != None and
-                upper_limit_below != None and
+                lower_limit_below is not None and
+                upper_limit_below is not None and
                 (upper_limit_below - lower_limit_below) >= safe_bandwidth
             ):
                 unused_spectrum.append( (lower_limit_below, upper_limit_below) )
 
             # unused section above is wide enough for current speed setting
             if (
-                lower_limit_above != None and
-                upper_limit_above != None and
+                lower_limit_above is not None and
+                upper_limit_above is not None and
                 (upper_limit_above - lower_limit_above) >= safe_bandwidth
             ):
                 unused_spectrum.append( (lower_limit_above, upper_limit_above) )
@@ -298,7 +296,7 @@ class OffsetMonitor:
 
             # wait until tx_text is not being 'watched'
             # tx_monitor requests tx_text every second
-            while self._client.js8call._watching == 'tx_text':
+            while self._client.js8call.watching == 'tx_text':
                 time.sleep(0.1)
             
             # skip processing if actively sending a message
@@ -335,7 +333,7 @@ class OffsetMonitor:
                 # find nearest unused spectrum and determine new offset
                 new_offset = self.find_new_offset(unused_spectrum)
 
-                if new_offset != None:
+                if new_offset is not None:
                     # set new offset
                     self.offset = self._client.set_offset(new_offset)
 

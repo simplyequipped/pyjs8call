@@ -46,7 +46,7 @@ class SpotMonitor:
         self._station_watch_list = []
 
         monitor_thread = threading.Thread(target=self._monitor)
-        monitor_thread.setDaemon(True)
+        monitor_thread.daemon = True
         monitor_thread.start()
 
     def _spots_callback(self, spots):
@@ -57,16 +57,16 @@ class SpotMonitor:
         Args:
             spots (list): List of new spots
         '''
-        if self._client.callback.spots != None:
+        if self._client.callback.spots is not None:
             thread = threading.Thread(target=self._client.callback.spots, args=[spots])
-            thread.setDaemon(True)
+            thread.daemon = True
             thread.start()
 
-        if self._client.callback.station_spot != None:
+        if self._client.callback.station_spot is not None:
             for spot in spots:
                 if spot.origin in self._station_watch_list:
                     thread = threading.Thread(target=self._client.callback.station_spot, args=[spot])
-                    thread.setDaemon(True)
+                    thread.daemon = True
                     thread.start()
 
     def add_station_watch(self, station):

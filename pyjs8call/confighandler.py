@@ -46,7 +46,6 @@ __docformat__ = 'google'
 
 
 import os
-import shutil
 import configparser
 
 # Note: Callsign (Configuration > MyCall) required to contain at least one number and have a max length of 9 characters
@@ -67,7 +66,7 @@ class ConfigHandler:
         Raises:
             FileNotFoundError: Config file not found at specified path
         '''
-        if config_path == None:
+        if config_path is None:
             self.path = os.path.join(os.path.expanduser('~'), '.config/JS8Call.ini')
         else:
             self.path = config_path
@@ -222,7 +221,7 @@ class ConfigHandler:
                 profile_option = option_parts[2]
 
             if profile_name == profile:
-                if profile_section not in options.keys():
+                if profile_section not in options:
                     options[profile_section] = {}
 
                 options[profile_section][profile_option] = value
@@ -289,13 +288,12 @@ class ConfigHandler:
             new_profile (str): Name of the profile to change to
 
         Raises:
-            Exception: Specified profile does not exist
+            ValueError: Specified profile does not exist
         '''
         if new_profile not in self.get_profile_list():
-            raise Exception('Profile ' + new_profile + ' does not exist')
+            raise ValueError('Profile ' + new_profile + ' does not exist')
 
         active_profile = self.get_active_profile()
-        new_profile_options = self.get_profile_options(new_profile)
 
         for section in self.config.sections():
             if section == 'MultiSettings':
@@ -345,7 +343,7 @@ class ConfigHandler:
         else:
             profile_options = self.get_profile_options(copy_profile)
 
-            for section in profile_optoins.keys():
+            for section in profile_options:
                 for option, value in profile_options.items():
                     new_profile_option = new_profile + '\\' + section + '\\' + option
                     self.config.set('MultiSettings', new_profile_option, str(value))
@@ -364,8 +362,8 @@ class ConfigHandler:
 
         profile_options = self.get_profile_options(profile)
 
-        for section in profile_options.keys():
-            for option in profile_options[section].keys():
+        for section in profile_options:
+            for option in profile_options[section]:
                 profile_option = profile + '\\' + section + '\\' + option
                 self.config.remove_option('MultiSettings', profile_option)
 

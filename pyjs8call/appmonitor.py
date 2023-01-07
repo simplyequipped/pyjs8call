@@ -34,12 +34,9 @@ To run JS8Call headless on Linux xvfb must be installed. On Debian systems try:
 __docformat__ = 'google'
 
 
-import os
 import time
-import subprocess
 import threading
-
-import pyjs8call
+import subprocess
 
 
 class AppMonitor:
@@ -51,11 +48,12 @@ class AppMonitor:
         restart (bool): Whether to restart the JS8Call application if it stops, defaults to True
     '''
 
-    def __init__(self, owner):
+    def __init__(self, owner, client):
         '''Initialize JS8Call application monitor.
 
         Args:
             owner (pyjs8call.js8call): The parent js8call object
+            client (pyjs8call.client): The parent client object
 
         Returns:
             pyjs8call.appmonitor.AppMonitor: Constructed application monitor object
@@ -71,12 +69,13 @@ class AppMonitor:
         self.running = False
         self.restart = True
         self._owner = owner
+        self._client = client
         self._monitor_thread = None
 
         try:
             self._exec_path = subprocess.check_output(['which', 'js8call']).decode('utf-8').strip()
-        except subprocess.CalledProcessError:
-            raise ProcessLookupError('JS8Call application not installed')
+        except subprocess.CalledProcessError as e:
+            raise ProcessLookupError('JS8Call application not installed') from e
 
     def start(self, headless=False):
         cmd = [self._exec_path]
@@ -84,23 +83,22 @@ class AppMonitor:
         if headless:
             try:
                 subprocess.check_output(['which', 'xvfb-run'])
-            except subprocess.CalledProcessError:
-                raise ProcessLookupError('Cannot run headless since xvfb-run is not installed, on Debian systems try: sudo apt install xvfb')
+            except subprocess.CalledProcessError as e:
+                raise ProcessLookupError('Cannot run headless since xvfb-run is not installed, on Debian systems try: sudo apt install xvfb') from e
 
             self.headless = True
             cmd.insert(0, 'xvfb-run')
             cmd.insert(1, '-a')
 
         if not self.is_running():
-            devnull = open(os.devnull, 'w')
-            self._process = subprocess.Popen(cmd, stderr=devnull)
+            self._process = subprocess.Popen(cmd, stderr=subprocess.DEVNULL)
 
         # wait for connection to application via socket
         timeout = time.time() + 60
         while True:
             try:
                 # this will error if unable to connect to the application
-                self._owner._connect()
+                self._owner.connect()
                 # no errors, must be connected
                 self.running = True
                 break
@@ -113,9 +111,9 @@ class AppMonitor:
             time.sleep(0.1)
 
         # start the application monitoring thread
-        if self.running and self._monitor_thread == None:
+        if self.running and self._monitor_thread is None:
             self._monitor_thread = threading.Thread(target=self._monitor)
-            self._monitor_thread.setDaemon(True)
+            self._monitor_thread.daemon = True
             self._monitor_thread.start()
 
         elif not self.running:
@@ -132,7 +130,7 @@ class AppMonitor:
             bool: True if the application is running, False otherwise
         '''
         # handle process started externally
-        if self._process == None:
+        if self._process is None:
             try:
                 # errors due to non-zero return code if no running instances
                 subprocess.check_output(['pgrep', 'js8call'])
@@ -143,10 +141,8 @@ class AppMonitor:
 
         # handle process started by self
         else:
-            if self._process.poll() == None:
-                running = True
-            else:
-                running = False
+            # returns None when running
+            running = not bool(self._process.poll())
 
         self.running = running
         return running
@@ -164,7 +160,7 @@ class AppMonitor:
         Returns:
             The return code of the terminated/killed subprocess or None if no return code was given.
         '''
-        if self._process == None:
+        if self._process is None:
             return None
 
         code = None
@@ -175,16 +171,15 @@ class AppMonitor:
         except subprocess.TimeoutExpired:
             pass
 
-        if code == None:
-            code = self._process.kill()
+        if code is None:
+            self._process.kill()
 
         try:
-            devnull = open(os.devnull, 'w')
             # errors due to non-zero return code if no running instances
-            subprocess.check_output(['pgrep', 'js8call'], stderr = devnull)
+            subprocess.check_output(['pgrep', 'js8call'], stderr = subprocess.DEVNULL)
             # if no error then the process is running, force kill process
-            subprocess.run(['killall', '-9', 'js8call'], stderr = devnull)
-        except:
+            subprocess.run(['killall', '-9', 'js8call'], check = True, stderr = subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
             pass
 
         return code
@@ -194,6 +189,6 @@ class AppMonitor:
         while self._owner.online:
             if not self.is_running() and self.restart:
                 # restart the whole system and reconnect
-                self._owner._client.restart()
+                self._client.restart()
             time.sleep(2)
 

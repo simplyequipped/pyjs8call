@@ -31,7 +31,6 @@ __docformat__ = 'google'
 import time
 import threading
 
-import pyjs8call
 from pyjs8call import Message
 
 
@@ -75,7 +74,7 @@ class TxMonitor:
         self._msg_max_age = 10 * 30 # 5 minutes
 
         monitor_thread = threading.Thread(target=self._monitor)
-        monitor_thread.setDaemon(True)
+        monitor_thread.daemon = True
         monitor_thread.start()
 
     def _callback(self, msg):
@@ -86,9 +85,9 @@ class TxMonitor:
         Args:
             msg (pyjs8call.message): Monitored message with changed status
         '''
-        if self._client.callback.outgoing != None:
+        if self._client.callback.outgoing is not None:
             thread = threading.Thread(target=self._client.callback.outgoing, args=[msg])
-            thread.setDaemon(True)
+            thread.daemon = True
             thread.start()
 
     def monitor(self, msg):
@@ -101,9 +100,8 @@ class TxMonitor:
         '''
         msg.status = Message.STATUS_QUEUED
 
-        self._msg_queue_lock.acquire()
-        self._msg_queue.append(msg)
-        self._msg_queue_lock.release()
+        with self._msg_queue_lock:
+            self._msg_queue.append(msg)
 
     def _monitor(self):
         '''Tx monitor thread.'''
@@ -112,10 +110,10 @@ class TxMonitor:
             tx_text = self._client.get_tx_text()
 
             # no text in tx field, nothing to process
-            if tx_text == None:
+            if tx_text is None:
                 continue
 
-            # when a msg is the tx text, drop the first callsign and strip spaces and end-of-message
+            # drop the first callsign and strip spaces and end-of-message
             # original format: 'callsign: callsign  message'
             if ':' in tx_text:
                 tx_text = tx_text.split(':')[1].strip(' ' + Message.EOM)
@@ -125,36 +123,33 @@ class TxMonitor:
             #    5 min in fast mode (10 sec cycles)
             #    7.5 min in normal mode (15 sec cycles)
             #    15 min in slow mode (30 sec cycles)
-            tx_window = self._client.get_tx_window_duration()
-            self._msg_max_age = tx_window * 30
+            self._msg_max_age = self._client.get_tx_window_duration() * 30
             
-            self._msg_queue_lock.acquire()
+            with self._msg_queue_lock:
+                self._process_queue(tx_text)
 
-            # process msg queue
-            for i in range(len(self._msg_queue)):
-                msg = self._msg_queue.pop(0)
-                msg_value = msg.destination + '  ' + msg.value.strip()
-                drop = False
+    def _process_queue(self, tx_text):
+        '''Compare queued message to tx text.'''
+        for i in range(len(self._msg_queue)):
+            msg = self._msg_queue.pop(0)
+            msg_value = msg.destination + '  ' + msg.value.strip()
+    
+            if msg_value == tx_text and msg.status == Message.STATUS_QUEUED:
+                # msg text was added to js8call tx field, sending
+                msg.status = Message.STATUS_SENDING
+                self._callback(msg)
+            elif msg_value != tx_text and msg.status == Message.STATUS_SENDING:
+                # msg text was removed from js8call tx field, sent
+                msg.status = Message.STATUS_SENT
+                self._callback(msg)
+                # msg dropped from queue
+                return None
+            elif time.time() > msg.timestamp + self._msg_max_age:
+                # msg too old, sending failed
+                msg.status = Message.STATUS_FAILED
+                self._callback(msg)
+                # msg dropped from queue
+                return None
 
-                if msg_value == tx_text and msg.status == Message.STATUS_QUEUED:
-                    # msg text was added to js8call tx field, sending
-                    msg.status = Message.STATUS_SENDING
-                    self._callback(msg)
+            self._msg_queue.append(msg)
                         
-                elif msg_value != tx_text and msg.status == Message.STATUS_SENDING:
-                    # msg text was removed from js8call tx field, sent
-                    msg.status = Message.STATUS_SENT
-                    self._callback(msg)
-                    drop = True
-                       
-                elif time.time() > msg.timestamp + self._msg_max_age:
-                    # msg sending failed
-                    msg.status = Message.STATUS_FAILED
-                    self._callback(msg)
-                    drop = True
-
-                if not drop:
-                    self._msg_queue.append(msg)
-                        
-            self._msg_queue_lock.release()
-           

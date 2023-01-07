@@ -64,7 +64,7 @@ class WindowMonitor:
         self._timestamp_lock = threading.Lock()
 
         monitor_thread = threading.Thread(target = self._monitor)
-        monitor_thread.setDaemon(True)
+        monitor_thread.daemon = True
         monitor_thread.start()
 
         # set incoming message callbacks
@@ -76,9 +76,9 @@ class WindowMonitor:
 
         Calls the *pyjs8call.client.callback.window* callback function using *threading.Thread*.
         '''
-        if self._client.callback.window != None:
+        if self._client.callback.window is None:
             thread = threading.Thread(target = self._client.callback.window)
-            thread.setDaemon(True)
+            thread.daemon = True
             thread.start()
 
     def process_tx_frame(self, msg):
@@ -87,10 +87,9 @@ class WindowMonitor:
         Args:
             msg (pyjs8call.message): Tx frame message object
         '''
-        self._timestamp_lock.acquire()
-        self._last_tx_frame_timestamp = msg.timestamp
-        self._next_window_timestamp = msg.timestamp + self._window_duration
-        self._timestamp_lock.release()
+        with self._timestamp_lock:
+            self._last_tx_frame_timestamp = msg.timestamp
+            self._next_window_timestamp = msg.timestamp + self._window_duration
 
     def process_rx_msg(self, msg):
         '''Process received message.
@@ -100,11 +99,10 @@ class WindowMonitor:
         '''
         # only process the first rx message per tx window cycle
         if (msg.timestamp - self._last_rx_msg_timestamp) > (self._window_duration / 2):
-            self._timestamp_lock.acquire()
-            self._last_rx_msg_timestamp = msg.timestamp
-            # message rx occurs approximately one second before the end of the tx window
-            self._next_window_timestamp = msg.timestamp + 1
-            self._timestamp_lock.release()
+            with self._timestamp_lock:
+                self._last_rx_msg_timestamp = msg.timestamp
+                # message rx occurs approximately one second before the end of the tx window
+                self._next_window_timestamp = msg.timestamp + 1
 
     def next_transition_timestamp(self, count=0, fallback=None):
         '''Get timestamp of next rx/tx window transition.
@@ -146,16 +144,14 @@ class WindowMonitor:
     def _monitor(self):
         '''Window monitor thread.'''
         while self._client.online:
-            self._timestamp_lock.acquire()
+            with self._timestamp_lock:
+                if self._next_window_timestamp != 0 and self._next_window_timestamp < time.time():
+                    # window transiton notification via callback function
+                    self._callback()
+                    # update window duration in case speed setting changed
+                    self._window_duration = self._client.get_tx_window_duration()
+                    # increament the window timestamp
+                    self._next_window_timestamp += self._window_duration
 
-            if self._next_window_timestamp != 0 and self._next_window_timestamp < time.time():
-                # window transiton notification via callback function
-                self._callback()
-                # update window duration in case speed setting changed
-                self._window_duration = self._client.get_tx_window_duration()
-                # increament the window timestamp
-                self._next_window_timestamp += self._window_duration
-
-            self._timestamp_lock.release()
             time.sleep(0.001)
 

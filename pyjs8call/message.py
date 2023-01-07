@@ -113,8 +113,8 @@ class Message:
         value (str): Message contents
         time (str): UTC timestamp (see datetime.now(timezone.utc).timestamp)
         timestamp (str): Local timestamp (see time.time)
-        params (dict): Dictioinary of message parameters used by certain JS8Call API messages
-        attributes (list): List of attributes for internal use (see *set*)
+        params (dict): Message parameters used by certain JS8Call API messages
+        attributes (list): Attributes for internal use (see *Message.set*)
         status (str): Message status (see static statuses), defaults to STATUS_CREATED
         raw (str): Raw message string passed to *Message.parse*, defaults to None
         freq (str): Dial frequency plus offset frequency in Hz, defaults to None
@@ -127,12 +127,14 @@ class Message:
         origin (str): Origin callsign, defaults to None
         utc (str): UTC timestamp, defaults to None
         cmd (str): JS8Call command (see static commands), defaults to None
-        text (str): Message text, used by certain JS8Call API messages, used for cleaned directed messages (see pyjs8call.client), defaults to None
+        text (str): Used by certain JS8Call API messages, defaults to None
         speed (str): JS8Call modem speed of received signal
         extra (str): Used by certain JS8Call API messages, defaults to None
         messages (list): Inbox messages, defaults to None
         band_activity (list): JS8Call band activity items, defaults to None
         call_activity (list): JS8Call call activity items, defaults to None
+
+    *text* is also used to store 'cleaned' incoming message text, see *pyjs8call.client.Client.clean_rx_message_text*.
     '''
 
     # outgoing message types
@@ -249,9 +251,9 @@ class Message:
             self.set(attr, None)
 
         # uppercase values in tx msg
-        if self.destination != None:
+        if self.destination is not None:
             self.destination = self.destination.upper()
-        if self.value != None:
+        if self.value is not None:
             self.value = self.value.upper()
             self.text = self.value
 
@@ -277,7 +279,7 @@ class Message:
             self.attributes.append(attribute)
 
         # set 'from' = 'call' for consistency
-        if attribute == 'call' and value != None and self.get('from') == None:
+        if attribute == 'call' and value is not None and self.get('from') is None:
             self.set('from', value)
 
         # Message.from cannot be called directly, use origin instead
@@ -297,24 +299,29 @@ class Message:
         '''
         return getattr(self, attribute, None)
 
-    def dict(self, exclude=[]):
+    def dict(self, exclude=None):
         '''Get dictionary representation of message object.
 
         Message attributes set to None are not included in the returned dictionary.
 
         Special attribute handling:
-        - *value*: If None, set to '' (empty string); if set and Message.type is TX_SEND_MESSAGE and Message.destination is not None (i.e. directed message), set to Message.destination and Message.value joined with a space.
+        *value*
+        - If None, set to '' (empty string)
+        - If set and Message.type is TX_SEND_MESSAGE and Message.destination is not None (i.e. directed message), set to Message.destination and Message.value joined with a space.
 
         Args:
-            exclude (list): List of attribute names to exclude from the dictionary (see *pack*)
+            exclude (list): Attribute names to exclude (see *pack*), defaults to *[]*
 
         Returns:
-            dict: Dictionary of message attributes and values
+            dict: Message attributes and values
         '''
+        if exclude is None:
+            exclude = []
+
         data = {}
         for attribute in self.attributes:
             # skip attribues excluded or already in dict
-            if attribute in exclude or attribute in data.keys():
+            if attribute in exclude or attribute in data:
                 continue
 
             value = self.get(attribute)
@@ -322,29 +329,40 @@ class Message:
             # handle special cases
             if attribute == 'value':
                 # replace None with empty string, 'value' is always included
-                if value == None:
+                if value is None:
                     value = ''
                 # build directed message
-                elif self.type == Message.TX_SEND_MESSAGE and self.destination != None:
+                elif self.type == Message.TX_SEND_MESSAGE and self.destination is not None:
                     value = self.destination + ' ' + value
 
             # add to dict if value is set
-            if value != None:
+            if value is not None:
                 data[attribute] = value
 
         return data
 
-    def pack(self, exclude=['id', 'destination', 'time', 'from', 'origin', 'text']):
+    def pack(self, exclude=None):
         '''Pack message for transmission over TCP socket.
 
+        The following attributes are excluded by default:
+        - id
+        - destination
+        - time
+        - from
+        - origin
+        - text
+
         Args:
-            exclude (list): List of attribute names to exclude from the dictionary, defaults to *['id', 'destination', 'time', 'from', 'origin', 'text']*
+            exclude (list): Attribute names to exclude, defaults to None
             
         Returns:
             UTF-8 encoded byte string. A dictionary representation of the message attributes is converted to a string using *json.dumps* before encoding.
-
         '''
+        if exclude is None:
+            exclude = [] 
+
         #TODO make sure 'text' is not used since it is excluded by default
+        exclude.extend(['id', 'destination', 'time', 'from', 'origin', 'text'])
 
         data = self.dict(exclude = exclude)
         # convert dict to json string
@@ -386,7 +404,7 @@ class Message:
         elif self.type == Message.RX_CALL_ACTIVITY:
             self.call_activity = []
             for key, value in msg['params'].items():
-                if key == '_ID' or value == None:
+                if key == '_ID' or value is None:
                     continue
 
                 call = {
@@ -398,6 +416,7 @@ class Message:
 
                 self.call_activity.append(call)
 
+        #TODO improve handling, remove try/except
         # handle band activity
         elif self.type == Message.RX_BAND_ACTIVITY:
             self.band_activity = []
@@ -415,7 +434,7 @@ class Message:
                     }
 
                     self.band_activity.append(data)
-                except:
+                except ValueError:
                     continue
 
         else:
@@ -431,7 +450,7 @@ class Message:
                 self.set(param, value)
 
             #TODO copied from js8net, test
-            if self.cmd == 'GRID' and self.text != None:
+            if self.cmd == 'GRID' and self.text is not None:
                 grid = self.text.split()
                 if len(grid) >= 4:
                     grid = grid[3]
@@ -471,13 +490,8 @@ class Message:
         # comparing origin, offset, and snr allows equating the same message sent more than once
         # from the js8call application (likely as different message types) at slightly different
         # times (likely milliseconds apart)
-        if (
-            self.timestamp == msg.timestamp or
-            (msg.origin == self.origin and msg.offset == self.offset and msg.snr == self.snr)
-        ):
-            return True
-        else:
-            return False
+        return bool( self.timestamp == msg.timestamp or
+            (msg.origin == self.origin and msg.offset == self.offset and msg.snr == self.snr) )
 
     def __lt__(self, msg):
         '''Whether another message is less than self.

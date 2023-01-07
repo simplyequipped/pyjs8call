@@ -33,7 +33,6 @@ import time
 import json
 import socket
 import threading
-from datetime import datetime, timezone
 
 import pyjs8call
 from pyjs8call import Message
@@ -50,6 +49,7 @@ class JS8Call:
         connected (bool): Whether the JS8Call TCP socket is connected
         spots (list): List of station spots (see pyjs8call.client.Client.get_station_spots)
         max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
+        watching (str): Setting currently monitored for async JS8Call response, internal use only
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442, headless=False):
@@ -59,7 +59,7 @@ class JS8Call:
             client (pyjs8call.client): Parent client object
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
             port (int): JS8Call TCP port setting, defaults to 2442
-            headless (bool): Run JS8Call headless using xvfb (linux only, requires xvfb to be installed)
+            headless (bool): Run JS8Call headless using xvfb (linux only), defaults to False
 
         Returns:
             pyjs8call.js8call: Constructed js8call object
@@ -71,8 +71,6 @@ class JS8Call:
         self._rx_queue_lock = threading.Lock()
         self._tx_queue = []
         self._tx_queue_lock = threading.Lock()
-        self._watch_timeout = 3 # seconds
-        self._watching = None
         self._last_rx_timestamp = 0
         self._socket = None
         self._socket_heartbeat_delay = 60 * 5 # seconds
@@ -90,10 +88,12 @@ class JS8Call:
             Message.RIG_PTT,
             Message.TX_FRAME
         ]
-        self.connected = False
+        self.watching = None
+        self._watch_timeout = 3 # seconds
         self.spots = []
         self.max_spots = 5000
         self._recent_spots = []
+        self.connected = False
 
         self.state = {
             'ptt' : None,
@@ -115,24 +115,52 @@ class JS8Call:
         self.online = True
 
         # start the application monitor
-        self.app_monitor = pyjs8call.AppMonitor(self)
+        self.app_monitor = pyjs8call.AppMonitor(self, client)
         self.app_monitor.start(headless=headless)
         
         tx_thread = threading.Thread(target=self._tx)
-        tx_thread.setDaemon(True)
+        tx_thread.daemon = True
         tx_thread.start()
 
         rx_thread = threading.Thread(target=self._rx)
-        rx_thread.setDaemon(True)
+        rx_thread.daemon = True
         rx_thread.start()
 
         hb_thread = threading.Thread(target=self._hb)
-        hb_thread.setDaemon(True)
+        hb_thread.daemon = True
         hb_thread.start()
 
         log_thread = threading.Thread(target=self._log_monitor)
-        log_thread.setDaemon(True)
+        log_thread.daemon = True
         log_thread.start()
+
+    def reinitialize(self, settings):
+        '''Re-initialize internal settings after restart.
+
+        Args:
+            settings (dict): Settings to re-initialize
+        '''
+        for setting, value in settings.items():
+            setattr(self, setting, value)
+
+    def restart_settings(self):
+        '''Get certain internal settings.
+
+        Returns:
+            dict: Settings used to re-initialize on restart
+        '''
+        settings = [
+            'spots',
+            'max_spots',
+            '_tx_queue',
+            '_debug',
+            '_debug_all',
+            '_debug_log_type_blacklist',
+            '_log',
+            '_log_all'
+        ]
+
+        return {setting: getattr(self, setting) for setting in settings}
 
     def stop(self):
         '''Stop threads and JS8Call application.'''
@@ -140,8 +168,35 @@ class JS8Call:
         self.app_monitor.stop()
         self._socket.close()
 
-    def _connect(self):
-        '''Connect to the TCP socket of the JS8Call application.'''
+    def enable_debugging(self, debug_all=False):
+        '''Print incoming and outgoing messages to console.
+
+        Args:
+            debug_all (bool): Print all messages, including nusance ones
+        '''
+        self._debug = True
+        
+        if debug_all:
+            self._debug_all = True
+
+    def enable_logging(self, log_all=False):
+        '''Log incoming and outgoing messages.
+
+        Log file location: *~/pyjs8call.log*
+
+        Args:
+            log_all (bool): Log all messages, including nusance messages
+        '''
+        self._log = True
+        
+        if log_all:
+            self._log_all = True
+
+    def connect(self):
+        '''Connect to the TCP socket of the JS8Call application.
+
+        This function is for internal use only.
+        '''
         self._socket = socket.socket()
         self._socket.connect((self._host, int(self._port)))
         self._socket.settimeout(1)
@@ -156,9 +211,8 @@ class JS8Call:
         '''
         msg.status = Message.STATUS_QUEUED
 
-        self._tx_queue_lock.acquire()
-        self._tx_queue.append(msg)
-        self._tx_queue_lock.release()
+        with self._tx_queue_lock:
+            self._tx_queue.append(msg)
         
     def append_to_rx_queue(self, msg):
         '''Queue received message from the JS8Call application for handling.
@@ -170,9 +224,8 @@ class JS8Call:
         '''
         msg.status = Message.STATUS_QUEUED
 
-        self._rx_queue_lock.acquire()
-        self._rx_queue.append(msg)
-        self._rx_queue_lock.release()
+        with self._rx_queue_lock:
+            self._rx_queue.append(msg)
 
     def get_next_message(self):
         '''Get next received message from the queue.
@@ -183,9 +236,8 @@ class JS8Call:
             pyjs8call.message: Message to be handled
         '''
         if len(self._rx_queue) > 0:
-            self._rx_queue_lock.acquire()
-            msg = self._rx_queue.pop(0)
-            self._rx_queue_lock.release()
+            with self._rx_queue_lock:
+                msg = self._rx_queue.pop(0)
 
             msg.status = Message.STATUS_RECEIVED
             return msg
@@ -208,24 +260,24 @@ class JS8Call:
         Returns:
             The value of the given local state variable
         '''
-        if item not in self.state.keys():
+        if item not in self.state:
             return None
 
-        self._watching = item
+        self.watching = item
         last_state = self.state[item]
         self.state[item] = None
         timeout = time.time() + self._watch_timeout
 
         while timeout > time.time():
-            if self.state[item] != None:
+            if self.state[item] is not None:
                 break
             time.sleep(0.001)
 
         # timeout occurred, revert to last state
-        if self.state[item] == None:
+        if self.state[item] is None:
             self.state[item] = last_state
         
-        self._watching = None
+        self.watching = None
         return self.state[item]
 
     def spot(self, msg):
@@ -262,22 +314,17 @@ class JS8Call:
 
         msg_time = time.strftime('%x %X', time.localtime(msg.timestamp))
 
-        self._log_queue_lock.acquire()
-        self._log_queue += msg_time + '  ' + msg_type + '  ' + msg_content + '\n'
-        self._log_queue_lock.release()
+        with self._log_queue_lock:
+            self._log_queue += msg_time + '  ' + msg_type + '  ' + msg_content + '\n'
 
     def _log_monitor(self):
         '''Log queue monitor thread.'''
         while self.online:
             if len(self._log_queue) > 0:
-                self._log_queue_lock.acquire()
-
-                with open(self._log_path, 'a') as fd:
-                    fd.write(self._log_queue)
-
-                self._log_queue = ''
-                self._log_queue_lock.release()
-
+                with self._log_queue_lock:
+                    with open(self._log_path, 'a', encoding='utf-8') as fd:
+                        fd.write(self._log_queue)
+                    self._log_queue = ''
             time.sleep(1)
 
     def _hb(self):
@@ -311,32 +358,30 @@ class JS8Call:
         while self.online:
             # TxMonitor updates tx_text every second
             # do not attempt to update while value is being watched (i.e. updated)
-            if self._watching != 'tx_text' and self.state['tx_text'] != None:
+            if self.watching != 'tx_text' and self.state['tx_text'] is not None:
                 if len(self.state['tx_text'].strip()) > 0:
                     tx_text = True
                     force_tx_text = False
                 else:
                     tx_text = False
 
-            self._tx_queue_lock.acquire()
+            with self._tx_queue_lock:
+                for msg in self._tx_queue.copy():
+                    # hold off on sending messages while there is something being sent (text in the tx text field)
+                    if msg.type == Message.TX_SEND_MESSAGE and (tx_text or force_tx_text):
+                        continue
 
-            for msg in self._tx_queue.copy():
-
-                # hold off on sending messages while there is something being sent (text in the tx text field)
-                if msg.type == Message.TX_SEND_MESSAGE and (tx_text or force_tx_text):
-                    continue
-                else:
                     # pack msg
                     packed = msg.pack()
-
+    
                     # print msg in debug mode
                     if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
-                            print('TX: ' + packed.decode('utf-8').strip())
-
+                        print('TX: ' + packed.decode('utf-8').strip())
+    
                     # log msg
                     if self._log and (self._log_all or (msg.type not in self._debug_log_type_blacklist)):
                         self._log_msg(msg)
-
+    
                     # send msg via socket
                     self._socket.sendall(packed)
                     # remove msg from queue
@@ -344,10 +389,9 @@ class JS8Call:
                     # make sure the next queued msg doesn't get sent before the tx text state updates
                     if msg.type == Message.TX_SEND_MESSAGE:
                         force_tx_text = True
-
+    
                     time.sleep(0.1)
-
-            self._tx_queue_lock.release()
+    
             time.sleep(0.1)
 
     def _rx(self):
@@ -376,7 +420,8 @@ class JS8Call:
 
             try: 
                 data_str = data.decode('utf-8')
-            except Exception as e:
+            #TODO test specific exception type
+            except UnicodeDecodeError:
                 # if decode fails, stop processing
                 continue
 
@@ -397,17 +442,17 @@ class JS8Call:
 
                 try:
                     msg = Message().parse(msg_str)
-                except Exception as e:
+                except:
                     # if parsing message fails, stop processing
                     continue
 
                 # if error in message value, stop processing
-                if msg.value != None and Message.ERR in msg.value:
+                if msg.value is not None and Message.ERR in msg.value:
                     continue
 
                 # print msg in debug mode
                 if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
-                        print('RX: ' + json.dumps(msg.dict()))
+                    print('RX: ' + json.dumps(msg.dict()))
 
                 # log msg
                 if self._log and (self._log_all or (msg.type not in self._debug_log_type_blacklist)):
