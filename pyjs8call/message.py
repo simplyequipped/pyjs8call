@@ -286,6 +286,10 @@ class Message:
         if attribute == 'from':
             self.set('origin', value)
 
+        # set 'destination' = 'to' for consistency
+        if attribute == 'to':
+            self.set('destination', value)
+
     def get(self, attribute):
         '''Get message attribute value.
 
