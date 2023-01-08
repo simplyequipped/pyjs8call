@@ -109,7 +109,7 @@ class SpotMonitor:
             now = time.time()
             time_since_last_update = now - self._last_spot_update_timestamp
             # get new spots since last update
-            new_spots = self._client.get_station_spots(max_age = time_since_last_update)
+            new_spots = self._client.get_station_spots(age = time_since_last_update)
             self._last_spot_update_timestamp = now
 
             if len(new_spots) > 0:

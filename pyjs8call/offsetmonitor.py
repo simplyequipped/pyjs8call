@@ -305,7 +305,7 @@ class OffsetMonitor:
                 continue
 
             # get recent spots
-            activity = self._client.get_station_spots(max_age = self.heard_station_age) 
+            activity = self._client.get_station_spots(age = self.heard_station_age) 
 
             # skip processing if there is no activity
             if len(activity) == 0:
