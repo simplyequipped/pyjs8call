@@ -600,21 +600,30 @@ class Client:
         '''
         return self.send_directed_message(destination, 'HEARD?')
 
-    def get_station_spots(self, station=None, max_age=0):
+    def get_station_spots(self, station=None, group=None, age=0):
         '''Get list of spotted messages.
 
         Spots are *pyjs8call.message* objects. All spots are returned if no filter criteria is specified.
 
+        Note that filtering on a station applies to the message origin, while filtering on a group applies to the message destination.
+
+        Specified *station* and *group* strings are converted to uppercase.
+
         Args:
-            station (str): Filter spots by station callsign
-            max_age (int): Filter spots by maximum age in seconds
+            station (str): Message origin callsign
+            group (str): Message destination group designator (ex. *@QRP*)
+            age (int): Maximum message age in seconds
 
         Returns:
             list: Spotted messages matching specified criteria
         '''
         spots = []
         for spot in self.js8call.spots:
-            if (max_age == 0 or spot.age() < max_age) and station in (None, spot.origin):
+            if (
+                (age == 0 or spot.age() <= age) and
+                station.upper() in (None, spot.origin) and 
+                group.upper() in (None, spot.destination)
+            ):
                 spots.append(spot)
 
         return spots
