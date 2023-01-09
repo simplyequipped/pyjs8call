@@ -44,6 +44,7 @@ class SpotMonitor:
         self._client = client
         self._last_spot_update_timestamp = 0
         self._station_watch_list = []
+        self._group_watch_list = []
 
         monitor_thread = threading.Thread(target=self._monitor)
         monitor_thread.daemon = True
@@ -52,48 +53,62 @@ class SpotMonitor:
     def _spots_callback(self, spots):
         '''New spots callback function handling.
 
-        Calls the *pyjs8call.client.callback.spots* and *pyjs8call.client.callback.station_spot* callback functions using *threading.Thread*.
+        Calls the *pyjs8call.client.callback.spots*, *pyjs8call.client.callback.station_spot*, and *pyjs8call.client.callback.group_spot* callback functions using *threading.Thread*.
 
         Args:
-            spots (list): List of new spots
+            spots (list): Spotted message objects
         '''
         if self._client.callback.spots is not None:
             thread = threading.Thread(target=self._client.callback.spots, args=[spots])
             thread.daemon = True
             thread.start()
 
-        if self._client.callback.station_spot is not None:
             for spot in spots:
-                if spot.origin in self._station_watch_list:
+                if (
+                    self._client.callback.station_spot is not None and
+                    spot.origin in self._station_watch_list
+                ):
                     thread = threading.Thread(target=self._client.callback.station_spot, args=[spot])
                     thread.daemon = True
                     thread.start()
 
+                elif (
+                    self._client.callback.group_spot is not None and
+                    spot.destination in self._group_watch_list
+                ):
+                    thread = threading.Thread(target=self._client.callback.group_spot, args=[spot])
+                    thread.daemon = True
+                    thread.start()
+
     def add_station_watch(self, station):
-        '''Add watched station.
+        '''Add watched station or group.
 
         Args:
-            station (str): Callsign of station to watch for
+            station (str): Station callsign or group designator to watch for
         '''
-        if station not in self._station_watch_list:
+        if station[0] == '@' and station not in self._group_watch_list:
+            self._group_watch_list.append(station)
+        elif station not in self._station_watch_list:
             self._station_watch_list.append(station)
 
     def remove_station_watch(self, station):
-        '''Remove watched station.
+        '''Remove watched station or group.
 
         Args:
-            station (str): Callsign of station to stop watching for
+            station (str): Station callsign or group designator to stop watching for
         '''
-        if station in self._station_watch_list:
+        if station[0] == '@' and station in self._group_watch_list:
+            self._group_watch_list.remove(station)
+        elif station in self._station_watch_list:
             self._station_watch_list.remove(station)
 
     def get_watched_stations(self):
-        '''Get watched stations.
+        '''Get watched stations and groups.
 
         Returns:
-            list: List of watched station callsigns
+            list: Watched station callsigns and group designators
         '''
-        return self._station_watch_list
+        return self._station_watch_list + self._group_watch_list
 
     def _monitor(self):
         '''Spot monitor thread.
