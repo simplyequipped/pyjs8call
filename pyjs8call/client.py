@@ -133,7 +133,7 @@ class Client:
         if self.online:
             self.restart()
 
-    def start(self, debugging=False, logging=False):
+    def start(self, debugging=False, logging=False, restart=False):
         '''Start and connect to the the JS8Call application.
 
         Starts monitoring objects and associated threads:
@@ -141,19 +141,20 @@ class Client:
         - Window monitor (see pyjs8call.windowmonitor)
         - Offset monitor (see pyjs8call.offsetmonitor)
         - Tx monitor (see pyjs8call.txmonitor)
+        - Time drift monitor (see pyjs8call.timemonitor)
 
         Args:
             debugging (bool): Print message data to the console, defaults to False
             logging (bool): Print message data to ~/pyjs8call.log, defaults to False
+            restart (bool): Internal usage on restart, defaults to False
         '''
-        # enable TCP connection
+        # enable JS8Call TCP connection
         self.config.set('Configuration', 'TCPEnabled', 'true')
         self.config.set('Configuration', 'TCPServer', self.host)
         self.config.set('Configuration', 'TCPServerPort', str(self.port))
         self.config.set('Configuration', 'AcceptTCPRequests', 'true')
         self.config.write()
 
-        # start js8call app and TCP interface
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
         self.online = True
 
@@ -163,21 +164,18 @@ class Client:
         if logging:
             self.js8call.enable_logging()
 
-        # initialize rx thread
         rx_thread = threading.Thread(target=self._rx)
         rx_thread.daemon = True
         rx_thread.start()
-
         time.sleep(0.5)
 
-        # start tx window monitor
         self.window_monitor = pyjs8call.WindowMonitor(self)
-        # start station spot monitor
         self.spot_monitor = pyjs8call.SpotMonitor(self)
-        # start auto offset monitor
         self.offset_monitor = pyjs8call.OffsetMonitor(self)
-        # start tx monitor
         self.tx_monitor = pyjs8call.TxMonitor(self)
+
+        if not restart:
+            self.time_monitor = pyjs8call.TimeMonitor(self)
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.
@@ -204,7 +202,7 @@ class Client:
         settings = self.js8call.restart_settings() 
         self.stop()
         time.sleep(1)
-        self.start()
+        self.start(restart = True)
         self.js8call.reinitialize(settings)
 
         # restore settings
@@ -1044,6 +1042,7 @@ class Callbacks:
         outgoing (func): Outgoing message status change callback function, defaults to None
         spots (func): New spots callback funtion, defaults to None
         station_spot (func): Watched station spot callback function, defaults to None
+        group_spot (func): Watched group spot callback function, defaults to None
         window (func): Transmit window transition callback function, defaults to None
 
     *incoming* structure: *{type: [callback, ...], ...}*
@@ -1059,6 +1058,9 @@ class Callbacks:
     *station_spot* callback signature: *func(msg)* where *msg* is a pyjs8call.message object
     - Called by pyjs8call.spotmonitor
 
+    *group_spot* callback signature: *func(msg)* where *msg* is a pyjs8call.message object
+    - Called by pyjs8call.spotmonitor
+
     *window* callback signature: *func()*
     - Called by pyjs8call.windowmonitor
     '''
@@ -1072,6 +1074,7 @@ class Callbacks:
         self.outgoing = None
         self.spots = None
         self.station_spot = None
+        self.group_spot = None
         self.window = None
         self.incoming = {
             Message.RX_DIRECTED: [],
