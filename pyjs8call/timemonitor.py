@@ -62,7 +62,11 @@ class TimeMonitor:
 
     def enable_time_station(self):
         self._time_station = True
-
+        
+        thread = threading.Thread(target=self._time_station_monitor)
+        thread.daemon = True
+        thread.start()
+        
     def disable_time_station(self):
         self._time_station = False
 
@@ -141,8 +145,12 @@ class TimeMonitor:
         while self._auto_sync:
             self.sync(station = station, min_delta = min_delta)
             time.sleep(self._auto_sync_interval)
-            
 
+    def _time_station_monitor(self):
+        '''Time station thread.'''
+        while self._time_station:
+            # self._client.
+            time.sleep(self._time_station_interval)
 
 
 
