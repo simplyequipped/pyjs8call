@@ -23,6 +23,8 @@
 __docformat__ = 'google'
 
 
+import time
+import threading
 import statistics
 
 #TODO document adding @TIME to groups before starting pyjs8call
@@ -32,7 +34,9 @@ class TimeMonitor:
     def __init__(self, client):
         self._client = client
         self._time_station = False
+        self._auto_sync = False
         self._time_station_interval = 3600 # 1 hour
+        self._auto_sync_interval = 3600 # 1 hour
 
     def get_drift(self):
         return self._client.config.get('MainWindow', 'TimeDrift', value_type=int())
@@ -43,11 +47,18 @@ class TimeMonitor:
         self._client.config.write()
         return self.get_drift()
 
-    def enable_auto_sync(self, station=None):
-        pass
+    def enable_auto_sync(self, station=None, min_delta=0.5):
+        self._auto_sync = True
+        
+        thread = threading.Thread(target=self._auto_sync_monitor, args=(station, min_delta))
+        thread.daemon = True
+        thread.start()
 
     def disable_auto_sync(self):
-        pass
+        self._auto_sync = False
+
+    def set_auto_sync_interval(self, interval):
+        self._auto_sync_interval = interval
 
     def enable_time_station(self):
         self._time_station = True
@@ -57,46 +68,39 @@ class TimeMonitor:
 
     def set_time_station_interval(self, interval):
         self._time_station_interval = interval
-
+        
     def search(self):
         '''Repeatedly adjust time drift until signals are found.'''
         pass
 
-    def activity_sync(self):
-        '''Use time deltas from recent activity to set time drift.'''
-        max_age = self._client.get_tx_window_duration() * 30
-        spots = self._client.get_station_spots(age = max_age)
-
-        if len(spots) == 0:
-            return False
-
-        # message time delta in seconds
-        delta = statistics.median([spot.tdelta for spot in spots])
-        # js8call time delta in milliseconds
-        delta = int(delta * 1000)
-
-    def sync(self, station=None, min_delta=1.0):
-        '''Sync time drift to a specified source.
+    def sync(self, station=None, min_delta=0.5):
+        '''Synchronize time drift.
 
         Note that since the JS8Call time delta cannot be set via API the application will be restarted in order to apply the time delta setting from the config file.
 
-        Note that only JS8Call transmit/receive window timing relative to other heard stations is syncronized. Clock time is not effected.
+        Note that only JS8Call transmit/receive window timing relative to other heard stations is synchronized. Clock time is not effected.
 
         There are 3 sources of time drift information:
         - a specific station callsign
         - a specific group designator (ex. @TIME)
         - all recently heard stations
 
-        Calling *sync* with no arguments will set the JS8Call time drift to the median time drift of all stations heard in the last 90 transmit cycles (15 minutes with the default *fast* JS8Call modem speed).
+        When no arguments are specified the median time drift of all stations heard in the last 90 transmit cycles (15 minutes with the default *fast* JS8Call modem speed) is used. This source is used to decode as many stations as possible.
 
-        When a station callsign or group designator is specified the time drift is set per the time delta of the last heard message from that callsign or group.
+        When *station* is a group designator (begins with '@') the median time drift of all stations associated with the specified group that were heard in the last 90 transmit cycles (15 minutes with the default *fast* JS8Call modem speed) is used. This source is used to decode as many stations as possible in a specific group, or to utilize 'master' time sources that can change over time (i.e. stations with internet or GPS time sync capability).
+
+        When *station* is a station callsign the time drift is set to the time delta of the last heard message from that station.
 
         Args:
             station (str): Station callsign or group designator to sync to, defaults to None
-            min_delta (float): Minimum time delta before performing a sync, defaults to 1.0
+            min_delta (float): Minimum time delta in seconds required before performing a sync, defaults to 0.5
 
         Returns:
-            bool: True if sync occured, False otherwise 
+            bool: True if sync occured, False otherwise
+            
+        A sync will not occur (return False) when:
+        - there are no spots for the specified time source
+        - the calculated time delta is less than the minimum delta
         '''
         max_age = self._client.get_tx_window_duration() * 90
 
@@ -111,12 +115,14 @@ class TimeMonitor:
             spots = self._client.get_station_spots(station = station)
 
         if len(spots) == 0:
+            # no activity to get time delta from
             return False
 
         if station is None or station[0] == '@':
+            # calculate median time delta for all or group specific activity in seconds
             delta = statistics.median([spot.tdrift for spot in spots if spot.get('tdrift')])
         else:
-            # last heard station or group time delta in seconds
+            # last heard station message time delta in seconds
             delta = spots[-1].tdrift
 
         if delta >= min_delta:
@@ -129,7 +135,13 @@ class TimeMonitor:
         else:
             return False
 
-
+    #TODO monitor outgoing activity to delay app restart
+    def _auto_sync_monitor(self, station, time_delta):
+        '''Auto time delta sync thread.'''
+        while self._auto_sync:
+            self.sync(station = station, min_delta = min_delta)
+            time.sleep(self._auto_sync_interval)
+            
 
 
 
