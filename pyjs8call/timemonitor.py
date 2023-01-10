@@ -29,15 +29,32 @@ import statistics
 
 
 class DriftMonitor:
-    ''''''
+    '''Time drift monitor.
+
+    There are 3 sources of relative time delta information:
+    - group messages (ex. @TIME)
+    - single station
+    - all recently heard stations
+
+    When *source* is set to None the median time drift of all stations heard in the last 90 transmit cycles (15 minutes with the default *fast* JS8Call modem speed) is used. Use this option to decode as many stations as possible.
+
+    When *station* is a group designator (begins with '@') the median time drift of all stations associated with the specified group that were heard in the last 90 transmit cycles (15 minutes with the default *fast* JS8Call modem speed) is used. Use this option to decode as many stations as possible in a specific group, or to utilize master time sources (see pyjs8call.timemonitor.TimeMaster).
+
+    When *station* is a station callsign the time drift is set to the time delta of the last heard message from that station.
+    
+    Attributes:
+        interval (int): Number of minutes between sync events, defaults to 60
+        source (str): Time sync source, defaults to '@TIME'
+        minimum_delta (float): Minimum time delta in seconds required before performing a sync, defaults to 0.5
+    '''
     def __init__(self, client):
         self._client = client
         self._enabled = False
         self.interval = 60
-        self.origin = None
+        self.source = '@TIME'
         self.minimum_delta = 0.5
         
-        # make sure time group is enabled in config
+        # ensure time group is enabled in config
         self._client.add_group('@TIME')
 
     def get_drift(self):
@@ -69,20 +86,9 @@ class DriftMonitor:
     def sync(self):
         '''Synchronize time drift.
 
-        Note that since the JS8Call time delta cannot be set via API the application will be restarted in order to apply the time delta setting from the config file.
+        Note that the JS8Call API does not support changing the time drift. The application will be restarted to apply the new time delta via the configuration file.
 
         Note that only JS8Call transmit/receive window timing relative to other heard stations is synchronized. Clock time is not effected.
-
-        There are 3 sources of time drift information:
-        - a specific station callsign
-        - a specific group designator (ex. @TIME)
-        - all recently heard stations
-
-        When no arguments are specified the median time drift of all stations heard in the last 90 transmit cycles (15 minutes with the default *fast* JS8Call modem speed) is used. This source is used to decode as many stations as possible.
-
-        When *station* is a group designator (begins with '@') the median time drift of all stations associated with the specified group that were heard in the last 90 transmit cycles (15 minutes with the default *fast* JS8Call modem speed) is used. This source is used to decode as many stations as possible in a specific group, or to utilize 'master' time sources that can change over time (i.e. stations with internet or GPS time sync capability).
-
-        When *station* is a station callsign the time drift is set to the time delta of the last heard message from that station.
 
         Args:
             station (str): Station callsign or group designator to sync to, defaults to None
@@ -97,23 +103,23 @@ class DriftMonitor:
         '''
         max_age = self._client.get_tx_window_duration() * 90
 
-        if station is None:
+        if self._is_group(self.source):
+            # sync against recent group activity
+            spots = self._client.get_station_spots(group = self.source, age = max_age)
+        elif self.source is not None:
+            # sync against last station message
+            spots = self._client.get_station_spots(station = self.source)
+        else:
             # sync against all recent activity
             spots = self._client.get_station_spots(age = max_age)
-        elif station[0] == '@':
-            # sync against recent group activity
-            spots = self._client.get_station_spots(group = self.origin, age = max_age)
-        else:
-            # sync against last station message
-            spots = self._client.get_station_spots(station = self.origin)
 
         if len(spots) == 0:
             # no activity to get time delta from
             return False
 
-        if self.origin is None or self.origin[0] == '@':
-            # calculate median time delta for all or group-specific activity in seconds
-            delta = statistics.median([spot.tdrift for spot in spots if spot.get('tdrift')])
+        if self._is_group(self.source) or self.source is None:
+            # calculate median time delta for recent activity in seconds
+            delta = statistics.median([spot.tdrift for spot in spots if spot.get('tdrift')] is not None)
         else:
             # last heard station message time delta in seconds
             delta = spots[-1].tdrift
@@ -127,6 +133,9 @@ class DriftMonitor:
             return True
         else:
             return False
+
+    def _is_group(self, designator):
+        return bool(designator[0] == '@')
 
     #TODO monitor outgoing activity to delay app restart
     def _monitor(self):
@@ -144,16 +153,38 @@ class DriftMonitor:
             self._last_sync_timestamp = time.time()
             
 class TimeMaster:
-    ''''''
+    '''Time master monitor.
+    
+    i.e. stations with internet or GPS time sync capability, 
+    
+    The time master object sends messages on a set interval that other stations can identify and synchronize against (see pyjs8call.timemonitor.DriftMonitor). By default outgoing messages target the custom @TIME group, but can be set to any group designation.
+    
+    In order for other stations to synchronize with the master station they will need to configure *client.drift_monitor.source* to the same group designator as the time masters destination. This is the default configuration.
+    
+    Note that *destination* can technically be set to a specific callsign. However, this will prevent other stations from synchronizing with the master station.
+    
+    Attributes:
+        interval (int): Number of minutes between outgoing messages, defaults to 60
+        destination (str): Outgoing message destination, defaults to @TIME
+        text (str): Text to include with each outgoing message, defaults to '' (empty string)
+    '''
     #TODO docs, when changing destination make sure group is added to configured groups, restart
     self.__init__(self, client):
+        '''Initialize time master object.
+        
+        Args:
+            client (pyjs8call.client): Parent client object
+            
+        Returns:
+            pyjs8call.timemonitor.TimeMaster: Constructed time master object
+        '''
         self._client = client
         self._enabled = False
         self._last_message_timestamp = 0
         self.interval = 60 # minutes
-        self.message_destination = '@TIME'
+        self.destination = '@TIME'
         #TODO can this be empty? test
-        self.message_text = ''
+        self.text = ''
 
     def enable(self):
         if self._enabled:
@@ -167,7 +198,7 @@ class TimeMaster:
 
     def disable(self):
         self._enabled = False
-
+        
     def _monitor(self):
         '''Time master monitor thread.'''
         while self._enabled:
@@ -178,12 +209,9 @@ class TimeMaster:
                 # allow disable while waiting
                 if not self._enabled:
                     return
-
-            self._client.send_directed_message(self.message_destination, self.message_text)
+                
+            self._client.send_directed_message(self.destination, self.text)
             self._last_message_timestamp = time.time()
-
-
-
 
 
 
