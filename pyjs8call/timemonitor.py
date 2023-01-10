@@ -27,16 +27,18 @@ import time
 import threading
 import statistics
 
-#TODO document adding @TIME to groups before starting pyjs8call
 
-class TimeMonitor:
-
+class DriftMonitor:
+    ''''''
     def __init__(self, client):
         self._client = client
-        self._time_station = False
-        self._auto_sync = False
-        self._time_station_interval = 3600 # 1 hour
-        self._auto_sync_interval = 3600 # 1 hour
+        self._enabled = False
+        self.interval = 60
+        self.origin = None
+        self.minimum_delta = 0.5
+        
+        # make sure time group is enabled in config
+        self._client.add_group('@TIME')
 
     def get_drift(self):
         return self._client.config.get('MainWindow', 'TimeDrift', value_type=int())
@@ -47,44 +49,24 @@ class TimeMonitor:
         self._client.config.write()
         return self.get_drift()
 
-    def enable_auto_sync(self, station=None, min_delta=0.5):
-        self._auto_sync = True
+    def enable(self):
+        if self._enabled:
+            return
         
-        thread = threading.Thread(target=self._auto_sync_monitor, args=(station, min_delta))
+        self._enabled = True
+        
+        thread = threading.Thread(target=self._monitor)
         thread.daemon = True
         thread.start()
 
-    def disable_auto_sync(self):
-        self._auto_sync = False
-
-    def set_auto_sync_interval(self, interval):
-        self._auto_sync_interval = interval
-
-    def enable_time_station(self, station='@TIME'):
-        '''Enable time station.
-
-        *station* is intended to be a group designator, but can technically be a station callsign if needed.
-
-        Args:
-            station (str): Group designator for outgoing messages
-        '''
-        self._time_station = True
-        
-        thread = threading.Thread(target=self._time_station_monitor, args=(station,))
-        thread.daemon = True
-        thread.start()
-        
-    def disable_time_station(self):
-        self._time_station = False
-
-    def set_time_station_interval(self, interval):
-        self._time_station_interval = interval
+    def disable(self):
+        self._enabled = False
         
     def search(self):
         '''Repeatedly adjust time drift until signals are found.'''
         pass
 
-    def sync(self, station=None, min_delta=0.5):
+    def sync(self):
         '''Synchronize time drift.
 
         Note that since the JS8Call time delta cannot be set via API the application will be restarted in order to apply the time delta setting from the config file.
@@ -120,23 +102,23 @@ class TimeMonitor:
             spots = self._client.get_station_spots(age = max_age)
         elif station[0] == '@':
             # sync against recent group activity
-            spots = self._client.get_station_spots(group = station, age = max_age)
+            spots = self._client.get_station_spots(group = self.origin, age = max_age)
         else:
             # sync against last station message
-            spots = self._client.get_station_spots(station = station)
+            spots = self._client.get_station_spots(station = self.origin)
 
         if len(spots) == 0:
             # no activity to get time delta from
             return False
 
-        if station is None or station[0] == '@':
-            # calculate median time delta for all or group specific activity in seconds
+        if self.origin is None or self.origin[0] == '@':
+            # calculate median time delta for all or group-specific activity in seconds
             delta = statistics.median([spot.tdrift for spot in spots if spot.get('tdrift')])
         else:
             # last heard station message time delta in seconds
             delta = spots[-1].tdrift
 
-        if delta >= min_delta:
+        if delta >= self.minimum_delta:
             # js8call time drift in milliseconds
             delta = int(delta * 1000) * -1
             self.set_drift(delta)
@@ -147,21 +129,58 @@ class TimeMonitor:
             return False
 
     #TODO monitor outgoing activity to delay app restart
-    def _auto_sync_monitor(self, station, time_delta):
+    def _monitor(self):
         '''Auto time delta sync thread.'''
-        while self._auto_sync:
-            self.sync(station = station, min_delta = min_delta)
-            time.sleep(self._auto_sync_interval)
+        while self._enabled:
+            # allow interval change while waiting
+            while (self._last_sync_timestamp + (self.interval * 60)) < time.time():
+                time.sleep(1)
 
-    def _time_station_monitor(self, station):
-        '''Time station thread.'''
-        while self._time_station:
-            self._client.send_directed_message(station, 'SYNC')
-            time.sleep(self._time_station_interval)
+                # allow disable while waiting
+                if not self._enabled:
+                    return
 
+            self.sync()
+            self._last_sync_timestamp = time.time()
+            
+class TimeMaster:
+    ''''''
+    #TODO docs, when changing destination make sure group is added to configured groups, restart
+    self.__init__(self, client):
+        self._client = client
+        self._enabled = False
+        self._last_message_timestamp = 0
+        self.interval = 60 # minutes
+        self.message_destination = '@TIME'
+        #TODO can this be empty? test
+        self.message_text = ''
 
+    def enable(self):
+        if self._enabled:
+            return
 
+        self._enabled = True
 
+        thread = threading.Thread(target=self._monitor)
+        thread.daemon = True
+        thread.start()
+
+    def disable(self):
+        self._enabled = False
+
+    def _monitor(self):
+        '''Time master monitor thread.'''
+        while self._enabled:
+            # allow interval change while waiting
+            while (self._last_message_timestamp + (self.interval * 60)) < time.time():
+                time.sleep(1)
+
+                # allow disable while waiting
+                if not self._enabled:
+                    return
+
+            self._client.send_directed_message(self.message_destination, self.message_text)
+            self._last_message_timestamp = time.time()
 
 
 
