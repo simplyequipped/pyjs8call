@@ -60,10 +60,17 @@ class TimeMonitor:
     def set_auto_sync_interval(self, interval):
         self._auto_sync_interval = interval
 
-    def enable_time_station(self):
+    def enable_time_station(self, station='@TIME'):
+        '''Enable time station.
+
+        *station* is intended to be a group designator, but can technically be a station callsign if needed.
+
+        Args:
+            station (str): Group designator for outgoing messages
+        '''
         self._time_station = True
         
-        thread = threading.Thread(target=self._time_station_monitor)
+        thread = threading.Thread(target=self._time_station_monitor, args=(station,))
         thread.daemon = True
         thread.start()
         
@@ -146,10 +153,10 @@ class TimeMonitor:
             self.sync(station = station, min_delta = min_delta)
             time.sleep(self._auto_sync_interval)
 
-    def _time_station_monitor(self):
+    def _time_station_monitor(self, station):
         '''Time station thread.'''
         while self._time_station:
-            # self._client.
+            self._client.send_directed_message(station, 'SYNC')
             time.sleep(self._time_station_interval)
 
 
