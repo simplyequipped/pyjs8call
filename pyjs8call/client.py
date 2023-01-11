@@ -615,6 +615,10 @@ class Client:
         Returns:
             list: Spotted messages matching specified criteria
         '''
+        # avoid processing loop if no filters specified
+        if station is None and group is None and age is 0:
+            return self.js8call.spots
+
         spots = []
         for spot in self.js8call.spots:
             if (
