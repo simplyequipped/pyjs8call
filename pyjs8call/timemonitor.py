@@ -58,9 +58,9 @@ class DriftMonitor:
         '''
         self._client = client
         self._enabled = False
+        self._searching = False
         
-        # ensure time group is enabled in config
-        self._client.add_group('@TIME')
+        self._client.config.add_group('@TIME')
 
     def get_drift(self):
         '''Get current time drift.
@@ -73,14 +73,14 @@ class DriftMonitor:
     def set_drift(self, drift):
         '''Set time drift.
 
-        Note that this function only sets the time drift in the JS8Call configuration file. To utilize the new setting the application must be restarted using `client.restart()`.
+        Note that this function only sets the time drift in the JS8Call configuration file. To utilize the new setting the application must be restarted using *client.restart()*.
 
         Note that a stations time drift reported from a *pyjs8call.message* object is in seconds. See *set_drift_from_tdrift()*.
 
-        If a stations time drift is positive then the corresponding JS8Call time drift will be negative, and vice vera.
+        If a stations time drift is positive then the corresponding JS8Call time drift adjustment will be negative, and vice vera.
 
         Args:
-            drift (float): New time drift in milliseconds
+            drift (int): New time drift in milliseconds
 
         Returns:
             int: Current time drift per the JS8Call configuration file
@@ -90,70 +90,101 @@ class DriftMonitor:
         return self.get_drift()
 
     def set_drift_from_tdrift(self, tdrift):
-        '''Set time drift from *Message.tdrift* parameter.
+        '''Set time drift from *Message.tdrift* attribute.
 
         Note that this function only sets the time drift in the JS8Call configuration file. To utilize the new setting the appliation must be restarted using `client.restart()`.
 
         Args:
             tdrift (float): Station time drift from *Message.tdrift*
+
+        Returns:
+            int: Current time drift per the JS8Call configuration file
         '''
         # convert station time drift in seconds to JS8Call time drift in milliseconds
         drift = int(float(tdrift) * 1000) * -1
         return self.set_drift(drift)
     
-    def search(self, timeout=10):
+    def start_search(self, timeout=10, until_activity=False, wait_cycles=3):
         '''Search for correct time drift to decode activity.
 
         Automatically find the correct time drift when accurate time sources are unavailable and the time difference between other stations is too large for JS8Call to decode messages. JS8Call can decode messages with a maximum time delta of 2 seconds.
 
-        Time drift is incremented by 1 second every 6 transmit cycles (1 minute with the default *fast* JS8Call modem speed) until stations are heard, all time drift intervals have been searched, or the search times out. With a transmit/receive window duration of 10 seconds a worst case search will take approximately 8 minutes. Once stations are heard, a sync against all recently heard stations is performed.
-
-        Checks for stations heard in the last 90 transmit cycles (15 minutes with the default *fast* JS8Call modem speed) before searching. If found, a sync against all recently heard stations is performed.
+        Checks for activity in the last 90 rx/tx window cycles (15 minutes with the default *fast* JS8Call modem speed) before searching. If recent activity is found a sync is performed against all recently heard stations (see *sync_to_activity*).
         
-        This function returns immediately because searching utilizes *threading.Thread*.
+        One search iteration is defined as incrementing the time drift by 1 second and waiting *wait_cycles* rx/tx window cycles for activity.
+
+        One search pass is defined as cycling though all search iterations. If *until_activity* is True additional search passes are made until activity is heard (*timeout* is ignored). See *stop_search()*. Once activity is heard a sync is performed against all recently heard stations (see *sync_to_activity*).
+
+        With a rx/tx window duration of 10 seconds, and 3 rx/tx window cycles per iteration, a worst case search would take approximately 4 minutes (plus time for the application to restart during each iteration). Once activity is heard a sync is performed against all recently heard stations (see *sync_to_activity*).
+
+        Searching utilizes *threading.Thread* and is therefore non-blocking.
 
         Args:
             timeout (int): Search timeout in minutes, defaults to 10
+            until_activity (bool): Search until activity is heard, defaults to False
+            wait_cycles (int): Number of rx/tx window cycles to wait for activity, defaults to 3
         '''
-        thread = threading.Thread(target=self._search, args=(timeout,))
+        self._searching = True
+
+        thread = threading.Thread(target=self._search, args=(timeout, until_activity, wait_cycles))
         thread.daemon = True
         thread.start()
 
-    def _search(self, timeout):
+    def stop_search(self):
+        '''Stop active search.
+        '''
+        self._searching = False
+
+    def _search(self, timeout, until_activity, wait_cycles):
         '''Time drift search thread.'''
-        timeout = time.time() + (timeout * 60)
-        window_duration = self._client.get_tx_window_duration()
-        initial_spots = self._client.spots()
+        if until_activity:
+            timeout = None
+        else:
+            timeout = time.time() + (timeout * 60)
 
         # avoid searching if there are recent spots
         if len(initial_spots) and initial_spots[-1].age() <= (window_duration * 90):
-            self.sync_to_all()
+            self.sync_to_activity()
+            self._searching = False
             return
 
+        while self._searching:
+            self._search_pass(timeout)
+
+            if not until_activity:
+                break
+
+    def _search_pass(self, timeout):
+        '''Perform a single time drift search pass.'''
+        window_duration = self._client.get_tx_window_duration()
+        initial_spots = self._client.spots()
+
         for drift in range(1, window_duration - 1):
-            # convert from seconds to milliseconds
+            # convert seconds to milliseconds
             self.set_drift(drift * 1000)
             self._client.restart()
             time.sleep(1)
             last_drift_change = time.time()
-
-            # wait for spots before incrementing time drift
-            while last_drift_change + (window_duration * 6) < time.time():
-                # new spots, sync and end search
+    
+            # wait for activity before incrementing time drift
+            while last_drift_change + (window_duration * wait_cycles) < time.time():
                 if len(self._client.spots()) > len(initial_spots):
-                    self.sync_to_all()
+                    # new spots, sync and end search
+                    self.sync_to_activity()
+                    self._searching = False
                     return
-
-                # search timed out
-                if time.time() > timeout:
+    
+                elif timeout is not None and time.time() > timeout:
+                    # search timed out
+                    self._searching = False
                     return
-
+    
                 time.sleep(1)
 
     def sync_to_activity(self, threshold=0.5):
         '''Synchronize time drift to recent activity.
         
-        Syncing to recent activity will decode as many stations as possible. Syncs to the median time drift of stations heard in the last 90 transmit cycles (15 minutes with the default *fast* JS8Call modem speed).
+        Syncing to recent activity will decode as many stations as possible. Syncs to the median time drift of stations heard in the last 90 rx/tx window cycles (15 minutes with the default *fast* JS8Call modem speed).
         
         Args:
             threshold (float): Median time drift in seconds to exceed before syncing, defaults to 0.5
@@ -182,7 +213,7 @@ class DriftMonitor:
     def sync_to_group(self, group, threshold=0.5):
         '''Synchronize time drift to recent group activity.
         
-        Syncing to a group will decode as many stations as possible in a specific group, or utilize master stations (see *sync()* and pyjs8call.timemonitor.TimeMaster). Syncs to the median time drift of stations heard in the last 90 transmit cycles (15 minutes with the default *fast* JS8Call modem speed).
+        Syncing to a group will decode as many stations as possible in a specific group, or utilize master stations (see *sync()* and pyjs8call.timemonitor.TimeMaster). Syncs to the median time drift of stations heard in the last 90 rx/tx window cycles (15 minutes with the default *fast* JS8Call modem speed).
         
         Args:
             group (str): Group designator to sync time drift to
@@ -259,7 +290,7 @@ class DriftMonitor:
         
         Uses *sync_to_station()* if *station* is specified.
         
-        Uses *sync_to_all()* if *group* and *station* are both None.
+        Uses *sync_to_activity()* if *group* and *station* are both None.
         
         Args:
             station (str): Station callsign to sync time drift to, defaults to None
@@ -280,7 +311,12 @@ class DriftMonitor:
         '''Disable automatic time drift monitor.'''
         self._enabled = False
         
-    #TODO monitor outgoing activity to delay app restart
+    #TODO WIP, js8call.restart_pending state?
+    def _restart_client(self):
+        while self._client.js8call.state['ptt']:
+            time.sleep()
+
+    #TODO check outgoing messages to delay app restart
     def _monitor(self, station, group, interval, threshold):
         '''Auto time drift sync thread.'''
         # sync as soon as loop starts
