@@ -95,7 +95,7 @@ class JS8Call:
         self.connected = False
 
         self.state = {
-            'ptt' : None,
+            'ptt' : False,
             'dial': None,
             'freq' : None,
             'offset' : None,
