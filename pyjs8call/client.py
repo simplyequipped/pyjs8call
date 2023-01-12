@@ -133,7 +133,7 @@ class Client:
         if self.online:
             self.restart()
 
-    def start(self, debugging=False, logging=False, restart=False):
+    def start(self, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
 
         Starts monitoring objects and associated threads:
@@ -142,11 +142,11 @@ class Client:
         - Offset monitor (see pyjs8call.offsetmonitor)
         - Tx monitor (see pyjs8call.txmonitor)
         - Time drift monitor (see pyjs8call.timemonitor)
+        - Time master (see pyjs8call.timemonitor)
 
         Args:
             debugging (bool): Print message data to the console, defaults to False
             logging (bool): Print message data to ~/pyjs8call.log, defaults to False
-            restart (bool): Internal usage on restart, defaults to False
         '''
         # enable JS8Call TCP connection
         self.config.set('Configuration', 'TCPEnabled', 'true')
@@ -173,9 +173,8 @@ class Client:
         self.spot_monitor = pyjs8call.SpotMonitor(self)
         self.offset_monitor = pyjs8call.OffsetMonitor(self)
         self.tx_monitor = pyjs8call.TxMonitor(self)
-
-        if not restart:
-            self.time_monitor = pyjs8call.TimeMonitor(self)
+        self.drift_monitor = pyjs8call.DriftMonitor(self)
+        self.time_master = pyjs8call.TimeMaster(self)
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.
@@ -195,17 +194,31 @@ class Client:
 
         Spots, max spots, dial frequency, offset frequency, outgoing message queue, debugging settings, and logging setting are preserved.
         '''
-        # save current settings
+        # save settings
         freq = self.get_freq()
         offset = self.get_offset()
+        settings = self.js8call.restart_settings()
 
-        settings = self.js8call.restart_settings() 
+        # stop
         self.stop()
         time.sleep(1)
-        self.start(restart = True)
-        self.js8call.reinitialize(settings)
+
+        # start
+        self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
+        self.online = True
+
+        rx_thread = threading.Thread(target=self._rx)
+        rx_thread.daemon = True
+        rx_thread.start()
+        time.sleep(0.5)
+
+        self.window_monitor = pyjs8call.WindowMonitor(self)
+        self.spot_monitor = pyjs8call.SpotMonitor(self)
+        self.offset_monitor = pyjs8call.OffsetMonitor(self)
+        self.tx_monitor = pyjs8call.TxMonitor(self)
 
         # restore settings
+        self.js8call.reinitialize(settings)
         self.set_freq(freq)
         self.set_offset(offset)
 
