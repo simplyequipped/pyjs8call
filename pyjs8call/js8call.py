@@ -402,7 +402,7 @@ class JS8Call:
 
         When processing the transmit message queue, if a transmission is in process (i.e. there is text in the tx text field) then transmission of additional messages is prevented until the current transmission is complete.
 
-        If debugging is enabled (see pyjs8call.client.Client.start) then the byte string of each message sent over the TCP socket is printed to the console. By default not all messages are printed in debug mode (see pyjs8call.js8call.JS8Call._debug_type_blacklist). Frequently sent and received messages used internal to pyjs8call are not printed.
+        If debugging or logging is enabled then each message sent over the TCP socket is printed to the console or to file respectively. By default not all messages are printed or logged (see pyjs8call.js8call.JS8Call._debug_log_type_blacklist). Frequently sent and received messages used internal to pyjs8call are not printed or logged.
         '''
         tx_text = False
         force_tx_text = False
@@ -423,24 +423,23 @@ class JS8Call:
                     if msg.type == Message.TX_SEND_MESSAGE and (tx_text or force_tx_text):
                         continue
 
-                    # pack msg
                     packed = msg.pack()
     
-                    # print msg in debug mode
                     if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
                         print('TX: ' + packed.decode('utf-8').strip())
     
-                    # log msg
                     if self._log and (self._log_all or (msg.type not in self._debug_log_type_blacklist)):
                         self._log_msg(msg)
     
                     # send msg via socket
                     self._socket.sendall(packed)
-                    # remove msg from queue
                     self._tx_queue.remove(msg)
                     # make sure the next queued msg doesn't get sent before the tx text state updates
                     if msg.type == Message.TX_SEND_MESSAGE:
                         force_tx_text = True
+
+                    if not self.online:
+                        return
     
                     time.sleep(0.1)
     
