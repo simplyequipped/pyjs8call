@@ -33,17 +33,22 @@ class DriftMonitor:
 
     Note that the JS8Call API does not support changing the time drift. The application will be restarted to apply new time drift settings via the configuration file.
 
-    Note that only JS8Call transmit/receive window timing relative to other stations is effected. Clock time is not effected.
+    Note that only JS8Call rx/tx window timing relative to other stations is effected. Clock time is not effected.
         
     There are 3 sources of time drift information:
     - recently heard stations in a group (ex. @TIME)
     - a single station
     - all recently heard stations
 
-    Attributes:
-        interval (int): Number of minutes between sync attempts, defaults to 60
-        source (str): Time drift sync source, defaults to '@TIME'
-        minimum_drift (float): Minimum time drift in seconds required before performing a sync, defaults to 0.5
+    Typical application example:
+    ```
+    # manual sync to @TIME group
+    client.drift_monitor.sync()
+
+    # automatic sync to @TIME group every hour
+    client.drift_monitor.enable()
+    ```
+
     '''
     def __init__(self, client):
         '''Initialize drift monitor object.
@@ -73,7 +78,7 @@ class DriftMonitor:
     def set_drift(self, drift):
         '''Set time drift.
 
-        Note that this function only sets the time drift in the JS8Call configuration file. To utilize the new setting the application must be restarted using *client.restart()*.
+        Note that this function is blocking until the JS8Call application restarts and the new time drift setting is applied. On slower platforms such as Raspberry Pi it may take several seconds to restart.
 
         Note that a stations time drift reported from a *pyjs8call.message* object is in seconds. See *set_drift_from_tdrift()*.
 
@@ -87,12 +92,13 @@ class DriftMonitor:
         '''
         self._client.config.get('MainWindow', 'TimeDrift', int(drift))
         self._client.config.write()
+        self._restart_client()
         return self.get_drift()
 
     def set_drift_from_tdrift(self, tdrift):
         '''Set time drift from *Message.tdrift* attribute.
 
-        Note that this function only sets the time drift in the JS8Call configuration file. To utilize the new setting the appliation must be restarted using `client.restart()`.
+        Note that this function is blocking until the JS8Call application restarts and the new time drift setting is applied. On slower platforms such as Raspberry Pi it may take several seconds to restart.
 
         Args:
             tdrift (float): Station time drift from *Message.tdrift*
@@ -101,6 +107,7 @@ class DriftMonitor:
             int: Current time drift per the JS8Call configuration file
         '''
         # convert station time drift in seconds to JS8Call time drift in milliseconds
+        #TODO review math/logic, should the sign change? should new drift be added to old drift?
         drift = int(float(tdrift) * 1000) * -1
         return self.set_drift(drift)
     
@@ -184,6 +191,8 @@ class DriftMonitor:
     def sync_to_activity(self, threshold=0.5):
         '''Synchronize time drift to recent activity.
         
+        Note that this function is blocking until the JS8Call application restarts and the new time drift setting is applied (if required). On slower platforms such as Raspberry Pi it may take several seconds to restart.
+
         Syncing to recent activity will decode as many stations as possible. Syncs to the median time drift of stations heard in the last 90 rx/tx window cycles (15 minutes with the default *fast* JS8Call modem speed).
         
         Args:
@@ -205,14 +214,16 @@ class DriftMonitor:
         if drift >= threshold:
             self.set_drift_from_tdrift(drift)
             # restart to utilize new time drift setting
-            self._client.restart()
+            self._restart_client()
             return True
         else:
             return False
 
     def sync_to_group(self, group, threshold=0.5):
         '''Synchronize time drift to recent group activity.
-        
+
+        Note that this function is blocking until the JS8Call application restarts and the new time drift setting is applied (if required). On slower platforms such as Raspberry Pi it may take several seconds to restart.
+
         Syncing to a group will decode as many stations as possible in a specific group, or utilize master stations (see *sync()* and pyjs8call.timemonitor.TimeMaster). Syncs to the median time drift of stations heard in the last 90 rx/tx window cycles (15 minutes with the default *fast* JS8Call modem speed).
         
         Args:
@@ -238,7 +249,7 @@ class DriftMonitor:
         if drift >= threshold:
             self.set_drift_from_tdrift(drift)
             # restart to utilize new time drift setting
-            self._client.restart()
+            self._restart_client()
             return True
         else:
             return False
@@ -246,6 +257,8 @@ class DriftMonitor:
     def sync_to_station(self, station, threshold=0.5):
         '''Synchronize time drift to single station.
         
+        Note that this function is blocking until the JS8Call application restarts and the new time drift setting is applied (if required). On slower platforms such as Raspberry Pi it may take several seconds to restart.
+
         Syncing to a station callsign will ensure time drift alignment with that station only. Time drift is based on the most recent message from the specified station.
         
         Args:
@@ -268,7 +281,7 @@ class DriftMonitor:
         if drift >= threshold:
             self.set_drift_from_tdrift(drift)
             # restart to utilize new time drift setting
-            self._client.restart()
+            self._restart_client()
             return True
         else:
             return False
@@ -276,6 +289,8 @@ class DriftMonitor:
     def sync(self, threshold=0.5):
         '''Synchronize time drift to @TIME group.
         
+        Note that this function is blocking until the JS8Call application restarts and the new time drift setting is applied (if required). On slower platforms such as Raspberry Pi it may take several seconds to restart.
+
         Convenience function to sync to the @TIME group. See *sync_to_group* for more details.
         
         Args:
@@ -313,10 +328,11 @@ class DriftMonitor:
         
     def _restart_client(self):
         tx_text = self._client.js8call.get_state('tx_text')
-        if isinstance(tx_text, str) and len(tx_text.strip()) == 0:
+        # no active outgoing message
+        if tx_text is not None and len(tx_text.strip()) == 0:
+            # restart preserves outgoing message buffer
             self._client.restart()
 
-    #TODO check outgoing messages to delay app restart
     def _monitor(self, station, group, interval, threshold):
         '''Auto time drift sync thread.'''
         # sync as soon as loop starts
@@ -339,13 +355,14 @@ class DriftMonitor:
 class TimeMaster:
     '''Time master monitor.
     
-    i.e. stations with internet or GPS time sync capability, 
-    
+    **It is not recommended that you configure your station as a time master station unless you understand what you are doing and why.**
+
     The time master object sends messages on a set interval that listening stations (see pyjs8call.timemonitor.DriftMonitor) can sync to. By default outgoing messages target the @TIME group.
     
-    In order for listening stations to utilize a time master station they will need to sync to the same group designator as the time master's destination. This is the default configuration for pyjs8call.timemonitor.DriftMonitor and pyjs8call.timemonitor.TimeMaster.
+    A time master station is intended to be a station with internet or GPS time sync capability. However, since JS8Call time syncing only needs to be relative to the rx/tx window of other stations, using time master stations is still effective even if the time master station does not have access to accurate clock time.
+    
+    In order for listening stations to utilize a time master station they will need to sync to the same group designator as the time master's destination. This is the default configuration for pyjs8call.timemonitor.DriftMonitor and pyjs8call.timemonitor.TimeMaster. See pyjs8call.confighandler for more information on adding and removing groups.
     '''
-    #TODO docs, when changing destination make sure group is added to configured groups, restart
     self.__init__(self, client):
         '''Initialize time master object.
         
@@ -362,6 +379,11 @@ class TimeMaster:
         '''Enable automatic time master outgoing messages.
     
         Note that *destination* can technically be set to a specific callsign. However, this may prevent other stations from synchronizing with the master station.
+
+        Args:
+            destination (str): Outgoing message destination, defaults to '@TIME'
+            message (str): Outgoing message text, defaults to '' (empty string)
+            interval (int): Number of minutes between outgoing messages
         '''
         if self._enabled:
             return
@@ -376,12 +398,15 @@ class TimeMaster:
         self._enabled = False
         
     def _monitor(self, destination, message, interval):
-        '''Time master message transmit thread.'''
+        '''Time master message transmit thread.
+
+        See *TimeMaster.enable()* for argument details.
+        '''
         # send message as soon as loop starts
         last_message_timestamp = 0
         
         while self._enabled:
-            if (last_message_timestamp + (interval * 60)) < time.time():
+            if time.time() > (last_message_timestamp + (interval * 60)):
                 message = destination + ' ' + message
                     
                 self._client.send_message(message.strip())
