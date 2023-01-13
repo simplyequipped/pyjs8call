@@ -168,6 +168,8 @@ class JS8Call:
     def get_state(self, state):
         '''Get asynchronous state value.
 
+        Waits for state to stop being watched before returning.
+
         Internal state settings:
         - ptt
         - dial 
@@ -195,13 +197,22 @@ class JS8Call:
 
         return self.state[state]
 
-    def watching(self):
-        '''Get active asynchronous setting name.
+    def watching(self, state=None):
+        '''Get internal asynchronous setting state.
+
+        See *get_state()* for a list of internal state settings.
+
+        Args:
+            state (str): State to check, defaults to None
 
         Returns:
-            str: Name of internal setting waiting for async JS8Call response
+            str: Name of internal setting waiting for async JS8Call response, if *state* is None
+            bool: Whether *state* is waiting for async JS8Call response, if *state* is specified
         '''
-        return self._watching
+        if state is None:
+            return self._watching
+        else:
+            return bool(state == self._watching)
 
     def stop(self):
         '''Stop threads and JS8Call application.'''
@@ -399,7 +410,7 @@ class JS8Call:
         while self.online:
             # TxMonitor updates tx_text every second
             # do not attempt to update while value is being watched (i.e. updated)
-            if self._watching != 'tx_text' and self.state['tx_text'] is not None:
+            if not self.watching('tx_text') and self.state['tx_text'] is not None:
                 if len(self.state['tx_text'].strip()) > 0:
                     tx_text = True
                     force_tx_text = False
