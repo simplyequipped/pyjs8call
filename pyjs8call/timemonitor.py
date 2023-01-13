@@ -311,10 +311,10 @@ class DriftMonitor:
         '''Disable automatic time drift monitor.'''
         self._enabled = False
         
-    #TODO WIP, js8call.restart_pending state?
     def _restart_client(self):
-        while self._client.js8call.state['ptt']:
-            time.sleep()
+        tx_text = self._client.js8call.get_state('tx_text')
+        if isinstance(tx_text, str) and len(tx_text.strip()) == 0:
+            self._client.restart()
 
     #TODO check outgoing messages to delay app restart
     def _monitor(self, station, group, interval, threshold):
@@ -388,3 +388,4 @@ class TimeMaster:
                 last_message_timestamp = time.time()
 
             time.sleep(1)
+
