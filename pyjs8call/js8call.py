@@ -165,10 +165,38 @@ class JS8Call:
 
         return {setting: getattr(self, setting) for setting in settings}
 
+    def get_state(self, state):
+        '''Get asynchronous state value.
+
+        Internal state settings:
+        - ptt
+        - dial 
+        - freq
+        - offset
+        - callsign
+        - speed
+        - grid
+        - info
+        - rx_text
+        - tx_text
+        - inbox 
+        - call_activity
+        - band_activity
+        - selected_call
+
+        Args:
+            state (str): State value to get
+
+        Returns:
+            Returned type varies depending on the specified state value.
+        '''
+        while self.watching(state):
+            time.sleep(0.1)
+
+        return self.state[state]
+
     def watching(self):
         '''Get active asynchronous setting name.
-
-        Used internally.
 
         Returns:
             str: Name of internal setting waiting for async JS8Call response
