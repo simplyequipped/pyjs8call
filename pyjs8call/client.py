@@ -632,8 +632,8 @@ class Client:
         for spot in self.js8call.spots:
             if (
                 (age == 0 or spot.age() <= age) and
-                station.upper() in (None, spot.origin) and 
-                group.upper() in (None, spot.destination)
+                (station is None or station.upper() == spot.origin) and 
+                (group is None or group.upper() == spot.destination)
             ):
                 spots.append(spot)
 
