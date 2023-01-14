@@ -59,7 +59,7 @@ class SpotMonitor:
             spots (list): Spotted message objects
         '''
         if self._client.callback.spots is not None:
-            thread = threading.Thread(target=self._client.callback.spots, args=[spots])
+            thread = threading.Thread(target=self._client.callback.spots, args=(spots,))
             thread.daemon = True
             thread.start()
 
@@ -68,7 +68,7 @@ class SpotMonitor:
                     self._client.callback.station_spot is not None and
                     spot.origin in self._station_watch_list
                 ):
-                    thread = threading.Thread(target=self._client.callback.station_spot, args=[spot])
+                    thread = threading.Thread(target=self._client.callback.station_spot, args=(spot,))
                     thread.daemon = True
                     thread.start()
 
@@ -76,7 +76,7 @@ class SpotMonitor:
                     self._client.callback.group_spot is not None and
                     spot.destination in self._group_watch_list
                 ):
-                    thread = threading.Thread(target=self._client.callback.group_spot, args=[spot])
+                    thread = threading.Thread(target=self._client.callback.group_spot, args=(spot,))
                     thread.daemon = True
                     thread.start()
 
