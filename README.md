@@ -65,6 +65,16 @@ Manages JS8Call offset frequency based on activity in the pass band. The offset 
 
 Monitors JS8Call tx text for queued outgoing messages. Notification of a message status change is handled via callback function.
 
+**Heartbeat Monitor** (pyjs8call.hbmonitor)
+
+Sends a heartbeat message on a time interval.
+
+**Time Monitor** (pyjs8call.timemonitor)
+
+Monitors a group, station, or all activity for time drift data and synchronizes local time drift. Enable automatic synchronization to the specified source on a time interval. Synchronizes to the @TIME group by default.
+
+Time master functionality is also implemented which sends outgoing messages on a time interval that other stations can use to synchronize their time drift. Targets the @TIME group by default.
+
 &nbsp;  
 
 ### Examples
@@ -140,7 +150,7 @@ js8call.send_directed_message('OH8STN', 'Thanks for the great content')
 
 # monitor message tx manually
 js8call.monitor_directed_tx = False
-msg = js8call.send_directed_message('KT1RUN', 'Thanks for the great content')
+msg = js8call.send_directed_message('KT7RUN', 'Thanks for the great content')
 js8call.tx_monitor.monitor(msg)
 ```
 
