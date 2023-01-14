@@ -95,6 +95,17 @@ class DriftMonitor:
         self._restart_client()
         return self.get_drift()
 
+    def set_drift_from_message(self, msg):
+        '''Set time drift from *Message*.
+
+        Args:
+            msg (pyjs8call.message): Message object to get time drift from
+
+        Returns:
+            int: Current time drift per the JS8Call configuration file
+        '''
+        return self.set_drift_from_tdrift(msg.tdrift)
+
     def set_drift_from_tdrift(self, tdrift):
         '''Set time drift from *Message.tdrift* attribute.
 
@@ -106,9 +117,10 @@ class DriftMonitor:
         Returns:
             int: Current time drift per the JS8Call configuration file
         '''
-        # convert station time drift in seconds to JS8Call time drift in milliseconds
-        #TODO review math/logic, should the sign change? should new drift be added to old drift?
-        drift = int(float(tdrift) * 1000) * -1
+        # convert seconds to milliseconds
+        tdrift = int(float(tdrift) * 1000)
+        # adjust relative to current drift
+        drift = self.get_drift() - tdrift
         return self.set_drift(drift)
     
     def start_search(self, timeout=10, until_activity=False, wait_cycles=3):
@@ -138,8 +150,7 @@ class DriftMonitor:
         thread.start()
 
     def stop_search(self):
-        '''Stop active search.
-        '''
+        '''Stop active search.'''
         self._searching = False
 
     def _search(self, timeout, until_activity, wait_cycles):
@@ -150,7 +161,9 @@ class DriftMonitor:
             timeout = time.time() + (timeout * 60)
 
         # avoid searching if there are recent spots
-        if len(initial_spots) and initial_spots[-1].age() <= (window_duration * 90):
+        window_duration = self._client.get_tx_window_duration()
+        initial_spots = self._client.spots(age = window_duration * 90)
+        if len(initial_spots) > 0:
             self.sync_to_activity()
             self._searching = False
             return
@@ -164,13 +177,11 @@ class DriftMonitor:
     def _search_pass(self, timeout):
         '''Perform a single time drift search pass.'''
         window_duration = self._client.get_tx_window_duration()
-        initial_spots = self._client.spots()
+        initial_spots = self._client.spots().copy()
 
         for drift in range(1, window_duration - 1):
             # convert seconds to milliseconds
             self.set_drift(drift * 1000)
-            self._client.restart()
-            time.sleep(1)
             last_drift_change = time.time()
     
             # wait for activity before incrementing time drift
@@ -209,12 +220,10 @@ class DriftMonitor:
             # no activity to get time drift from
             return False
 
-       drift = statistics.median([spot.tdrift for spot in spots if spot.get('tdrift')] is not None)
+       drift = statistics.mean([spot.tdrift for spot in spots if spot.get('tdrift') is not None])
 
         if drift >= threshold:
             self.set_drift_from_tdrift(drift)
-            # restart to utilize new time drift setting
-            self._restart_client()
             return True
         else:
             return False
@@ -244,12 +253,10 @@ class DriftMonitor:
             # no activity to get time drift from
             return False
 
-        drift = statistics.median([spot.tdrift for spot in spots if spot.get('tdrift')] is not None)
+        drift = statistics.mean([spot.tdrift for spot in spots if spot.get('tdrift') is not None])
 
         if drift >= threshold:
             self.set_drift_from_tdrift(drift)
-            # restart to utilize new time drift setting
-            self._restart_client()
             return True
         else:
             return False
@@ -275,13 +282,11 @@ class DriftMonitor:
             # no activity to get time drift from
             return False
         
-        # last heard station message time drift in seconds
-        drift = spots[-1].tdrift
+        # last heard station message
+        msg = spots[-1]
 
         if drift >= threshold:
-            self.set_drift_from_tdrift(drift)
-            # restart to utilize new time drift setting
-            self._restart_client()
+            self.set_drift_from_msg(msg)
             return True
         else:
             return False
@@ -406,7 +411,7 @@ class TimeMaster:
         last_message_timestamp = 0
         
         while self._enabled:
-            if time.time() > (last_message_timestamp + (interval * 60)):
+            if (last_message_timestamp + (interval * 60)) < time.time():
                 message = destination + ' ' + message
                     
                 self._client.send_message(message.strip())
