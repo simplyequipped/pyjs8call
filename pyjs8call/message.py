@@ -190,7 +190,8 @@ class Message:
     CMD_GRID                = 'GRID'
     CMD_HEARING             = 'HEARING'
     CMD_QUERY_CALL          = 'QUERY CALL'
-    COMMANDS = [CMD_SNR, CMD_GRID, CMD_HEARING, CMD_QUERY_CALL]
+    CMD_HEARTBEAT           = 'HEARTBEAT'
+    COMMANDS = [CMD_SNR, CMD_GRID, CMD_HEARING, CMD_QUERY_CALL, CMD_HEARTBEAT]
 
     # status types
     STATUS_CREATED          = 'created'
