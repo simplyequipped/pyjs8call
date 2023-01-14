@@ -42,13 +42,25 @@ class SpotMonitor:
             pyjs8call.spotmonitor: Constructed spot monitor object
         '''
         self._client = client
-        self._last_spot_update_timestamp = 0
         self._station_watch_list = []
         self._group_watch_list = []
 
-        monitor_thread = threading.Thread(target=self._monitor)
-        monitor_thread.daemon = True
-        monitor_thread.start()
+        self.enable()
+
+    def enable(self):
+        '''Enable spot monitoring.'''
+        if self._enabled:
+            return
+
+        self._enabled = True
+
+        thread = threading.Thread(target=self._monitor)
+        thread.daemon = True
+        thread.start()
+
+    def disable(self):
+        '''Disable spot monitoring.'''
+        self._enabled = False
 
     def _spots_callback(self, spots):
         '''New spots callback function handling.
@@ -115,17 +127,17 @@ class SpotMonitor:
 
         Uses *pyjs8call.client.get_station_spots* internally.
         '''
-        while self._client.online:
+        last_spot_update_timestamp = 0
+
+        while self._enabled:
             default_delay = self._client.get_tx_window_duration() / 3
             delay = self._client.window_monitor.next_transition_seconds(count = 1, fallback = default_delay)
             time.sleep(delay)
 
-            # update timestamps
-            now = time.time()
-            time_since_last_update = now - self._last_spot_update_timestamp
             # get new spots since last update
+            time_since_last_update = time.time() - last_spot_update_timestamp
             new_spots = self._client.get_station_spots(age = time_since_last_update)
-            self._last_spot_update_timestamp = now
+            last_spot_update_timestamp = time.time()
 
             if len(new_spots) > 0:
                 self._spots_callback(new_spots)
