@@ -28,57 +28,54 @@ import threading
 
 
 class HeartbeatMonitor:
+    '''Heartbeat monitor.
 
+    Send heaertbeat messages automatically on a timed interval.
+    '''
     def __init__(self, client):
-        self._client = client
-        self._last_hb_timestamp = 0
-        self._enabled = False
-        self.interval = 15 # minutes
+    '''Initialize heartbeat monitor object.
 
-    def enable(self):
+    Args:
+        client (pyjs8call.client): Parent client object
+
+    Returns:
+        pyjs8call.hbmonitor: Constructed heartbeat object
+    '''
+        self._client = client
+        self._enabled = False
+
+    def enable(self, interval=15):
+        '''Enable heartbeat monitoring.
+
+        Args:
+            interval (int): Number of minutes between outgoing messages, defaults to 15
+        '''
         if self._enabled:
-            return None
+            return
 
         self._enabled = True
 
-        thread = threading.Thread(target=self._monitor)
+        thread = threading.Thread(target=self._monitor, args=(interval,))
         thread.daemon = True
         thread.start()
 
     def disable(self):
+        '''Disable heartbeat monitoring.'''
         self._enabled = False
 
-    def _monitor(self):
+    def _monitor(self, interval):
         '''Heartbeat monitor thread.'''
+        last_hb_timestamp = 0
+
         while self._enabled:
             # allow interval change while waiting
-            while (self._last_hb_timestamp + (self._interval * 60)) < time.time():
+            while (last_hb_timestamp + (interval * 60)) < time.time():
                 time.sleep(1)
 
                 # allow disable while waiting
                 if not self._enabled:
-                    return None
+                    return
 
             self._client.send_heartbeat_message()
-            self._last_hb_timestamp = time.time()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            last_hb_timestamp = time.time()
 
