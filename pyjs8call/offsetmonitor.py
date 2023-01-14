@@ -38,13 +38,12 @@ class OffsetMonitor:
     '''Monitor offset frequency based on activity in the pass band.
 
     Attributes:
-    - min_offset (int): Minimum offset for adjustment and recent activity monitoring
-    - max_offset (int): Maximum offset for adjustment and recent activity monitoring
-    - heard_station_age (int): Maximum age of a heard station to be considered recent activity
-    - bandwidth (int): JS8Call tx signal bandwidth (see pyjs8call.client.Client.get_bandwidth)
-    - bandwidth_safety_factor (float): Safety factor to apply to tx bandwidth when looking for an unused portion of the pass band
-    - offset (int): Current JS8Call offset frequency in Hz
-    - enabled (bool): Whether to enable the offset monitor and automatically adjust the offset frequency, defaults to True
+        min_offset (int): Minimum offset for adjustment and recent activity monitoring
+        max_offset (int): Maximum offset for adjustment and recent activity monitoring
+        heard_station_age (int): Maximum age of a heard station to be considered recent activity
+        bandwidth (int): JS8Call tx signal bandwidth (see pyjs8call.client.Client.get_bandwidth)
+        bandwidth_safety_factor (float): Safety factor to apply to tx bandwidth when looking for an unused portion of the pass band
+        offset (int): Current JS8Call offset frequency in Hz
     '''
 
     def __init__(self, client):
@@ -63,12 +62,24 @@ class OffsetMonitor:
         self.bandwidth = self._client.get_bandwidth()
         self.bandwidth_safety_factor = 1.25
         self.offset = self._client.get_offset()
-        self.enabled = True
+        self._enabled = False
 
-        # start monitoring thread
-        monitor_thread = threading.Thread(target=self._monitor)
-        monitor_thread.daemon = True
-        monitor_thread.start()
+        self.enable()
+
+    def enable(self):
+        '''Enable automatic offset monitoring.'''
+        if self._enabled:
+            return
+
+        self._enabled = True
+
+        thread = threading.Thread(target=self._monitor)
+        thread.daemon = True
+        thread.start()
+
+    def disable(self):
+        '''Disable automatic offset monitoring.'''
+        self._enabled = False
 
     def _min_signal_freq(self, offset, bandwidth):
         '''Get lower edge of signal.
@@ -285,23 +296,14 @@ class OffsetMonitor:
 
         Update activity 0.5 seconds before the end of the current tx window. This allows a new offset to be selected before the next tx window if new activity overlaps with the current offset. Activity is not updated if a message is being sent (i.e. there is text in the tx text box).
         '''
-        while self._client.online:
-            # wait until enabled
-            while not self.enabled:
-                time.sleep(1)
-
+        while self._enabled:
             # wait until 0.5 seconds before the end of the tx window
             default_delay = self._client.get_tx_window_duration() / 2
             delay = self._client.window_monitor.next_transition_seconds(count = 1, fallback = default_delay) - 0.5
             time.sleep(delay)
 
-            # wait until tx_text is not being 'watched'
-            # tx_monitor requests tx_text every second
-            while self._client.js8call.watching() == 'tx_text':
-                time.sleep(0.1)
-            
             # skip processing if actively sending a message
-            if self._client.js8call.state['tx_text'] != '':
+            if self._client.get_state('tx_text') != '':
                 continue
 
             # get recent spots
