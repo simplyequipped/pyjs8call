@@ -303,7 +303,7 @@ class OffsetMonitor:
             time.sleep(delay)
 
             # skip processing if actively sending a message
-            if self._client.get_state('tx_text') != '':
+            if self._client.js8call.get_state('tx_text') != '':
                 continue
 
             # get recent spots
