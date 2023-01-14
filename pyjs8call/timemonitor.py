@@ -220,7 +220,7 @@ class DriftMonitor:
             # no activity to get time drift from
             return False
 
-       drift = statistics.mean([spot.tdrift for spot in spots if spot.get('tdrift') is not None])
+        drift = statistics.mean([spot.tdrift for spot in spots if spot.get('tdrift') is not None])
 
         if drift >= threshold:
             self.set_drift_from_tdrift(drift)
@@ -301,7 +301,7 @@ class DriftMonitor:
         Args:
             threshold (float): Median time drift in seconds to exceed before syncing, defaults to 0.5
         '''
-        returns self.sync_to_group('@TIME', threshold = threshold)
+        return self.sync_to_group('@TIME', threshold = threshold)
 
     def enable(self, station=None, group='@TIME', interval=60, threshold=0.5):
         '''Enable automatic time drift monitor.
@@ -368,7 +368,7 @@ class TimeMaster:
     
     In order for listening stations to utilize a time master station they will need to sync to the same group designator as the time master's destination. This is the default configuration for pyjs8call.timemonitor.DriftMonitor and pyjs8call.timemonitor.TimeMaster. See pyjs8call.confighandler for more information on adding and removing groups.
     '''
-    self.__init__(self, client):
+    def __init__(self, client):
         '''Initialize time master object.
         
         Args:
