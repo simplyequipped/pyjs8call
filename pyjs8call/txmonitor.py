@@ -119,9 +119,8 @@ class TxMonitor:
         '''Tx monitor thread.'''
         while self._enabled:
             time.sleep(1)
-            tx_text = self._client.get_tx_text()
+            tx_text = self._client.js8call.get_state('tx_text')
 
-            # no text in tx field, nothing to process
             if tx_text is None:
                 continue
 
