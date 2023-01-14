@@ -33,14 +33,14 @@ class HeartbeatMonitor:
     Send heaertbeat messages automatically on a timed interval.
     '''
     def __init__(self, client):
-    '''Initialize heartbeat monitor object.
+        '''Initialize heartbeat monitor object.
 
-    Args:
-        client (pyjs8call.client): Parent client object
+        Args:
+            client (pyjs8call.client): Parent client object
 
-    Returns:
-        pyjs8call.hbmonitor: Constructed heartbeat object
-    '''
+        Returns:
+            pyjs8call.hbmonitor: Constructed heartbeat object
+        '''
         self._client = client
         self._enabled = False
 
