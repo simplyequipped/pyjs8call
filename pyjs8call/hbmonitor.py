@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+'''Monitor heartbeat messaging.'''
+
 __docformat__ = 'google'
 
 
@@ -28,7 +30,7 @@ import threading
 
 
 class HeartbeatMonitor:
-    '''Heartbeat monitor.
+    '''Monitor heartbeat messaging.
 
     Send heaertbeat messages automatically on a timed interval.
     '''
