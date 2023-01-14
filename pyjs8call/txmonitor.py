@@ -68,14 +68,26 @@ class TxMonitor:
             pyjs8call.txmonitor: Constructed tx monitor object
         '''
         self._client = client
+        self._enabled = False
         self._msg_queue = []
         self._msg_queue_lock = threading.Lock()
         # initialize msg max age to 30 tx cycles in fast mode (10 sec cycles)
         self._msg_max_age = 10 * 30 # 5 minutes
 
-        monitor_thread = threading.Thread(target=self._monitor)
-        monitor_thread.daemon = True
-        monitor_thread.start()
+        self.enable()
+
+    def enable(self):
+        if self._enabled:
+            return
+
+        self._enabled = True
+
+        thread = threading.Thread(target=self._monitor)
+        thread.daemon = True
+        thread.start()
+
+    def disable(self):
+        self._enabled = False
 
     def _callback(self, msg):
         '''Handle callback for monitored message status change.
@@ -86,7 +98,7 @@ class TxMonitor:
             msg (pyjs8call.message): Monitored message with changed status
         '''
         if self._client.callback.outgoing is not None:
-            thread = threading.Thread(target=self._client.callback.outgoing, args=[msg])
+            thread = threading.Thread(target=self._client.callback.outgoing, args=(msg,))
             thread.daemon = True
             thread.start()
 
@@ -105,7 +117,7 @@ class TxMonitor:
 
     def _monitor(self):
         '''Tx monitor thread.'''
-        while self._client.online:
+        while self._enabled:
             time.sleep(1)
             tx_text = self._client.get_tx_text()
 
@@ -119,10 +131,6 @@ class TxMonitor:
                 tx_text = tx_text.split(':')[1].strip(' ' + Message.EOM)
             
             # update msg max age based on speed setting (30 tx cycles)
-            #    3 min in turbo mode (6 sec cycles)
-            #    5 min in fast mode (10 sec cycles)
-            #    7.5 min in normal mode (15 sec cycles)
-            #    15 min in slow mode (30 sec cycles)
             self._msg_max_age = self._client.get_tx_window_duration() * 30
             
             with self._msg_queue_lock:
