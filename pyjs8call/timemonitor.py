@@ -90,7 +90,7 @@ class DriftMonitor:
         Returns:
             int: Current time drift per the JS8Call configuration file
         '''
-        self._client.config.get('MainWindow', 'TimeDrift', int(drift))
+        self._client.config.set('MainWindow', 'TimeDrift', int(drift))
         self._client.config.write()
         self._restart_client()
         return self.get_drift()
@@ -155,6 +155,8 @@ class DriftMonitor:
 
     def _search(self, timeout, until_activity, wait_cycles):
         '''Time drift search thread.'''
+        initial_drift = self.get_drift()
+
         if until_activity:
             timeout = None
         else:
@@ -162,39 +164,52 @@ class DriftMonitor:
 
         # avoid searching if there are recent spots
         window_duration = self._client.get_tx_window_duration()
-        initial_spots = self._client.spots(age = window_duration * 90)
+        initial_spots = self._client.get_station_spots(age = window_duration * 90)
         if len(initial_spots) > 0:
             self.sync_to_activity()
             self._searching = False
             return
 
         while self._searching:
-            self._search_pass(timeout)
+            try:
+                self._search_single_pass(timeout, wait_cycles)
 
-            if not until_activity:
-                break
+                if not until_activity:
+                    # single pass only
+                    self._searching = False
 
-    def _search_pass(self, timeout):
+            except TimeoutError:
+                # search timed out
+                self._searching = False
+            except StopIteration:
+                # activity found
+                self._searching = False
+                return
+
+        self.set_drift(initial_drift)
+
+    def _search_single_pass(self, timeout, wait_cycles):
         '''Perform a single time drift search pass.'''
         window_duration = self._client.get_tx_window_duration()
-        initial_spots = self._client.spots().copy()
+        initial_spots = self._client.get_station_spots().copy()
 
-        for drift in range(1, window_duration - 1):
+        for drift in range(1, window_duration):
             # convert seconds to milliseconds
             self.set_drift(drift * 1000)
             last_drift_change = time.time()
     
             # wait for activity before incrementing time drift
-            while last_drift_change + (window_duration * wait_cycles) < time.time():
-                if len(self._client.spots()) > len(initial_spots):
-                    # new spots, sync and end search
+            while last_drift_change + (window_duration * wait_cycles) > time.time():
+                if len(self._client.get_station_spots()) > len(initial_spots):
+                    # new spots heard, sync and end search
                     self.sync_to_activity()
-                    self._searching = False
-                    return
+                    raise StopIteration
     
                 elif timeout is not None and time.time() > timeout:
-                    # search timed out
-                    self._searching = False
+                    # search timed out, end search
+                    raise TimeoutError
+
+                elif not self._searching:
                     return
     
                 time.sleep(1)
@@ -334,7 +349,7 @@ class DriftMonitor:
     def _restart_client(self):
         tx_text = self._client.js8call.get_state('tx_text')
         # no active outgoing message
-        if tx_text is not None and len(tx_text.strip()) == 0:
+        if tx_text is None or len(tx_text.strip()) == 0:
             # restart preserves outgoing message buffer
             self._client.restart()
 
