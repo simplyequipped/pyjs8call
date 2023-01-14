@@ -175,6 +175,7 @@ class Client:
         self.tx_monitor = pyjs8call.TxMonitor(self)
         self.drift_monitor = pyjs8call.DriftMonitor(self)
         self.time_master = pyjs8call.TimeMaster(self)
+        self.heartbeat_monitor = pyjs8call.HeartbeatMonitor(self)
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.
@@ -201,7 +202,7 @@ class Client:
 
         # stop
         self.stop()
-        time.sleep(1)
+        time.sleep(0.25)
 
         # start
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
@@ -211,11 +212,6 @@ class Client:
         rx_thread.daemon = True
         rx_thread.start()
         time.sleep(0.5)
-
-        self.window_monitor = pyjs8call.WindowMonitor(self)
-        self.spot_monitor = pyjs8call.SpotMonitor(self)
-        self.offset_monitor = pyjs8call.OffsetMonitor(self)
-        self.tx_monitor = pyjs8call.TxMonitor(self)
 
         # restore settings
         self.js8call.reinitialize(settings)
