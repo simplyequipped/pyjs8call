@@ -42,6 +42,7 @@ class SpotMonitor:
             pyjs8call.spotmonitor: Constructed spot monitor object
         '''
         self._client = client
+        self._enabled = False
         self._station_watch_list = []
         self._group_watch_list = []
 
