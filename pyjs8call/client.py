@@ -926,6 +926,8 @@ class Client:
             msg.set('type', Message.MODE_GET_SPEED)
             self.js8call.send(msg)
             speed = self.js8call.watch('speed')
+        else:
+            speed = self.js8call.get_state('speed')
 
         return self.submode_to_speed(speed)
 
