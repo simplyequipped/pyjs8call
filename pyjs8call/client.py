@@ -57,6 +57,9 @@ class Client:
         window_monitor (pyjs8call.windowmonitor): Monitors the JS8Call transmit window
         offset_monitor (pyjs8call.offsetmonitor): Manages JS8Call offset frequency
         tx_monitor (pyjs8call.txmonitor): Monitors JS8Call transmit text for outgoing messages
+        drift_monitor (pyjs8call.timemonitor): Monitors JS8Call time drift
+        time_master (pyjs8call.timemonitor): Manages time master outgoing messages
+        inbox_monitor (pyjs8call.inboxmonitor): Monitors JS8Call inbox messages
         config (pyjs8call.confighandler): Manages JS8Call configuration file
         clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages
         monitor_directed_tx (bool): Monitor outgoing message status (see pyjs8call.txmonitor)
@@ -99,6 +102,9 @@ class Client:
         self.window_monitor = None
         self.offset_monitor = None
         self.tx_monitor = None
+        self.drift_monitor = None
+        self.time_master = None
+        self.inbox_monitor = None
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
@@ -143,6 +149,7 @@ class Client:
         - Tx monitor (see pyjs8call.txmonitor)
         - Time drift monitor (see pyjs8call.timemonitor)
         - Time master (see pyjs8call.timemonitor)
+        - Inbox master (see pyjs8call.inboxmonitor)
 
         Args:
             debugging (bool): Print message data to the console, defaults to False
@@ -176,6 +183,7 @@ class Client:
         self.drift_monitor = pyjs8call.DriftMonitor(self)
         self.time_master = pyjs8call.TimeMaster(self)
         self.heartbeat_monitor = pyjs8call.HeartbeatMonitor(self)
+        self.inbox_monitor = pyjs8call.InboxMonitor(self)
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.
@@ -1076,6 +1084,10 @@ class Callbacks:
 
     *window* callback signature: *func()*
     - Called by pyjs8call.windowmonitor
+
+    *inbox* callback signature: *func(msgs)* where *msgs* is a list of *dict* message items
+    - See *client.get_inbox_messages()* for message item *dict* key details
+    - Called by pyjs8call.inboxmonitor
     '''
 
     def __init__(self):
@@ -1089,6 +1101,7 @@ class Callbacks:
         self.station_spot = None
         self.group_spot = None
         self.window = None
+        self.inbox = None
         self.incoming = {
             Message.RX_DIRECTED: [],
         }

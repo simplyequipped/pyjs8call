@@ -82,10 +82,12 @@ class JS8Call:
         self._log_queue = ''
         self._log_queue_lock = threading.Lock()
         self._debug_log_type_blacklist = [
-            Message.TX_GET_TEXT,
-            Message.TX_TEXT,
-            Message.RIG_PTT,
-            Message.TX_FRAME
+            Message.TX_GET_TEXT,        # tx monitor every 1 second
+            Message.TX_TEXT,            # tx monitor every 1 second
+            Message.RIG_PTT,            # too frequent, not useful
+            Message.TX_FRAME,           # start of outgoing message, not useful
+            Message.INBOX_MESSAGES,     # inbox monitor every window transition
+            Message.INBOX_GET_MESSAGES  # inbox monitor every window transition
         ]
         self._watching = None
         self._watch_timeout = 3 # seconds
@@ -537,16 +539,13 @@ class JS8Call:
             #            self.spots[msg.params['FROM']][station] = []
             #        self.spots[msg.params['FROM']][station].append(msg)
 
-            # spot message
-            self.spot(msg)
-
         #TODO no example, test response and update code
         #elif msg.params['CMD'] == 'QUERY CALL':
-        #    # spot message
-        #    self.spot(msg)
+
+        elif msg.cmd == 'HEARTBEAT' and 'MSG' in msg.value:
+            self._client.inbox_monitor.process_incoming_remote_message_id(msg)
                 
-        elif msg.cmd in Message.COMMANDS:
-            # spot message
+        if msg.cmd in Message.COMMANDS:
             self.spot(msg)
 
 
@@ -556,7 +555,6 @@ class JS8Call:
             self.state['inbox'] = msg.messages
 
         elif msg.type == Message.RX_SPOT:
-            # spot message
             self.spot(msg)
 
         elif msg.type == Message.RX_DIRECTED:
@@ -564,7 +562,6 @@ class JS8Call:
             if self._client.clean_directed_text:
                 msg = self._client.clean_rx_message_text(msg)
 
-            # spot message
             self.spot(msg)
 
         elif msg.type == Message.RIG_FREQ:
