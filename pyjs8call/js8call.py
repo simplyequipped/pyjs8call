@@ -155,6 +155,7 @@ class JS8Call:
             dict: Settings used to re-initialize on restart
         '''
         settings = [
+            'state',
             'spots',
             'max_spots',
             '_tx_queue',
