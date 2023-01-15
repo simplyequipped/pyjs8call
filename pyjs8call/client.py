@@ -643,16 +643,23 @@ class Client:
 
         return spots
 
-    def get_freq(self):
+    def get_freq(self, update=True):
         '''Get JS8Call dial frequency.
+
+        Args:
+            update (bool): Update if True or use local state if False, defaults to True
 
         Returns:
             int: Dial frequency in Hz
         '''
-        msg = Message()
-        msg.type = Message.RIG_GET_FREQ
-        self.js8call.send(msg)
-        freq = self.js8call.watch('dial')
+        freq = self.js8call.get_state('dial')
+
+        if update or freq is None:
+            msg = Message()
+            msg.type = Message.RIG_GET_FREQ
+            self.js8call.send(msg)
+            freq = self.js8call.watch('dial')
+
         return freq
 
     def set_freq(self, freq):
@@ -671,16 +678,23 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_freq()
 
-    def get_offset(self):
+    def get_offset(self, update=True):
         '''Get JS8Call offset frequency.
+
+        Args:
+            update (bool): Update if True or use local state if False, defaults to True
 
         Returns:
             int: Offset frequency in Hz
         '''
-        msg = Message()
-        msg.type = Message.RIG_GET_FREQ
-        self.js8call.send(msg)
-        offset = self.js8call.watch('offset')
+        offset = self.js8call.get_state('offset')
+        
+        if update or offset is None:
+            msg = Message()
+            msg.type = Message.RIG_GET_FREQ
+            self.js8call.send(msg)
+            offset = self.js8call.watch('offset')
+
         return offset
 
     def set_offset(self, offset):
@@ -699,16 +713,23 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_offset()
 
-    def get_station_callsign(self):
+    def get_station_callsign(self, update=True):
         '''Get JS8Call callsign.
+
+        Args:
+            update (bool): Update if True or use local state if False, defaults to True
 
         Returns:
             str: JS8Call configured callsign
         '''
-        msg = Message()
-        msg.type = Message.STATION_GET_CALLSIGN
-        self.js8call.send(msg)
-        callsign = self.js8call.watch('callsign')
+        callsign = self.js8call.get_state('callsign')
+
+        if update or callsign is None:
+            msg = Message()
+            msg.type = Message.STATION_GET_CALLSIGN
+            self.js8call.send(msg)
+            callsign = self.js8call.watch('callsign')
+
         return callsign
 
     def set_station_callsign(self, callsign):
@@ -735,16 +756,23 @@ class Client:
         else:
             raise ValueError('callsign must be <= 9 characters in length and contain at least 1 number')
 
-    def get_station_grid(self):
+    def get_station_grid(self, update=True):
         '''Get JS8Call grid square.
+
+        Args:
+            update (bool): Update if True or use local state if False, defaults to True
 
         Returns:
             str: JS8Call configured grid square
         '''
-        msg = Message()
-        msg.type = Message.STATION_GET_GRID
-        self.js8call.send(msg)
-        grid = self.js8call.watch('grid')
+        grid = self.js8call.get_state('grid')
+
+        if update or grid is None:
+            msg = Message()
+            msg.type = Message.STATION_GET_GRID
+            self.js8call.send(msg)
+            grid = self.js8call.watch('grid')
+
         return grid
 
     def set_station_grid(self, grid):
@@ -764,16 +792,23 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_station_grid()
 
-    def get_station_info(self):
+    def get_station_info(self, update=True):
         '''Get JS8Call station information.
+
+        Args:
+            update (bool): Update if True or use local state if False, defaults to True
 
         Returns:
             str: JS8Call configured station information
         '''
-        msg = Message()
-        msg.type = Message.STATION_GET_INFO
-        self.js8call.send(msg)
-        info = self.js8call.watch('info')
+        info = self.js8call.get_state('info')
+
+        if update or info is None:
+            msg = Message()
+            msg.type = Message.STATION_GET_INFO
+            self.js8call.send(msg)
+            info = self.js8call.watch('info')
+
         return info
 
     def set_station_info(self, info):
@@ -921,13 +956,13 @@ class Client:
         Returns:
             str: JS8call modem speed setting
         '''
-        if update or self.js8call.state['speed'] is None:
+        speed = self.js8call.get_state('speed')
+
+        if update or speed is None:
             msg = Message()
             msg.set('type', Message.MODE_GET_SPEED)
             self.js8call.send(msg)
             speed = self.js8call.watch('speed')
-        else:
-            speed = self.js8call.get_state('speed')
 
         return self.submode_to_speed(speed)
 
