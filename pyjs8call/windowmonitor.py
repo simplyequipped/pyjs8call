@@ -24,7 +24,7 @@
 
 JS8Call incoming and outgoing messages are used to calculate the next rx/tx window transition.
 
-Set `client.callbacks.window` to know when a rx/tx window transition occurs. See pyjs8call.client.Callbacks for *window* callback function details.
+Set `client.callback.window` to know when a rx/tx window transition occurs. See pyjs8call.client.Callbacks for *window* callback function details.
 
 '''
 

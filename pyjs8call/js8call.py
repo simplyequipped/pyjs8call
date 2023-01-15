@@ -390,13 +390,14 @@ class JS8Call:
         while self.online:
             # if no recent rx, check the connection by making a request
             timeout = self._last_rx_timestamp + self._socket_heartbeat_delay
+
             if time.time() > timeout:
                 self.connected = False
                 msg = Message()
                 msg.type = Message.STATION_GET_CALLSIGN
                 self.send(msg)
                 
-            time.sleep(1)
+            time.sleep(5)
 
     def _tx(self):
         '''JS8Call application transmit thread.
@@ -471,7 +472,7 @@ class JS8Call:
             try:
                 data += self._socket.recv(65535)
             except (socket.timeout, OSError):
-                # if rx from socket fails, stop processing
+                # if rx from socket fails continue trying
                 # OSError occurs while app is restarting
                 continue
 

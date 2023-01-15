@@ -22,7 +22,7 @@
 
 '''Monitor inbox messages.
 
-Set `client.callbacks.inbox` to receive new inbox messages as they arrive. See pyjs8call.client.Callbacks for *inbox* callback function details.
+Set `client.callback.inbox` to receive new inbox messages as they arrive. See pyjs8call.client.Callbacks for *inbox* callback function details.
 '''
 
 __docformat__ = 'google'
@@ -82,7 +82,7 @@ class InboxMonitor:
             self._client.query_message_id(msg.origin, msg_id)
 
     def _callback(self, msgs):
-        if self._client.callbacks.inbox is not None:
+        if self._client.callback.inbox is not None:
             thread = threading.Thread(target=self._client.callback.inbox, args=(msgs,)) 
             thread.daemon = True
             thread.start()

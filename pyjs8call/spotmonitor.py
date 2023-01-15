@@ -22,11 +22,11 @@
 
 '''Monitor recent station spots.
 
-Set `client.callbacks.spots` to receive all new activity.
+Set `client.callback.spots` to receive all new activity.
 
-Set `client.callbacks.station_spot` to receive new activity for a specific station.
+Set `client.callback.station_spot` to receive new activity for a specific station.
 
-Set `client.callbacks.group_spot` to receive new activity for a specific group.
+Set `client.callback.group_spot` to receive new activity for a specific group.
 
 See pyjs8call.client.Callbacks for callback function details.
 
