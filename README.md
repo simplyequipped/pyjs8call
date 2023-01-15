@@ -27,6 +27,8 @@ See a simple example in the *example.py* file at the top level of the repo.
     pip3 install pyjs8call
     ```
 
+3. Launch JS8Call to configure audio and CAT interface settings.
+
 &nbsp;
 
 ### Modules
@@ -74,6 +76,10 @@ Sends a heartbeat message on a time interval.
 Monitors a group, station, or all activity for time drift data and synchronizes local time drift. Enable automatic synchronization to the specified source on a time interval. Synchronizes to the @TIME group by default.
 
 Time master functionality is also implemented which sends outgoing messages on a time interval that other stations can use to synchronize their time drift. Targets the @TIME group by default.
+
+**Inbox Monitor** (pyjs8call.inboxmonitor)
+
+Monitors the local inbox. Notification of new messages is handled via callback function.
 
 &nbsp;  
 
