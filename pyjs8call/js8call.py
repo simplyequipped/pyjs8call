@@ -531,6 +531,7 @@ class JS8Call:
         ### command handling ###
 
         if msg.cmd == Message.CMD_HEARING:
+            pass
             #TODO validate response structure
             #if not Message.ERR in msg.params['TEXT']:
             #    hearing = msg.params['TEXT'].split()[3:]
