@@ -434,12 +434,15 @@ class JS8Call:
                     if self._log and (self._log_all or (msg.type not in self._debug_log_type_blacklist)):
                         self._log_msg(msg)
     
-                    # send msg via socket
-                    self._socket.sendall(packed)
-                    self._tx_queue.remove(msg)
-                    # make sure the next queued msg doesn't get sent before the tx text state updates
-                    if msg.type == Message.TX_SEND_MESSAGE:
-                        force_tx_text = True
+                    try:
+                        self._socket.sendall(packed)
+                        self._tx_queue.remove(msg)
+                        # make sure the next queued msg doesn't get sent before the tx text state updates
+                        if msg.type == Message.TX_SEND_MESSAGE:
+                            force_tx_text = True
+                    except BrokenPipeError:
+                        # may happen when restarting
+                        pass
 
                     if not self.online:
                         return
