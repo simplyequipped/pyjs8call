@@ -20,7 +20,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Monitor recent station spots.'''
+'''Monitor recent station spots.
+
+Set `client.callbacks.spots` to receive all new activity.
+
+Set `client.callbacks.station_spot` to receive new activity for a specific station.
+
+Set `client.callbacks.group_spot` to receive new activity for a specific group.
+
+See pyjs8call.client.Callbacks for callback function details.
+
+'''
 
 __docformat__ = 'google'
 
