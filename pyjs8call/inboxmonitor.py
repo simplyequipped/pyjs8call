@@ -93,11 +93,13 @@ class InboxMonitor:
 
         while self._enabled:
             inbox = self._client.get_inbox_messages()
-            new_msgs = [msg for msg in inbox if msg not in last_inbox]
-            last_inbox = inbox
 
-            if len(new_msgs) > 0:
-                self._callback(new_msgs)
+            if inbox is not None:
+                new_msgs = [msg for msg in inbox if msg not in last_inbox]
+                last_inbox = inbox
+
+                if len(new_msgs) > 0:
+                    self._callback(new_msgs)
 
             # delay until next window transition
             default_delay = self._client.get_tx_window_duration() / 3
