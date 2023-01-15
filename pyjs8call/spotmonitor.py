@@ -63,7 +63,7 @@ class SpotMonitor:
         '''Disable spot monitoring.'''
         self._enabled = False
 
-    def _spots_callback(self, spots):
+    def _callback(self, spots):
         '''New spots callback function handling.
 
         Calls the *pyjs8call.client.callback.spots*, *pyjs8call.client.callback.station_spot*, and *pyjs8call.client.callback.group_spot* callback functions using *threading.Thread*.
@@ -108,7 +108,7 @@ class SpotMonitor:
         Args:
             group (str): Group designator to watch for
         '''
-        if station[0] != '@':
+        if group[0] != '@':
             raise ValueError('Group designator must begin with \'@\'')
 
         if group not in self._group_watch_list:
@@ -129,7 +129,7 @@ class SpotMonitor:
         Args:
             group (str): Group designator to stop watching for
         '''
-        if station[0] != '@':
+        if group[0] != '@':
             raise ValueError('Group designator must begin with \'@\'')
 
         if group in self._group_watch_list:
@@ -169,5 +169,5 @@ class SpotMonitor:
             last_spot_update_timestamp = time.time()
 
             if len(new_spots) > 0:
-                self._spots_callback(new_spots)
+                self._callback(new_spots)
 
