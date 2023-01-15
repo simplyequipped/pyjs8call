@@ -94,34 +94,62 @@ class SpotMonitor:
                     thread.start()
 
     def add_station_watch(self, station):
-        '''Add watched station or group.
+        '''Add watched station.
 
         Args:
-            station (str): Station callsign or group designator to watch for
+            station (str): Station callsign to watch for
         '''
-        if station[0] == '@' and station not in self._group_watch_list:
-            self._group_watch_list.append(station)
-        elif station not in self._station_watch_list:
+        if station not in self._station_watch_list:
             self._station_watch_list.append(station)
 
-    def remove_station_watch(self, station):
-        '''Remove watched station or group.
+    def add_group_watch(self, group):
+        '''Add watched group.
 
         Args:
-            station (str): Station callsign or group designator to stop watching for
+            group (str): Group designator to watch for
         '''
-        if station[0] == '@' and station in self._group_watch_list:
-            self._group_watch_list.remove(station)
-        elif station in self._station_watch_list:
+        if station[0] != '@':
+            raise ValueError('Group designator must begin with \'@\'')
+
+        if group not in self._group_watch_list:
+            self._group_watch_list.append(group)
+
+    def remove_station_watch(self, station):
+        '''Remove watched station.
+
+        Args:
+            station (str): Station callsign to stop watching for
+        '''
+        if station in self._station_watch_list:
             self._station_watch_list.remove(station)
 
+    def remove_group_watch(self, group):
+        '''Remove watched group.
+
+        Args:
+            group (str): Group designator to stop watching for
+        '''
+        if station[0] != '@':
+            raise ValueError('Group designator must begin with \'@\'')
+
+        if group in self._group_watch_list:
+            self._group_watch_list.remove(group)
+
     def get_watched_stations(self):
-        '''Get watched stations and groups.
+        '''Get watched stations.
 
         Returns:
-            list: Watched station callsigns and group designators
+            list: Watched station callsigns
         '''
-        return self._station_watch_list + self._group_watch_list
+        return self._station_watch_list
+
+    def get_watched_groups(self):
+        '''Get watched groups.
+
+        Returns:
+            list: Watched group designators
+        '''
+        return self._group_watch_list
 
     def _monitor(self):
         '''Spot monitor thread.
