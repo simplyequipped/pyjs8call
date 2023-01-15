@@ -880,67 +880,75 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_tx_text()
 
-    #TODO break into two functions: get_speed and speed_to_str
-    def get_speed(self, update=True, speed=None):
-        '''Get JS8Call modem speed or map speed from integer to text.
+    def submode_to_speed(self, submode):
+        '''Map submode *int* to speed *str*.
 
-        This function has two use cases:
-        1. get_speed() without arguments: get JS8Call modem speed
-        2. get_speed(speed=1) with given speed as an int: convert speed to text
-
-        Possible speed settings as str and (int):
-        - slow (4)
-        - normal (0)
-        - fast (1)
-        - turbo (2)
+        | Submode | Speed |
+        | -------- | -------- |
+        | 0 | normal |
+        | 1 | fast |
+        | 2 | turbo |
+        | 4 | slow |
+        | 8 | ultra |
 
         Args:
-            update (bool): Request speed setting from JS8Call, defaults to True
-            speed (int): Speed integer to map to appropriate speed text, defaults to None
+            submode (int): Submode to map to text
 
         Returns:
-            str: JS8call modem speed setting as text
+            str: Speed as text
         '''
-        if speed is None:
-            if update or self.js8call.state['speed'] is None:
-                msg = Message()
-                msg.set('type', Message.MODE_GET_SPEED)
-                self.js8call.send(msg)
-                speed = self.js8call.watch('speed')
-
-            else:
-                while self.js8call.watching() == 'speed':
-                    time.sleep(0.1)
-
-                speed = self.js8call.state['speed']
-
         # map integer to text
-        speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo'}
+        speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo', 8:'ultra'}
 
-        if speed in speeds:
-            return speeds[int(speed)]
+        if int(submode) in speeds:
+            return speeds[int(submode)]
         else:
-            raise ValueError('Invalid speed ' + str(speed))
+            raise ValueError('Invalid submode \'' + str(submode) + '\'')
+
+    def get_speed(self, update=True):
+        '''Get JS8Call modem speed.
+
+        Possible modem speeds:
+        - slow
+        - normal
+        - fast
+        - turbo
+        - ultra
+
+        Args:
+            update (bool): Update speed if True or use local state if False, defaults to True
+
+        Returns:
+            str: JS8call modem speed setting
+        '''
+        if update or self.js8call.state['speed'] is None:
+            msg = Message()
+            msg.set('type', Message.MODE_GET_SPEED)
+            self.js8call.send(msg)
+            speed = self.js8call.watch('speed')
+
+        return self.submode_to_speed(speed)
 
     def set_speed(self, speed):
         '''Set JS8Call modem speed.
 
         **NOTE: The JS8Call API only sets the modem speed in the menu without changing the configured modem speed, which makes this function useless. This is a JS8Call API issue.**
 
-        Possible modem speed settings are:
+        Possible modem speeds:
         - slow
         - normal
         - fast
         - turbo
+        - ultra
 
         Args:
             speed (str): Speed to set
 
         Returns:
-            str: JS8Call modem speed setting as text
+            str: JS8Call modem speed setting
         '''
         if isinstance(speed, str):
-            speeds = {'slow':4, 'normal':0, 'fast':1, 'turbo':2}
+            speeds = {'slow':4, 'normal':0, 'fast':1, 'turbo':2, 'ultra':8}
             if speed in speeds:
                 speed = speeds[speed]
             else:
@@ -958,11 +966,13 @@ class Client:
 
         Uses JS8Call configured speed if no speed is given.
 
-        Possible speed settings and corresponding bandwidths:
-        - slow (25 Hz)
-        - normal (50 Hz)
-        - fast (80 Hz)
-        - turbo (160 Hz)
+        | Speed | Bandwidth |
+        | -------- | -------- |
+        | slow | 25 Hz |
+        | normal | 50 Hz |
+        | fast | 80 Hz |
+        | turbo | 160 Hz |
+        | ultra | 250 Hz |
 
         Args:
             speed (str): Speed setting, defaults to None
@@ -973,25 +983,27 @@ class Client:
         if speed is None:
             speed = self.get_speed(update = False)
         elif isinstance(speed, int):
-            speed = self.get_speed(speed = speed)
+            speed = self.submode_to_speed(speed)
 
-        bandwidths = {'slow':25, 'normal':50, 'fast':80, 'turbo':160}
+        bandwidths = {'slow':25, 'normal':50, 'fast':80, 'turbo':160, 'ultra':250}
 
         if speed in bandwidths:
             return bandwidths[speed]
         else:
-            raise ValueError('Invalid speed: ' + speed)
+            raise ValueError('Invalid speed \'' + speed + '\'')
 
     def get_tx_window_duration(self, speed=None):
         '''Get JS8Call tx window duration based on modem speed.
 
         Uses JS8Call configured speed if no speed is given.
 
-        Possible speed settings and corresponding tx window durations:
-        - slow (30 seconds)
-        - normal (15 seconds)
-        - fast (10 seconds)
-        - turbo (5 seconds)
+        | Speed | Duration |
+        | -------- | -------- |
+        | slow | 30 seconds |
+        | normal | 15 seconds |
+        | fast | 10 seconds |
+        | turbo | 6 seconds |
+        | ultra | 4 seconds |
 
         Args:
             speed (str): Speed setting, defaults to None
@@ -1002,9 +1014,9 @@ class Client:
         if speed is None:
             speed = self.get_speed(update = False)
         elif isinstance(speed, int):
-            speed = self.get_speed(speed = speed)
+            speed = self.submode_to_speed(speed)
 
-        duration = {'slow': 30, 'normal': 15, 'fast': 10, 'turbo': 5}
+        duration = {'slow': 30, 'normal': 15, 'fast': 10, 'turbo': 6, 'ultra':4}
         return duration[speed]
 
     def raise_window(self):
