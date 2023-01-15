@@ -23,6 +23,8 @@
 '''Monitor JS8Call tx text for queued outgoing messages.
 
 Directed messages are monitored by default (see pyjs8call.client.Client.monitor_directed_tx).
+
+Set `client.callbacks.outgoing` to receive outgoing message status updates. See pyjs8call.client.Callbacks for *outgoing* callback function details.
 '''
 
 __docformat__ = 'google'
