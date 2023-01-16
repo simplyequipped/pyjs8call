@@ -32,11 +32,11 @@ from pyjs8call.offsetmonitor import OffsetMonitor
 from pyjs8call.windowmonitor import WindowMonitor
 from pyjs8call.confighandler import ConfigHandler
 from pyjs8call.hbmonitor import HeartbeatMonitor
-from pyjs8call.timemonitor import DriftMonitor
 from pyjs8call.spotmonitor import SpotMonitor
-from pyjs8call.timemonitor import TimeMaster
 from pyjs8call.appmonitor import AppMonitor
 from pyjs8call.message import Message
+from pyjs8call.timemonitor import DriftMonitor
+from pyjs8call.timemonitor import TimeMaster
 from pyjs8call.inboxmonitor import InboxMonitor
 from pyjs8call.txmonitor import TxMonitor
 from pyjs8call.js8call import JS8Call
