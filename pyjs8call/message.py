@@ -346,7 +346,10 @@ class Message:
                     value = ''
                 # build directed message
                 elif self.type == Message.TX_SEND_MESSAGE and self.destination is not None:
-                    value = self.destination + ' ' + value
+                    if self.cmd is None:
+                        value = self.destination + ' ' + value
+                    else:
+                        value = self.destination + ' ' + self.cmd + ' ' + value
 
             # add to dict if value is set
             if value is not None:
@@ -400,18 +403,23 @@ class Message:
         self.type = msg['type'].strip()
         
         # handle inbox messages
-        if self.type == Message.MESSAGES:
-            self.messages = [m['params'] for m in msg['params']['MESSAGES']]
+        if self.type == Message.INBOX_MESSAGES:
+            self.messages = []
             
-            for i in range(len(self.messages)):
-                self.messages[i] = {
-                    'id' : self.messages[i]['_ID'],
-                    'time' : self.messages[i]['UTC'],
-                    'origin' : self.messages[i]['FROM'],
-                    'destination' : self.messages[i]['TO'],
-                    'path' : self.messages[i]['PATH'],
-                    'text' : self.messages[i]['TEXT']
-                }
+            for message in msg['params']['MESSAGES']:
+                self.messages.append({
+                    'cmd' : message['params']['CMD'].strip(),
+                    'freq' : message['params']['DIAL'],
+                    'offset' : message['params']['OFFSET'],
+                    'snr' : message['params']['SNR'],
+                    'speed' : message['params']['SUBMODE'],
+                    'time' : message['params']['UTC'],
+                    'origin' : message['params']['FROM'],
+                    'destination' : message['params']['TO'],
+                    'path' : message['params']['PATH'],
+                    'text' : message['params']['TEXT'].strip(),
+                    'type' : message['type'].lower()
+                })
 
         # handle call activity
         elif self.type == Message.RX_CALL_ACTIVITY:
