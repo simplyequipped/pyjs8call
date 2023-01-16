@@ -72,6 +72,7 @@ class DriftMonitor:
         self._client = client
         self._enabled = False
         self._searching = False
+        self._ativity_heard = False
         
         self._client.config.add_group('@TIME')
 
@@ -152,6 +153,11 @@ class DriftMonitor:
             wait_cycles (int): Number of rx/tx window cycles to wait for activity, defaults to 3
         '''
         self._searching = True
+        self._ativity_heard = False
+
+        # set incoming message callbacks
+        self._client.callback.register_incoming(self.process_search_activity, message_type = pyjs8call.Message.RX_DIRECTED)
+        self._client.callback.register_incoming(self.process_search_activity, message_type = pyjs8call.Message.RX_ACTIVITY)
 
         thread = threading.Thread(target=self._search, args=(timeout, until_activity, wait_cycles))
         thread.daemon = True
@@ -160,6 +166,17 @@ class DriftMonitor:
     def stop_search(self):
         '''Stop active search.'''
         self._searching = False
+        self._client.callback.remove_incoming(self.process_search_activity)
+
+    def process_search_activity(self, msg):
+        '''Activity callback.
+
+        Used internally to detect activity while searching.
+
+        Args:
+            msg (pyjs8call.message) Message object to process
+        '''
+        self._activity_heard = True
 
     def _search(self, timeout, until_activity, wait_cycles):
         '''Time drift search thread.'''
@@ -171,11 +188,11 @@ class DriftMonitor:
         else:
             timeout = time.time() + timeout
 
-        # avoid searching if activity heard in the last hour
-        initial_spots = self._client.get_station_spots(age = 3600)
-        if len(initial_spots) > 0:
+        # avoid searching if activity heard in the last 15 minutes
+        spots = self._client.get_station_spots(age = 15 * 60)
+        if len(spots) > 0:
             self.sync_to_activity()
-            self._searching = False
+            self.stop_search()
             return
 
         while self._searching:
@@ -184,14 +201,14 @@ class DriftMonitor:
 
                 if not until_activity:
                     # single pass only
-                    self._searching = False
+                    self.stop_search()
 
             except TimeoutError:
                 # search timed out
-                self._searching = False
+                self.stop_search()
             except StopIteration:
                 # activity found
-                self._searching = False
+                self.stop_search()
                 return
 
         self.set_drift(initial_drift)
@@ -200,7 +217,6 @@ class DriftMonitor:
         '''Perform a single time drift search pass.'''
         window_duration = self._client.get_tx_window_duration()
         interval = window_duration * wait_cycles
-        initial_spots = self._client.get_station_spots().copy()
 
         for drift in range(1, window_duration):
             # convert seconds to milliseconds
@@ -209,13 +225,11 @@ class DriftMonitor:
     
             # wait for activity before incrementing time drift
             while last_drift_change + interval > time.time():
-                if len(self._client.get_station_spots()) > len(initial_spots):
-                    # new spots heard, sync and end search
+                if self._activity_heard:
                     self.sync_to_activity()
                     raise StopIteration
     
                 elif timeout is not None and time.time() > timeout:
-                    # search timed out, end search
                     raise TimeoutError
 
                 elif not self._searching:
@@ -247,7 +261,7 @@ class DriftMonitor:
 
         drift = statistics.mean([spot.tdrift for spot in spots if spot.get('tdrift') is not None])
 
-        if drift >= threshold:
+        if abs(drift) >= threshold:
             self.set_drift_from_tdrift(drift)
             return True
         else:
@@ -284,7 +298,7 @@ class DriftMonitor:
 
         drift = statistics.mean([spot.tdrift for spot in spots if spot.get('tdrift') is not None])
 
-        if drift >= threshold:
+        if abs(drift) >= threshold:
             self.set_drift_from_tdrift(drift)
             return True
         else:
@@ -314,7 +328,7 @@ class DriftMonitor:
         # last heard station message
         msg = spots[-1]
 
-        if msg.get('tdrift') is not None and msg.tdrift >= threshold:
+        if msg.get('tdrift') is not None and abs(msg.tdrift) >= threshold:
             self.set_drift_from_msg(msg)
             return True
         else:
@@ -412,14 +426,16 @@ class TimeMaster:
         self._client = client
         self._enabled = False
 
-    def enable(self, destination='@TIME', message='', interval=10):
+    def enable(self, destination='@TIME', message='SYNC', interval=10):
         '''Enable automatic time master messaging.
     
         Note that *destination* can technically be set to a specific callsign. However, this may prevent other stations from synchronizing with the master station.
+        
+        Note that receiving stations will recognize incoming messages as a directed message (which result in a spot) unless a message is included.
 
         Args:
             destination (str): Outgoing message destination, defaults to '@TIME'
-            message (str): Outgoing message text, defaults to '' (empty string)
+            message (str): Outgoing message text, defaults to 'SYNC'
             interval (int): Number of minutes between outgoing messages, defaults to 10
         '''
         if self._enabled:
