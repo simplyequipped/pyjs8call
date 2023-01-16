@@ -29,6 +29,8 @@ import time
 import threading
 import statistics
 
+from pyjs8call import Message
+
 
 class DriftMonitor:
     '''Monitor time drift.
@@ -72,7 +74,7 @@ class DriftMonitor:
         self._client = client
         self._enabled = False
         self._searching = False
-        self._ativity_heard = False
+        self._activity_heard = False
         
         self._client.config.add_group('@TIME')
 
@@ -156,8 +158,8 @@ class DriftMonitor:
         self._ativity_heard = False
 
         # set incoming message callbacks
-        self._client.callback.register_incoming(self.process_search_activity, message_type = pyjs8call.Message.RX_DIRECTED)
-        self._client.callback.register_incoming(self.process_search_activity, message_type = pyjs8call.Message.RX_ACTIVITY)
+        self._client.callback.register_incoming(self.process_search_activity, message_type = Message.RX_DIRECTED)
+        self._client.callback.register_incoming(self.process_search_activity, message_type = Message.RX_ACTIVITY)
 
         thread = threading.Thread(target=self._search, args=(timeout, until_activity, wait_cycles))
         thread.daemon = True
@@ -209,6 +211,7 @@ class DriftMonitor:
             except StopIteration:
                 # activity found
                 self.stop_search()
+                self.sync_to_activity()
                 return
 
         self.set_drift(initial_drift)
@@ -226,7 +229,6 @@ class DriftMonitor:
             # wait for activity before incrementing time drift
             while last_drift_change + interval > time.time():
                 if self._activity_heard:
-                    self.sync_to_activity()
                     raise StopIteration
     
                 elif timeout is not None and time.time() > timeout:
