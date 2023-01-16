@@ -87,7 +87,8 @@ class JS8Call:
             Message.RIG_PTT,            # too frequent, not useful
             Message.TX_FRAME,           # start of outgoing message, not useful
             Message.INBOX_MESSAGES,     # inbox monitor every window transition
-            Message.INBOX_GET_MESSAGES  # inbox monitor every window transition
+            Message.INBOX_GET_MESSAGES, # inbox monitor every window transition
+            Message.STATION_STATUS      # too frequent
         ]
         self._watching = None
         self._watch_timeout = 3 # seconds
@@ -500,9 +501,12 @@ class JS8Call:
 
                 try:
                     msg = Message().parse(msg_str)
-                except:
-                    # if parsing message fails, stop processing
-                    continue
+                except Exception as e:
+                    if self._debug or self._debug_all:
+                        raise e
+                    else:
+                        # if parsing message fails, stop processing
+                        continue
 
                 # if error in message value, stop processing
                 if msg.value is not None and Message.ERR in msg.value:
