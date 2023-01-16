@@ -174,7 +174,7 @@ class Client:
         rx_thread = threading.Thread(target=self._rx)
         rx_thread.daemon = True
         rx_thread.start()
-        time.sleep(0.5)
+        time.sleep(1)
 
         self.window_monitor = pyjs8call.WindowMonitor(self)
         self.spot_monitor = pyjs8call.SpotMonitor(self)
@@ -478,16 +478,24 @@ class Client:
     def get_inbox_messages(self):
         '''Get JS8Call inbox messages.
 
-        Each inbox message (dict) has the following keys:
-        - id
-        - time
-        - origin
-        - destination
-        - path
-        - text
+        Each inbox message is a *dict* with the following keys:
+
+        | Key | Value Type |
+        | -------- | -------- |
+        | cmd | *str* |
+        | freq | *int* | 
+        | offset | *int* | 
+        | snr | *int* |
+        | speed | *int* |
+        | time | *str* |
+        | origin | *str* |
+        | destination | *str* |
+        | path | *str* |
+        | text | *str* |
+        | type | *str* |
 
         Returns:
-            list: List of messages where each message is a dictionary object
+            list: List of messages
         '''
         msg = Message()
         msg.type = Message.INBOX_GET_MESSAGES
@@ -1175,6 +1183,19 @@ class Callbacks:
             self.incoming[message_type] = []
 
         self.incoming[message_type].append(callback)
+
+    def remove_incoming(self, callback, message_type=None):
+        '''Remove incoming message callback function.
+    
+        If *message_type* is None *callback* is removed from all message types.
+
+        Args:
+            callback (func): Function to remove
+            message_type (str): Message type to remove function from, defaults to None
+        '''
+        for msg_type, callbacks in self.incoming.items():
+            if message_type in (None, msg_type) and callback in callbacks:
+                self.incoming[msg_type].remove(callback)
 
     def incoming_type(self, message_type=Message.RX_DIRECTED):
         '''Get incoming message callback functions.
