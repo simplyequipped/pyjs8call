@@ -391,8 +391,12 @@ class ConfigHandler:
 
         if group not in self.get_groups():
             groups = self.config.get('Configuration', 'MyGroups')
+
+            if len(groups.strip()) > 0:
+                groups += ', '
+
             # add second @ symbol to match config file formatting
-            groups += ', @' + group
+            groups += '@' + group
             self.config.set('Configuration', 'MyGroups', groups)
 
     def remove_group(self, group):
