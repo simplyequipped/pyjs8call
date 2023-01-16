@@ -423,6 +423,9 @@ class Message:
 
         # handle call activity
         elif self.type == Message.RX_CALL_ACTIVITY:
+            #TODO
+            print(msg_str)
+
             self.call_activity = []
             for key, value in msg['params'].items():
                 if key == '_ID' or value is None:
@@ -440,6 +443,9 @@ class Message:
         #TODO improve handling, remove try/except
         # handle band activity
         elif self.type == Message.RX_BAND_ACTIVITY:
+            #TODO
+            print(msg_str)
+
             self.band_activity = []
             for key, value in msg['params'].items():
                 try:
