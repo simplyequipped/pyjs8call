@@ -176,6 +176,7 @@ class Client:
         rx_thread.start()
         time.sleep(1)
 
+        self.activity_monitor = pyjs8call.ActivityMonitor(self)
         self.window_monitor = pyjs8call.WindowMonitor(self)
         self.spot_monitor = pyjs8call.SpotMonitor(self)
         self.offset_monitor = pyjs8call.OffsetMonitor(self)
