@@ -34,19 +34,18 @@ __docformat__ = 'google'
 import time
 import threading
 
-import pyjs8call
+from pyjs8call import Message
 
 
 class WindowMonitor:
-    '''Monitor transition of next rx/tx window.
+    '''Monitor rx/tx window transitions.
 
-    Incoming and outgoing messages trigger JS8Call API messages that can be used to calculate the start or end of a transmit window.
+    Incoming and outgoing messages trigger JS8Call API messages that can be used to calculate the start or end of a transmit window. The length of the rx/tx window is based on the JS8Call modem speed setting.
 
-    JS8Call API messages for incoming messages or other activity are sent approximately one second before the end of the transmit window. The timestamp of the received message is used to calculate the end of the current rx/tx window. Messages of type RX_DIRECTED and RX_ACTIVITY are monitored.
+    JS8Call API messages for incoming messages or other activity are sent approximately two seconds before the end of the transmit window. The timestamp of the received message is used to calculate the end of the current rx/tx window. Messages of type RX_DIRECTED and RX_ACTIVITY are monitored.
 
-    JS8Call API tx frames for outgoing messages are typically sent immediately at the beginning of the transmit window. The timestamp of the tx frame message is used to calculate the beginning of the current rx/tx window. Note that JS8Call allows an outgoing message to be transmitted if sent within one second of the beginning of the rx/tx window, which may result in a tx frame that is not aligned with the beginning of the rx/tx window and a window transition calculation that is temporarily incorrect by a maximum of one second. The calculation will be corrected automatically once the next message is sent or received normally.
+    JS8Call API tx frames for outgoing messages are sent immediately at the beginning of the transmit window. The timestamp of the tx frame message is used to calculate the beginning of the current rx/tx window. Note that JS8Call allows an outgoing message to be transmitted if sent within one second of the beginning of the rx/tx window, which may result in a tx frame that is not aligned with the beginning of the rx/tx window and a window transition calculation that is temporarily incorrect by a maximum of one second. The calculation will be corrected automatically once the next message is sent or received normally.
 
-    The length of the rx/tx window is based on the JS8Call modem speed setting.
 
     Note that the rx/tx window transition cannot be calculated until a message is sent or received.
     '''
@@ -66,10 +65,6 @@ class WindowMonitor:
         self._next_window_timestamp = 0
         self._timestamp_lock = threading.Lock()
 
-        # set incoming message callbacks
-        self._client.callback.register_incoming(self.process_rx_msg, message_type = pyjs8call.Message.RX_DIRECTED)
-        self._client.callback.register_incoming(self.process_rx_msg, message_type = pyjs8call.Message.RX_ACTIVITY)
-
         self.enable()
 
     def enable(self):
@@ -78,6 +73,10 @@ class WindowMonitor:
             return
 
         self._enabled = True
+        
+        self._client.callback.register_incoming(self.process_tx_msg, message_type = Message.TX_FRAME)
+        self._client.callback.register_incoming(self.process_rx_msg, message_type = Message.RX_DIRECTED)
+        self._client.callback.register_incoming(self.process_rx_msg, message_type = Message.RX_ACTIVITY)
 
         thread = threading.Thread(target = self._monitor)
         thread.daemon = True
@@ -86,6 +85,8 @@ class WindowMonitor:
     def disable(self):
         '''Disable rx/tx window monitoring.'''
         self._enabled = False
+        self._client.callback.remove_incoming(self.process_rx_msg)
+        self._client.callback.remove_incoming(self.process_tx_msg)
 
     def _callback(self):
         '''Window transition callback function handling.
