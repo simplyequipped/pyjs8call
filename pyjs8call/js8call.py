@@ -618,13 +618,13 @@ class JS8Call:
         elif msg.type == Message.RX_BAND_ACTIVITY:
             self.state['band_activity'] = msg.band_activity
 
-        #TODO should this be used? use RX.BAND_ACTIVITY for now
-        #TODO note, RX.SPOT received immediately after RX.ACTIVITY in some cases
         elif msg.type == Message.RX_ACTIVITY:
+            # utilized by activity monitor via callback
             pass
 
         elif msg.type == Message.TX_FRAME:
-            self._client.window_monitor.process_tx_frame(msg)
+            # utilized by tx monitor via callback
+            pass
 
         self.append_to_rx_queue(msg)
 
