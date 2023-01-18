@@ -74,7 +74,7 @@ class DriftMonitor:
         self._client = client
         self._enabled = False
         self._searching = False
-        self._activity_heard = False
+        self._search_activity = []
         
         self._client.config.add_group('@TIME')
 
@@ -155,7 +155,7 @@ class DriftMonitor:
             wait_cycles (int): Number of rx/tx window cycles to wait for activity, defaults to 3
         '''
         self._searching = True
-        self._ativity_heard = False
+        self._search_activity = []
 
         # set incoming message callbacks
         self._client.callback.register_incoming(self.process_search_activity, message_type = Message.RX_DIRECTED)
@@ -178,7 +178,8 @@ class DriftMonitor:
         Args:
             msg (pyjs8call.message) Message object to process
         '''
-        self._activity_heard = True
+        if self._searching:
+            self._search_activity.append(msg)
 
     def _search(self, timeout, until_activity, wait_cycles):
         '''Time drift search thread.'''
@@ -190,7 +191,7 @@ class DriftMonitor:
         else:
             timeout = time.time() + timeout
 
-        # avoid searching if activity heard in the last 15 minutes
+        # avoid searching if spots in the last 15 minutes
         spots = self._client.get_station_spots(age = 15 * 60)
         if len(spots) > 0:
             self.sync_to_activity()
@@ -211,7 +212,7 @@ class DriftMonitor:
             except StopIteration:
                 # activity found
                 self.stop_search()
-                self.sync_to_activity()
+                self.sync_to_activity(activity = self._search_activity)
                 return
 
         self.set_drift(initial_drift)
@@ -228,7 +229,7 @@ class DriftMonitor:
     
             # wait for activity before incrementing time drift
             while last_drift_change + interval > time.time():
-                if self._activity_heard:
+                if len(self._search_activity) > 0:
                     raise StopIteration
     
                 elif timeout is not None and time.time() > timeout:
@@ -239,23 +240,30 @@ class DriftMonitor:
     
                 time.sleep(1)
 
-    def sync_to_activity(self, threshold=0.5, age=15):
+    def sync_to_activity(self, threshold=0.5, age=15, activity=None):
         '''Synchronize time drift to recent activity.
         
         Note that this function is blocking until the JS8Call application restarts and the new time drift setting is applied (if required). On resource restricted platforms such as Raspberry Pi it may take several seconds to restart.
 
         Syncing to recent activity will decode as many stations as possible. Syncs to the average time drift of stations heard in the last *age* minutes.
         
+        If *activity* is None recent spot activity is utilized.
+        
         Args:
             threshold (float): Median time drift in seconds to exceed before syncing, defaults to 0.5
             age (int): Maximum age of activity in minutes, defaults to 15
+            activity (list): pyjs8call.message objects to use as activity, defaults to None
             
         Returns:
             bool: True if sync occured, False otherwise
         '''
         age *= 60
-        # sync against all recent activity
-        spots = self._client.get_station_spots(age = age)
+        
+        if activity is None:
+            # sync against all recent activity
+            spots = self._client.get_station_spots(age = age)
+        else:
+            spots = activity
 
         if len(spots) == 0:
             # no activity to get time drift from
