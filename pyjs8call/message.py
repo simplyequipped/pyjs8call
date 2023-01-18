@@ -399,10 +399,24 @@ class Message:
         '''
         self.raw = msg_str
         msg = json.loads(msg_str)
-
+        
+        # parse top level message fields
         self.type = msg['type'].strip()
         
-        # handle inbox messages
+        if 'value' in msg.keys():
+            self.value = msg['value'].strip()
+
+        # parse paramater fields
+        for param, value in msg['params'].items():
+            param = param.strip()
+            if isinstance(value, str):
+                value = value.strip()
+
+            self.set(param, value)
+        
+        
+        # type handling
+        
         if self.type == Message.INBOX_MESSAGES:
             self.messages = []
             
@@ -421,7 +435,6 @@ class Message:
                     'type' : message['type'].lower()
                 })
 
-        # handle call activity
         elif self.type == Message.RX_CALL_ACTIVITY:
             #TODO
             print(msg_str)
@@ -439,7 +452,6 @@ class Message:
                 })
 
         #TODO can this replace activity monitor?
-        # handle band activity
         elif self.type == Message.RX_BAND_ACTIVITY:
             #TODO
             print(msg_str)
@@ -460,29 +472,27 @@ class Message:
                 except ValueError:
                     continue
 
-        else:
-            if 'value' in msg.keys():
-                self.value = msg['value'].strip()
+                
+        # command handling
 
-            # parse remaining msg fields
-            for param, value in msg['params'].items():
-                param = param.strip()
-                if isinstance(value, str):
-                    value = value.strip()
-
-                self.set(param, value)
-
-            #TODO copied from js8net, test
-            if self.cmd == 'GRID' and self.text is not None:
+        #TODO copied from js8net, test
+        if self.cmd == 'GRID' and self.text is not None:
+            if Message.ERR in self.text:
+                self.set('grid', None)
+            else:
                 grid = self.text.split()
+                
                 if len(grid) >= 4:
                     grid = grid[3]
-                
-                if Message.ERR in grid:
-                    self.set('grid', None)
-                else:
-                    self.set('grid', grid)
 
+                self.set('grid', grid)
+                
+        elif self.cmd == 'HEARING' and self.text is not None:
+                #TODO investigate, why start at 3?
+                # hearing = msg.text.split()[3:]
+                hearing = msg.text.split()
+                self.set('hearing', hearing)
+                
         # allow usage like: msg = Message().parse(rx_str)
         return self
  
