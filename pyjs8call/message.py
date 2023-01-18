@@ -90,8 +90,17 @@ class Message:
     Static commands:
     - CMD_SNR
     - CMD_GRID
+    - CMD_INFO
     - CMD_HEARING
+    - CMD_STATUS
     - CMD_QUERY_CALL
+    - CMD_QUERY_MSG
+    - CMD_QUERY_MSGS
+    - CMD_MSG
+    - CMD_HEARTBEAT
+    - CMD_HEARTBEAT_SNR
+    - CMD_ACK
+    - CMD_NACK
 
     Static statuses:
     - STATUS_CREATED
@@ -196,10 +205,19 @@ class Message:
     # command types
     CMD_SNR                 = 'SNR'
     CMD_GRID                = 'GRID'
+    CMD_INFO                = 'INFO'
+    CMD_STATUS              = 'STATUS'
     CMD_HEARING             = 'HEARING'
     CMD_QUERY_CALL          = 'QUERY CALL'
+    CMD_QUERY_MSG           = 'QUERY MSG'
+    CMD_QUERY_MSGS          = 'QUERY MSGS'
+    CMD_MSG                 = 'MSG'
     CMD_HEARTBEAT           = 'HEARTBEAT'
-    COMMANDS = [CMD_SNR, CMD_GRID, CMD_HEARING, CMD_QUERY_CALL, CMD_HEARTBEAT]
+    CMD_HEARTBEAT_SNR       = 'HEARTBEAT SNR'
+    CMD_ACK                 = 'ACK'
+    CMD_NACK                = 'NACK'
+
+    COMMANDS = [CMD_SNR, CMD_GRID, CMD_INFO, CMD_STATUS, CMD_HEARING, CMD_QUERY_CALL, CMD_QUERY_MSG, CMD_QUERY_MSGS, CMD_MSGS, CMD_HEARTBEAT, CMD_HEARTBEAT_SNR, CMD_ACK, CMD_NACK]
 
     # status types
     STATUS_CREATED          = 'created'
