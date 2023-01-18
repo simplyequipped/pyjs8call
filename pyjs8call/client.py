@@ -608,7 +608,7 @@ class Client:
     def query_heard(self, destination):
         '''Send JS8Call heard query.
         
-        Message format: *DESTINATION* HEARD?
+        Message format: *DESTINATION* HEARING?
 
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
@@ -618,7 +618,82 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, 'HEARD?')
+        return self.send_directed_message(destination, 'HEARING?')
+
+    def query_snr(self, destination):
+        '''Send JS8Call SNR query.
+        
+        Message format: *DESTINATION* SNR?
+
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+
+        Args:
+            destination (str): Callsign to direct query to
+
+        Returns:
+            pyjs8call.message: Constructed message object
+        '''
+        return self.send_directed_message(destination, 'SNR?')
+
+    def query_grid(self, destination):
+        '''Send JS8Call grid query.
+        
+        Message format: *DESTINATION* GRID?
+
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+
+        Args:
+            destination (str): Callsign to direct query to
+
+        Returns:
+            pyjs8call.message: Constructed message object
+        '''
+        return self.send_directed_message(destination, 'GRID?')
+
+    def query_info(self, destination):
+        '''Send JS8Call info query.
+        
+        Message format: *DESTINATION* INFO?
+
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+
+        Args:
+            destination (str): Callsign to direct query to
+
+        Returns:
+            pyjs8call.message: Constructed message object
+        '''
+        return self.send_directed_message(destination, 'INFO?')
+
+    def query_status(self, destination):
+        '''Send JS8Call status query.
+        
+        Message format: *DESTINATION* STATUS?
+
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+
+        Args:
+            destination (str): Callsign to direct query to
+
+        Returns:
+            pyjs8call.message: Constructed message object
+        '''
+        return self.send_directed_message(destination, 'STATUS?')
+
+    def query_call(self, destination, callsign):
+        '''Send JS8Call call query.
+        
+        Message format: *DESTINATION* QUERY CALL *CALLSIGN*?
+
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+
+        Args:
+            destination (str): Callsign to direct query to
+
+        Returns:
+            pyjs8call.message: Constructed message object
+        '''
+        return self.send_directed_message(destination, 'QUERY CALL ' + callsign + '?')
 
     def get_station_spots(self, station=None, group=None, age=0):
         '''Get list of spotted messages.
@@ -836,6 +911,7 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_station_info()
 
+    #TODO add hearing and heard data
     def get_call_activity(self):
         '''Get JS8Call call activity.
 
@@ -1109,7 +1185,6 @@ class Client:
 
         return rx_messages
     
-    #TODO review age value
     def hearing(self, age=60):
         '''Get information on which stations other stations are hearing.
         
@@ -1117,10 +1192,17 @@ class Client:
         # logHeardGraph
         # - directed msg origin/destination
         # - HEARING cmd
+
+        # specified station is HEARING these other stations
+        # - callsign hearing origin
+        # - origin hearing destination
+
+        # stations heard by specified station
+        # - any ack message, including heartbeats
+        # - destination hearing origin
         
         callsign = self.get_station_callsign()
         hearing = {}
-        heard = {}
         
         for spot in self.get_station_spots(age = age):
             # stations we are hearing
@@ -1130,7 +1212,39 @@ class Client:
             else:
                 hearing[callsign] = [spot.origin]
                 
-            #TODO review
+            # handle relays
+            if spot.origin in hearing:
+                if spot.destination not in hearing[spot.origin]:
+                    hearing[spot.origin].append(spot.destination)
+            else:
+                hearing[spot.origin] = [spot.destination]
+                
+            if spot.cmd == 'HEARING' and spot.hearing is not None:
+                if spot.origin in hearing:
+                    spot_hearing = [station for station in spot.hearing if station not in hearing[spot.origin]]
+                    hearing[spot.origin].extend(spot_hearing)
+                else:
+                    hearing[spot.origin] = spot.hearing
+            
+            if spot.cmd == 'ACK':
+                if spot.origin in hearing:
+                    hearing[spot.origin].append(spot.destination)
+                else:
+                    hearing[spot.origin] = spot.hearing
+
+    #TODO review age value
+    def heard(self, age=60, station=None):
+        '''Get information on which stations other stations are hearing.
+        
+        '''
+        # logHeardGraph
+        # - directed msg origin/destination
+        # - HEARING cmd
+        
+        callsign = self.get_station_callsign()
+        heard = {}
+        
+        for spot in self.get_station_spots(age = age):
             # stations that heard us
             if spot.destination == callsign:
                 if spot.origin in heard:
@@ -1140,14 +1254,6 @@ class Client:
                     heard[spot.origin] = [callsign]
                 
             #TODO review
-            # stations hearing other stations
-            if spot.origin in hearing:
-                if spot.destination not in hearing[spot.origin]:
-                    hearing[spot.origin].append(spot.destination)
-            else:
-                hearing[spot.origin] = [spot.destination]
-                
-            #TODO review
             # stations heard by other stations
             if spot.destination in heard:
                 if spot.origin not in heard[spot.destination]:
@@ -1155,21 +1261,12 @@ class Client:
             else:
                 heard[spot.destination] = [spot.origin]
                 
-            # stations reporting who they are hearing
-            if spot.cmd == 'HEARING' and spot.hearing is not None:
-                if spot.origin in hearing:
-                    spot_hearing = [station for station in spot.hearing if station not in hearing[spot.origin]]
-                    hearing[spot.origin].extend(spot_hearing)
-                else:
-                    hearing[spot.origin] = spot.hearing
-            
             # stations acknowledging other stations
             if spot.cmd == 'ACK':
-                if spot.origin in hearing:
-                    spot_hearing = [station for station in spot.hearing if station not in hearing[spot.origin]]
-                    hearing[spot.origin].extend(spot_hearing)
+                if spot.origin in heard:
+                    heard[spot.origin].append(spot.destination)
                 else:
-                    hearing[spot.origin] = spot.hearing
+                    hearing[spot.origin] = [spot.destination]
 
 class Callbacks:
     '''Callback functions container.
