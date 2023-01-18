@@ -389,7 +389,7 @@ class Message:
     def parse(self, msg_str):
         '''Load message string into message object.
 
-        *Message.parse* should be called inside a try/except block to catch parsing errors.
+        *Message.parse* should be called inside a try/except block to handle parsing errors.
 
         Args:
             msg_str (str): Received message string to parse and load
@@ -431,16 +431,14 @@ class Message:
                 if key == '_ID' or value is None:
                     continue
 
-                call = {
+                self.call_activity.append({
                     'origin' : key,
                     'grid' : value['GRID'],
                     'snr' : value['SNR'],
                     'time' : value['UTC']
-                }
+                })
 
-                self.call_activity.append(call)
-
-        #TODO improve handling, remove try/except
+        #TODO can this replace activity monitor?
         # handle band activity
         elif self.type == Message.RX_BAND_ACTIVITY:
             #TODO
@@ -452,15 +450,13 @@ class Message:
                     # skip if key is not a freq offset (int)
                     int(key)
 
-                    data = {
+                    self.band_activity.append({
                         'freq' : value['DIAL'],
                         'offset' : value['OFFSET'],
                         'snr' : value['SNR'],
                         'time' : value['UTC'],
                         'text' : value['TEXT']
-                    }
-
-                    self.band_activity.append(data)
+                    })
                 except ValueError:
                     continue
 
