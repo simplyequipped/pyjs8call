@@ -1108,7 +1108,68 @@ class Client:
             rx_messages.append(data)
 
         return rx_messages
-
+    
+    #TODO review age value
+    def hearing(self, age=60):
+        '''Get information on which stations other stations are hearing.
+        
+        '''
+        # logHeardGraph
+        # - directed msg origin/destination
+        # - HEARING cmd
+        
+        callsign = self.get_station_callsign()
+        hearing = {}
+        heard = {}
+        
+        for spot in self.get_station_spots(age = age):
+            # stations we are hearing
+            if callsign in hearing:
+                if spot.origin not in hearing[callsign]:
+                    hearing[callsign].append(spot.origin)
+            else:
+                hearing[callsign] = [spot.origin]
+                
+            #TODO review
+            # stations that heard us
+            if spot.destination == callsign:
+                if spot.origin in heard:
+                    if callsign not in heard[spot.origin]:
+                        heard[spot.origin].append(callsign)
+                else:
+                    heard[spot.origin] = [callsign]
+                
+            #TODO review
+            # stations hearing other stations
+            if spot.origin in hearing:
+                if spot.destination not in hearing[spot.origin]:
+                    hearing[spot.origin].append(spot.destination)
+            else:
+                hearing[spot.origin] = [spot.destination]
+                
+            #TODO review
+            # stations heard by other stations
+            if spot.destination in heard:
+                if spot.origin not in heard[spot.destination]:
+                    heard[spot.destination].append(spot.origin)
+            else:
+                heard[spot.destination] = [spot.origin]
+                
+            # stations reporting who they are hearing
+            if spot.cmd == 'HEARING' and spot.hearing is not None:
+                if spot.origin in hearing:
+                    spot_hearing = [station for station in spot.hearing if station not in hearing[spot.origin]]
+                    hearing[spot.origin].extend(spot_hearing)
+                else:
+                    hearing[spot.origin] = spot.hearing
+            
+            # stations acknowledging other stations
+            if spot.cmd == 'ACK':
+                if spot.origin in hearing:
+                    spot_hearing = [station for station in spot.hearing if station not in hearing[spot.origin]]
+                    hearing[spot.origin].extend(spot_hearing)
+                else:
+                    hearing[spot.origin] = spot.hearing
 
 class Callbacks:
     '''Callback functions container.
