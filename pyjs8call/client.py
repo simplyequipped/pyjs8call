@@ -267,25 +267,22 @@ class Client:
             return msg
 
         message = msg.value
+
         # remove origin callsign
-        message = message.split(':')[1].strip()
-        
-        # find first space, default to end of message if no spaces
-        first_space_index = message.find(' ')
-        if first_space_index == -1:
-            first_space_index = len(message)
+        # avoid other semicolons in message text
+        message = ':'.join(message.split(':')[1:]).strip()
 
-        # find last relay character before message text
-        # avoid finding '>' in the actual message text
-        last_relay_index = message.rfind('>', 0, first_space_index)
+        # handle no spaces between relay path and message text
+        # avoid other relay character in message text
+        last_relay_index = message.rfind(Message.CMD_RELAY, 0, message.find(' '))
 
-        if last_relay_index != -1:
-            # remove relay callsigns
-            message = message[last_relay_index:]
+        if last_relay_index > 0:
+            # remove relay path
+            message = message[last_relay_index + 1:]
         else:
             # remove destination callsign or group
             message = ' '.join(message.split(' ')[1:])
-            
+        
         # strip remaining spaces and end-of-message symbol
         message = message.strip(' ' + Message.EOM)
 
@@ -337,7 +334,7 @@ class Client:
         self.js8call.send(msg)
         return msg
 
-    def relay_message(self, relay, destination, message):
+    def send_relay_message(self, relay, destination, message):
         '''Send JS8Call directed message via relay.
 
         Message format: *RELAY>DESTINATION>MESSAGE*
@@ -364,12 +361,14 @@ class Client:
         
         value.append(destination)
         value.append(message)
-        value = '>'.join(value)
+        value = Message.CMD_RELAY.join(value)
 
         return self.send_message(value)
 
     def send_heartbeat(self, grid=None):
         '''Send a JS8Call heartbeat message.
+
+        Note that JS8Call will only transmit API messages at the selected offset. Heartbeat messages can still be sent, but will not be in the heartbeat sub-band.
 
         Message format: @HB HEARTBEAT *GRID*
 
@@ -385,12 +384,15 @@ class Client:
         '''
         if grid is None:
             grid = self.get_station_grid()
+
         if grid is None:
             grid = ''
+
         if len(grid) > 4:
             grid = grid[:4]
 
-        return self.send_message('@HB HEARTBEAT ' + grid)
+        value = '@HB ' + Message.CMD_HEARTBEAT + ' ' + grid
+        return self.send_message(value.strip())
 
     def send_aprs_grid(self, grid=None):
         '''Send a JS8Call message with APRS grid square.
@@ -417,7 +419,7 @@ class Client:
         if len(grid) > 4:
             grid = grid[:4]
 
-        return self.send_message('@APRSIS GRID ' + grid)
+        return self.send_message('@APRSIS ' + Message.CMD_GRID + ' ' + grid)
 
     def send_aprs_sms(self, phone, message):
         '''Send a JS8Call APRS message via a SMS gateway.
@@ -434,7 +436,7 @@ class Client:
             pyjs8call.message: Constructed message object
         '''
         phone = str(phone).replace('-', '')
-        return self.send_message('@APRSIS CMD :SMSGATE   :@' + phone + ' ' + message)
+        return self.send_message('@APRSIS ' + Message.CMD_CMD + ' :SMSGATE   :@' + phone + ' ' + message)
     
     def send_aprs_email(self, email, message):
         '''Send a JS8Call APRS message via an e-mail gateway.
@@ -450,7 +452,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_message('@APRSIS CMD :EMAIL-2   :' + email + ' ' + message)
+        return self.send_message('@APRSIS ' + Message.CMD_CMD + ' :EMAIL-2   :' + email + ' ' + message)
     
     def send_aprs_pota_spot(self, park, freq, mode, message, callsign=None):
         '''Send JS8Call APRS POTA spot message.
@@ -474,7 +476,7 @@ class Client:
         if callsign is None:
             callsign = self.get_station_callsign()
 
-        return self.send_message('@APRSIS CMD :POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode + ' ' + message)
+        return self.send_message('@APRSIS ' + Message.CMD_CMD + ' :POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode + ' ' + message)
     
     def get_inbox_messages(self):
         '''Get JS8Call inbox messages.
@@ -518,7 +520,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        value = destination + ' MSG ' + message
+        value = destination + ' ' + Message.CMD_MSG + ' ' + message
         return self.send_message(value)
 
     def forward_inbox_message(self, destination, forward, message):
@@ -536,7 +538,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        value = destination + ' MSG TO:' + forward + ' ' + message
+        value = destination + ' ' + Message.CMD_MSG_TO + forward + ' ' + message
         return self.send_message(value)
 
     def store_local_inbox_message(self, destination, message):
@@ -570,7 +572,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        message = 'QUERY CALL ' + callsign + '?'
+        message = Message.CMD_QUERY_CALL + ' ' + callsign + '?'
         return self.send_directed_message(destination, message)
 
     def query_messages(self, destination):
@@ -586,7 +588,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, 'QUERY MSGS')
+        return self.send_directed_message(destination, Message.CMD_QUERY_MSGS)
 
     def query_message_id(self, destination, msg_id):
         '''Send JS8Call stored message ID query.
@@ -602,7 +604,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        message = 'QUERY MSG ' + msg_id
+        message = Message.CMD_QUERY_MSG + ' ' + msg_id
         return self.send_directed_message(destination, message)
 
     def query_heard(self, destination):
@@ -618,7 +620,8 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, 'HEARING?')
+        message = Message.CMD_HEARING + '?'
+        return self.send_directed_message(destination, message)
 
     def query_snr(self, destination):
         '''Send JS8Call SNR query.
@@ -633,7 +636,8 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, 'SNR?')
+        message = Message.CMD_SNR + '?'
+        return self.send_directed_message(destination, message)
 
     def query_grid(self, destination):
         '''Send JS8Call grid query.
@@ -648,7 +652,8 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, 'GRID?')
+        message = Message.CMD_GRID + '?'
+        return self.send_directed_message(destination, message)
 
     def query_info(self, destination):
         '''Send JS8Call info query.
@@ -663,7 +668,8 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, 'INFO?')
+        message = Message.CMD_INFO + '?'
+        return self.send_directed_message(destination, message)
 
     def query_status(self, destination):
         '''Send JS8Call status query.
@@ -678,7 +684,8 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, 'STATUS?')
+        message = Message.CMD_STATUS + '?'
+        return self.send_directed_message(destination, message)
 
     def query_call(self, destination, callsign):
         '''Send JS8Call call query.
@@ -693,7 +700,8 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, 'QUERY CALL ' + callsign + '?')
+        message = Message.CMD_QUERY_CALL + ' ' + callsign + '?'
+        return self.send_directed_message(destination, message)
 
     def get_station_spots(self, station=None, group=None, age=0):
         '''Get list of spotted messages.
@@ -1201,39 +1209,38 @@ class Client:
         # - any ack message, including heartbeats
         # - destination hearing origin
         
-        callsign = self.get_station_callsign()
         hearing = {}
         
         for spot in self.get_station_spots(age = age):
             # stations we are hearing
-            if callsign in hearing:
-                if spot.origin not in hearing[callsign]:
-                    hearing[callsign].append(spot.origin)
-            else:
+            if callsign not in hearing:
                 hearing[callsign] = [spot.origin]
+            elif spot.origin not in hearing[callsign]:
+                    hearing[callsign].append(spot.origin)
                 
-            # handle relays
-            if spot.origin in hearing:
-                if spot.destination not in hearing[spot.origin]:
-                    hearing[spot.origin].append(spot.destination)
-            else:
-                hearing[spot.origin] = [spot.destination]
-                
-            if spot.cmd == 'HEARING' and spot.hearing is not None:
-                if spot.origin in hearing:
+            if spot.cmd == Message.CMD_HEARING and spot.hearing is not None:
+                if spot.origin not in hearing:
+                    hearing[spot.origin] = spot.hearing
+                else:
                     spot_hearing = [station for station in spot.hearing if station not in hearing[spot.origin]]
                     hearing[spot.origin].extend(spot_hearing)
-                else:
-                    hearing[spot.origin] = spot.hearing
             
-            if spot.cmd == 'ACK':
-                if spot.origin in hearing:
-                    hearing[spot.origin].append(spot.destination)
-                else:
-                    hearing[spot.origin] = spot.hearing
+            if spot.cmd == Message.CMD_ACK:
+                if spot.origin not in hearing:
+                    hearing[spot.origin] = []
 
-    #TODO review age value
-    def heard(self, age=60, station=None):
+                if isinstance(spot.path, list):
+                    # handle relay path
+                    #TODO review if path list should be reversed
+                    relay_path = Message.CMD_RELAY.join(spot.path))
+
+                    if relay_path not in hearing[spot.origin]:
+                        hearing[spot.origin].append(relay_path)
+
+                elif spot.destination != '@ALLCALL' and spot.destination not in hearing[spot.origin]:
+                    hearing[spot.origin].append(spot.destination)
+
+    def heard_by(self, age=60, station=None):
         '''Get information on which stations other stations are hearing.
         
         '''
