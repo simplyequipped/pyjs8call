@@ -97,10 +97,13 @@ class Message:
     - CMD_QUERY_MSG
     - CMD_QUERY_MSGS
     - CMD_MSG
+    - CMD_MSG_TO
     - CMD_HEARTBEAT
     - CMD_HEARTBEAT_SNR
     - CMD_ACK
     - CMD_NACK
+    - CMD_RELAY
+    - CMD_CMD
 
     Static statuses:
     - STATUS_CREATED
@@ -135,6 +138,7 @@ class Message:
         offset (str): Passband offset frequency in Hz, defaults to None
         call (str): Callsign, used by certain JS8Call API messages, defaults to None
         grid (str): Grid square, default to None
+        path (list): Parsed relay path, defaults to None
         snr (str): Signal-to-noise ratio, defaults to None
         from (str): Origin callsign, defaults to None
         origin (str): Origin callsign, defaults to None
@@ -143,6 +147,7 @@ class Message:
         text (str): Used by certain JS8Call API messages, defaults to None
         speed (str): JS8Call modem speed of received signal
         extra (str): Used by certain JS8Call API messages, defaults to None
+        hearing (list): Response to HEARING? query, defaults to None
         messages (list): Inbox messages, defaults to None
         band_activity (list): JS8Call band activity items, defaults to None
         call_activity (list): JS8Call call activity items, defaults to None
@@ -212,12 +217,15 @@ class Message:
     CMD_QUERY_MSG           = 'QUERY MSG'
     CMD_QUERY_MSGS          = 'QUERY MSGS'
     CMD_MSG                 = 'MSG'
+    CMD_MSG_TO              = 'MSG TO:'
     CMD_HEARTBEAT           = 'HEARTBEAT'
     CMD_HEARTBEAT_SNR       = 'HEARTBEAT SNR'
     CMD_ACK                 = 'ACK'
     CMD_NACK                = 'NACK'
+    CMD_RELAY               = '>'
+    CMD_CMD                 = 'CMD'
 
-    COMMANDS = [CMD_SNR, CMD_GRID, CMD_INFO, CMD_STATUS, CMD_HEARING, CMD_QUERY_CALL, CMD_QUERY_MSG, CMD_QUERY_MSGS, CMD_MSGS, CMD_HEARTBEAT, CMD_HEARTBEAT_SNR, CMD_ACK, CMD_NACK]
+    COMMANDS = [CMD_SNR, CMD_GRID, CMD_INFO, CMD_STATUS, CMD_HEARING, CMD_QUERY_CALL, CMD_QUERY_MSG, CMD_QUERY_MSGS, CMD_MSGS, CMD_HEARTBEAT, CMD_HEARTBEAT_SNR, CMD_ACK, CMD_NACK, CMD_RELAY, CMD_CMD, CMD_MSG_TO]
 
     # status types
     STATUS_CREATED          = 'created'
@@ -266,9 +274,11 @@ class Message:
             'origin',
             'utc',
             'cmd',
+            'path',
             'text',
             'speed',
             'extra',
+            'hearing',
             'messages',
             'band_activity',
             'call_activity'
@@ -494,7 +504,7 @@ class Message:
         # command handling
 
         #TODO copied from js8net, test
-        if self.cmd == 'GRID' and self.text is not None:
+        if self.cmd == Message.CMD_GRID and self.text is not None:
             if Message.ERR in self.text:
                 self.set('grid', None)
             else:
@@ -505,12 +515,19 @@ class Message:
 
                 self.set('grid', grid)
                 
-        elif self.cmd == 'HEARING' and self.text is not None:
+        elif self.cmd == Message.CMD_HEARING and self.text is not None:
                 #TODO investigate, why start at 3?
                 # hearing = msg.text.split()[3:]
                 hearing = msg.text.split()
                 self.set('hearing', hearing)
-                
+
+
+        # relay path handling
+
+        if self.path is not None and Message.CMD_RELAY in self.path:
+            self.path = self.path.strip(Message.CMD_RELAY).split(Message.CMD_RELAY)
+        
+
         # allow usage like: msg = Message().parse(rx_str)
         return self
  
