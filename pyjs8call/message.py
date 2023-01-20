@@ -37,86 +37,122 @@ import secrets
 class Message:
     '''Message object for incoming and outgoing messages.
 
-    Static outgoing types:
-    - RX_GET_TEXT
-    - RX_GET_CALL_ACTIVITY
-    - RX_GET_BAND_ACTIVITY
-    - RX_GET_SELECTED_CALL
-    - TX_SEND_MESSAGE
-    - TX_GET_TEXT
-    - TX_SET_TEXT
-    - MODE_GET_SPEED
-    - MODE_SET_SPEED
-    - STATION_GET_INFO
-    - STATION_SET_INFO
-    - STATION_GET_GRID
-    - STATION_SET_GRID
-    - STATION_GET_CALLSIGN
-    - INBOX_GET_MESSAGES
-    - INBOX_STORE_MESSAGE
-    - RIG_GET_FREQ
-    - RIG_SET_FREQ
-    - WINDOW_RAISE
-    - PING
+    Static types:
 
-    Static incoming types:
-    - MESSAGES
-    - INBOX_MESSAGE
-    - INBOX_MESSAGES
-    - RX_SPOT
-    - RX_DIRECTED
-    - RX_DIRECTED_ME
-    - RX_SELECTED_CALL
-    - RX_CALL_ACTIVITY
-    - RX_BAND_ACTIVITY
-    - RX_ACTIVITY
-    - RX_TEXT
-    - TX_TEXT
-    - TX_FRAME
-    - RIG_FREQ
-    - RIG_PTT
-    - STATION_CALLSIGN
-    - STATION_GRID
-    - STATION_INFO
-    - STATION_STATUS
-    - MODE_SPEED
-    - LOG_QSO
+    | Outgoing Type | Value |
+    | -------- | -------- |
+    | RX_GET_TEXT | 'RX.GET_TEXT' |
+    | RX_GET_CALL_ACTIVITY | 'RX.GET_CALL_ACTIVITY' |
+    | RX_GET_BAND_ACTIVITY | 'RX.GET_BAND_ACTIVITY' |
+    | RX_GET_SELECTED_CALL | 'RX.GET_CALL_SELECTED' |
+    | TX_SEND_MESSAGE | 'TX.SEND_MESSAGE' |
+    | TX_GET_TEXT | 'TX.GET_TEXT' |
+    | TX_SET_TEXT | 'TX.SET_TEXT' |
+    | MODE_GET_SPEED | 'MODE.GET_SPEED' |
+    | MODE_SET_SPEED | 'MODE.SET_SPEED' |
+    | STATION_GET_INFO | 'STATION.SET_INFO' |
+    | STATION_SET_INFO | 'STATION.GET_INFO' |
+    | STATION_GET_GRID | 'STATION.GET_GRID' |
+    | STATION_SET_GRID | 'STATION.SET_GRID' |
+    | STATION_GET_CALLSIGN | 'STATION.GET_CALLSIGN' |
+    | INBOX_GET_MESSAGES | 'INBOX.GET_MESSAGES' |
+    | INBOX_STORE_MESSAGE | 'INBOX.STORE_MESSAGE' |
+    | RIG_GET_FREQ | 'RIG.GET_FREQ' |
+    | RIG_SET_FREQ | 'RIG.SET_FREQ' |
+    | WINDOW_RAISE | 'WINDOW.RAISE' |
+    | PING | 'PING' |
+    | &nbsp; | &nbsp; |
+    | **Incoming Type** | **Value** |
+    | MESSAGES | 'MESSAGES' |
+    | INBOX_MESSAGE | 'INBOX.MESSAGE' |
+    | INBOX_MESSAGES | 'INBOX.MESSAGES' |
+    | RX_SPOT | 'RX.SPOT' |
+    | RX_DIRECTED | 'RX.DIRECTED' |
+    | RX_DIRECTED_ME | 'RX.DIRECTED.ME' |
+    | RX_SELECTED_CALL | 'RX.CALL_SELECTED' |
+    | RX_CALL_ACTIVITY | 'RX.CALL_ACTIVITY' |
+    | RX_BAND_ACTIVITY | 'RX.BAND_ACTIVITY' |
+    | RX_ACTIVITY | 'RX.ACTIVITY' |
+    | RX_TEXT | 'RX.TEXT' |
+    | TX_TEXT | 'TX.TEXT' |
+    | TX_FRAME | 'TX.FRAME' |
+    | RIG_FREQ | 'RIG.FREQ' |
+    | RIG_PTT | 'RIG.PTT' |
+    | STATION_CALLSIGN | 'STATION.CALLSIGN' |
+    | STATION_GRID | 'STATION.GRID' |
+    | STATION_INFO | 'STATION.INFO' |
+    | STATION_STATUS | 'STATION.STATUS' |
+    | MODE_SPEED | 'MODE.SPEED' |
+    | LOG_QSO | 'LOG.QSO' |
+    | &nbsp; | &nbsp; |
+    | **Types** | **Value** |
+    | TX_TYPES | *list* of outgoing types |
+    | RX_TYPES | *list* of incoming types |
+    | TYPES | *list* of all types |
 
-    Static message types:
-    - TX_TYPES (outgoing types)
-    - RX_TYPES (incoming types)
-    - TYPES (outgoing and incoming types)
+    &nbsp;
 
     Static commands:
-    - CMD_SNR
-    - CMD_GRID
-    - CMD_INFO
-    - CMD_HEARING
-    - CMD_STATUS
-    - CMD_QUERY_CALL
-    - CMD_QUERY_MSG
-    - CMD_QUERY_MSGS
-    - CMD_MSG
-    - CMD_MSG_TO
-    - CMD_HEARTBEAT
-    - CMD_HEARTBEAT_SNR
-    - CMD_ACK
-    - CMD_NACK
-    - CMD_RELAY
-    - CMD_CMD
+
+    | Command | Value |
+    | -------- | -------- |
+    | CMD_STATUS | ' STATUS' |
+    | CMD_HEARING_Q | ' HEARING?' |
+    | CMD_HEARING | ' HEARING' |
+    | CMD_HW_CPY_Q | ' HW CPY?' |
+    | CMD_MSG | ' MSG' |
+    | CMD_MSG_TO | ' MSG TO:' |
+    | CMD_QUERY | ' QUERY' |
+    | CMD_QUERY_MSGS | ' QUERY MSGS' |
+    | CMD_QUERY_MSGS_Q | ' QUERY MSGS?' |
+    | CMD_QUERY_CALL | ' QUERY CALL' |
+    | CMD_NO | ' NO' |
+    | CMD_YES | ' YES' |
+    | CMD_AGN_Q | ' AGN?' |
+    | CMD_ACK | ' ACK' |
+    | CMD_NACK | ' NACK' |
+    | CMD_DIT_DIT | ' DIT DIT' |
+    | CMD_FB | ' FB' |
+    | CMD_SK | ' SK' |
+    | CMD_RR | ' RR' |
+    | CMD_QSL | ' QSL' |
+    | CMD_QSL_Q | ' QSL?' |
+    | CMD_CMD | ' CMD' |
+    | CMD_SNR | ' SNR' |
+    | CMD_73 | ' 73' |
+    | CMD_RELAY | ' >' |
+    | CMD_FREETEXT | '&nbsp;' &nbsp;&nbsp;(space) |
+    | CMD_FREETEXT_2 | '&nbsp;&nbsp;' &nbsp;(space x2) |
+    | &nbsp; | &nbsp; |
+    | **Commands** | **Value** |
+    | AUTOREPLY_COMMANDS | *list* of autoreply commands |
+    | COMMANDS | *list* of all commands |
+
+    &nbsp;
 
     Static statuses:
-    - STATUS_CREATED
-    - STATUS_QUEUED
-    - STATUS_SENDING
-    - STATUS_SENT
-    - STATUS_FAILED
-    - STATUS_RECEIVED
-    - STATUS_ERROR
 
-    Static constants:
-    - ERR
-    - EOM
+    | Status | Value |
+    | -------- | -------- |
+    | STATUS_CREATED | 'created' |
+    | STATUS_QUEUED | 'queued' |
+    | STATUS_SENDING | 'sending' |
+    | STATUS_SENT | 'sent' |
+    | STATUS_FAILED | 'failed' |
+    | STATUS_RECEIVED | 'received' |
+    | STATUS_ERROR | 'error' |
+    | &nbsp; | &nbsp; |
+    | **Statuses** | **Value** |
+    | STATUSES | *list* of all statuses |
+
+    &nbsp;
+
+    Static characters:
+
+    | Character | Value |
+    | -------- | -------- |
+    | EOM | '♢' |
+    | ERR | '…' |
 
     &nbsp;
 
@@ -244,8 +280,8 @@ class Message:
     CMD_SNR                 = ' SNR'
     CMD_73                  = ' 73'
     CMD_RELAY               = ' >'
-    CMD_FREETEXT            = '  '
-    CMD_FREETEXT_2          = '   '
+    CMD_FREETEXT            = ' '
+    CMD_FREETEXT_2          = '  '
 
     COMMANDS = [CMD_HB, CMD_HEARTBEAT, CMD_HEARTBEAT_SNR, CMD_CQ, CMD_SNR_Q, CMD_Q, CMD_GRID_Q, CMD_GRID, CMD_INFO_Q, CMD_INFO, CMD_STATUS_Q, CMD_STATUS, CMD_HEARING_Q, CMD_HEARING, CMD_HW_CPY_Q, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_NO, CMD_YES, CMD_AGN_Q, CMD_ACK, CMD_NACK, CMD_DIT_DIT, CMD_FB, CMD_SK, CMD_RR, CMD_QSL, CMD_QSL_Q, CMD_CMD, CMD_SNR, CMD_73, CMD_RELAY, CMD_FREETEXT, CMD_FREETEXT_2]
 
