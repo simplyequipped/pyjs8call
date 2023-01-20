@@ -152,7 +152,7 @@ class Message:
         band_activity (list): JS8Call band activity items, defaults to None
         call_activity (list): JS8Call call activity items, defaults to None
 
-    *text* is also used to store 'cleaned' incoming message text, see *pyjs8call.client.Client.clean_rx_message_text*.
+    *text* is also used to store 'cleaned' incoming message text, see *pyjs8call.client.clean_rx_message_text()*.
     '''
 
     # outgoing message types
@@ -205,27 +205,51 @@ class Message:
     RX_TYPES = [MESSAGES, INBOX_MESSAGE, INBOX_MESSAGES, RX_SPOT, RX_DIRECTED, RX_DIRECTED_ME, RX_SELECTED_CALL, RX_CALL_ACTIVITY, RX_BAND_ACTIVITY, RX_ACTIVITY, RX_TEXT, TX_TEXT, TX_FRAME, RIG_FREQ, RIG_PTT, STATION_CALLSIGN, STATION_GRID, STATION_INFO, STATION_STATUS, MODE_SPEED, LOG_QSO]
 
     TYPES = TX_TYPES + RX_TYPES
+    DIRECTED_TYPES = [RX_DIRECTED, RX_DIRECTED_ME]
 
-    #TODO are more commands supported?
     # command types
-    CMD_SNR                 = 'SNR'
-    CMD_GRID                = 'GRID'
-    CMD_INFO                = 'INFO'
-    CMD_STATUS              = 'STATUS'
-    CMD_HEARING             = 'HEARING'
-    CMD_QUERY_CALL          = 'QUERY CALL'
-    CMD_QUERY_MSG           = 'QUERY MSG'
-    CMD_QUERY_MSGS          = 'QUERY MSGS'
-    CMD_MSG                 = 'MSG'
-    CMD_MSG_TO              = 'MSG TO:'
-    CMD_HEARTBEAT           = 'HEARTBEAT'
-    CMD_HEARTBEAT_SNR       = 'HEARTBEAT SNR'
-    CMD_ACK                 = 'ACK'
-    CMD_NACK                = 'NACK'
-    CMD_RELAY               = '>'
-    CMD_CMD                 = 'CMD'
+    CMD_HB                  = ' HB'
+    CMD_HEARTBEAT           = ' HEARTBEAT'
+    CMD_HEARTBEAT_SNR       = ' HEARTBEAT SNR'
+    CMD_CQ                  = ' CQ'
+    CMD_SNR_Q               = ' SNR'
+    CMD_Q                   = ' ?'
+    CMD_GRID_Q              = ' GRID?'
+    CMD_GRID                = ' GRID'
+    CMD_INFO_Q              = ' INFO?'
+    CMD_INFO                = ' INFO'
+    CMD_STATUS_Q            = ' STATUS?'
+    CMD_STATUS              = ' STATUS'
+    CMD_HEARING_Q           = ' HEARING?'
+    CMD_HEARING             = ' HEARING'
+    CMD_HW_CPY_Q            = ' HW CPY?'
+    CMD_MSG                 = ' MSG'
+    CMD_MSG_TO              = ' MSG TO:'
+    CMD_QUERY               = ' QUERY'
+    CMD_QUERY_MSGS          = ' QUERY MSGS'
+    CMD_QUERY_MSGS_Q        = ' QUERY MSGS?'
+    CMD_QUERY_CALL          = ' QUERY CALL'
+    CMD_NO                  = ' NO'
+    CMD_YES                 = ' YES'
+    CMD_AGN_Q               = ' AGN?'
+    CMD_ACK                 = ' ACK'
+    CMD_NACK                = ' NACK'
+    CMD_DIT_DIT             = ' DIT DIT'
+    CMD_FB                  = ' FB'
+    CMD_SK                  = ' SK'
+    CMD_RR                  = ' RR'
+    CMD_QSL                 = ' QSL'
+    CMD_QSL_Q               = ' QSL?'
+    CMD_CMD                 = ' CMD'
+    CMD_SNR                 = ' SNR'
+    CMD_73                  = ' 73'
+    CMD_RELAY               = ' >'
+    CMD_FREETEXT            = '  '
+    CMD_FREETEXT_2          = '   '
 
-    COMMANDS = [CMD_SNR, CMD_GRID, CMD_INFO, CMD_STATUS, CMD_HEARING, CMD_QUERY_CALL, CMD_QUERY_MSG, CMD_QUERY_MSGS, CMD_MSGS, CMD_HEARTBEAT, CMD_HEARTBEAT_SNR, CMD_ACK, CMD_NACK, CMD_RELAY, CMD_CMD, CMD_MSG_TO]
+    COMMANDS = [CMD_HB, CMD_HEARTBEAT, CMD_HEARTBEAT_SNR, CMD_CQ, CMD_SNR_Q, CMD_Q, CMD_GRID_Q, CMD_GRID, CMD_INFO_Q, CMD_INFO, CMD_STATUS_Q, CMD_STATUS, CMD_HEARING_Q, CMD_HEARING, CMD_HW_CPY_Q, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_NO, CMD_YES, CMD_AGN_Q, CMD_ACK, CMD_NACK, CMD_DIT_DIT, CMD_FB, CMD_SK, CMD_RR, CMD_QSL, CMD_QSL_Q, CMD_CMD, CMD_SNR, CMD_73, CMD_RELAY, CMD_FREETEXT, CMD_FREETEXT_2]
+
+    AUTOREPLY_COMMANDS = [CMD_SNR_Q, CMD_Q, CMD_HEARING_Q, CMD_GRID, CMD_STATUS_Q, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_INFO_Q, CMD_AGN_Q, CMD_ACK, CMD_NACK]
 
     # status types
     STATUS_CREATED          = 'created'
@@ -235,6 +259,7 @@ class Message:
     STATUS_FAILED           = 'failed'
     STATUS_RECEIVED         = 'received'
     STATUS_ERROR            = 'error'
+
     STATUSES = [STATUS_CREATED, STATUS_QUEUED, STATUS_SENDING, STATUS_SENT, STATUS_FAILED, STATUS_RECEIVED, STATUS_ERROR]
 
     # constants
@@ -437,7 +462,9 @@ class Message:
         # parse paramater fields
         for param, value in msg['params'].items():
             param = param.strip()
-            if isinstance(value, str):
+
+            # maintain spaces before commands
+            if isinstance(value, str) and param != 'CMD':
                 value = value.strip()
 
             self.set(param, value)
@@ -538,6 +565,44 @@ class Message:
             float: Message age in seconds
         '''
         return time.time() - self.timestamp
+
+    def is_directed(self):
+        '''Message object is directed message.
+
+        Used internally.
+
+        Returns:
+            bool: True if message is a directed message, False otherwise
+        '''
+        return bool(self.type in Message.DIRECTED_TYPES or self.cmd in Message.COMMANDS)
+        
+    def is_directed_to(self, station):
+        '''Message object is directed to specified station.
+
+        If *station* is a list of callsigns and/or groups then each is compared to *Message.destination*. Returns *True* if any match. This is useful for filtering incoming messages per a list of callsigns and groups associated with the local station.
+
+        Args:
+            station (str, list): Callsign(s) to compare to *destination*
+
+        Returns:
+            bool: True if message is a directed to the specified station, False otherwise
+        '''
+        if isinstance(station, str):
+            return bool(self.is_directed() and self.destination.upper() == station.upper())
+        elif isinstance(station, list):
+            return any( [self.is_directed_to(str(callsign)) for callsign in station] )
+
+    def is_autoreply(self):
+        '''Message object contains autoreply command.
+
+        Used internally.
+
+        A subset of commands are considered autoreply commands (see *Message.AUTOREPLY_COMMANDS*). Note that an autoreply command applies to incoming and outgoing messages. Just because the message containes an autoreply command does not mean it was sent automatically by the JS8Call application. For example, a manual SNR query message contains an autoreply command.
+
+        Returns:
+            bool: True if message contains an autoreply command, False otherwise
+        '''
+        return bool(self.cmd in Message.AUTOREPLY_COMMANDS)
 
     def __eq__(self, msg):
         '''Whether another message is considered equal to self.
