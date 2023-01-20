@@ -604,7 +604,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        message = Message.CMD_QUERY_MSG + ' ' + msg_id
+        message = Message.CMD_QUERY + ' ' + Message.CMD_MSG + ' ' + msg_id
         return self.send_directed_message(destination, message)
 
     def query_heard(self, destination):
@@ -1232,7 +1232,7 @@ class Client:
                 if isinstance(spot.path, list):
                     # handle relay path
                     #TODO review if path list should be reversed
-                    relay_path = Message.CMD_RELAY.join(spot.path))
+                    relay_path = Message.CMD_RELAY.join(spot.path)
 
                     if relay_path not in hearing[spot.origin]:
                         hearing[spot.origin].append(relay_path)
