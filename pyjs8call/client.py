@@ -1195,23 +1195,22 @@ class Client:
     
     def hearing(self, age=60):
         '''Get information on which stations other stations are hearing.
-        
+
+        Args:
+            age (int): Maximum message age in minutes, defaults to 60
+
+        Returns:
+            dict: Example format *{'station': ['station', ...], ...}*
         '''
-        # logHeardGraph
-        # - directed msg origin/destination
-        # - HEARING cmd
-
-        # specified station is HEARING these other stations
-        # - callsign hearing origin
-        # - origin hearing destination
-
-        # stations heard by specified station
-        # - any ack message, including heartbeats
-        # - destination hearing origin
-        
+        age *= 60
+        callsign = self.get_station_callsign()
         hearing = {}
         
         for spot in self.get_station_spots(age = age):
+            # only process msgs with directed commands
+            if spot.cmd is None:
+                continue
+
             # stations we are hearing
             if callsign not in hearing:
                 hearing[callsign] = [spot.origin]
@@ -1240,40 +1239,17 @@ class Client:
                 elif spot.destination != '@ALLCALL' and spot.destination not in hearing[spot.origin]:
                     hearing[spot.origin].append(spot.destination)
 
-    def heard_by(self, age=60, station=None):
-        '''Get information on which stations other stations are hearing.
+        return hearing
+
+#TODO
+#    def heard_by(self, age=60):
+#        '''Get information on which stations are heard other stations.
+#        
+#        '''
+#        callsign = self.get_station_callsign()
+#        heard = {}
         
-        '''
-        # logHeardGraph
-        # - directed msg origin/destination
-        # - HEARING cmd
-        
-        callsign = self.get_station_callsign()
-        heard = {}
-        
-        for spot in self.get_station_spots(age = age):
-            # stations that heard us
-            if spot.destination == callsign:
-                if spot.origin in heard:
-                    if callsign not in heard[spot.origin]:
-                        heard[spot.origin].append(callsign)
-                else:
-                    heard[spot.origin] = [callsign]
-                
-            #TODO review
-            # stations heard by other stations
-            if spot.destination in heard:
-                if spot.origin not in heard[spot.destination]:
-                    heard[spot.destination].append(spot.origin)
-            else:
-                heard[spot.destination] = [spot.origin]
-                
-            # stations acknowledging other stations
-            if spot.cmd == 'ACK':
-                if spot.origin in heard:
-                    heard[spot.origin].append(spot.destination)
-                else:
-                    hearing[spot.origin] = [spot.destination]
+
 
 class Callbacks:
     '''Callback functions container.
