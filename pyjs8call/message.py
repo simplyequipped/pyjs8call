@@ -438,7 +438,7 @@ class Message:
                     if self.cmd is None:
                         value = self.destination + ' ' + value
                     else:
-                        value = self.destination + ' ' + self.cmd + ' ' + value
+                        value = self.destination + self.cmd + ' ' + value
 
             # add to dict if value is set
             if value is not None:
