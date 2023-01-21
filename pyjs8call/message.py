@@ -96,6 +96,18 @@ class Message:
 
     | Command | Value |
     | -------- | -------- |
+    | CMD_HB | ' HB' |
+    | CMD_HEARTBEAT | ' HEARTBEAT' |
+    | CMD_HEARTBEAT_SNR | ' HEARTBEAT SNR' |
+    | CMD_CQ | ' CQ' |
+    | CMD_SNR | ' SNR' |
+    | CMD_SNR_Q | ' SNR?' |
+    | CMD_Q | ' ?' |
+    | CMD_GRID_Q | ' GRID?' |
+    | CMD_GRID | ' GRID' |
+    | CMD_INFO_Q | ' INFO?' |
+    | CMD_INFO | ' INFO' |
+    | CMD_STATUS_Q | ' STATUS?' |
     | CMD_STATUS | ' STATUS' |
     | CMD_HEARING_Q | ' HEARING?' |
     | CMD_HEARING | ' HEARING' |
@@ -248,7 +260,8 @@ class Message:
     CMD_HEARTBEAT           = ' HEARTBEAT'
     CMD_HEARTBEAT_SNR       = ' HEARTBEAT SNR'
     CMD_CQ                  = ' CQ'
-    CMD_SNR_Q               = ' SNR'
+    CMD_SNR                 = ' SNR'
+    CMD_SNR_Q               = ' SNR?'
     CMD_Q                   = ' ?'
     CMD_GRID_Q              = ' GRID?'
     CMD_GRID                = ' GRID'
