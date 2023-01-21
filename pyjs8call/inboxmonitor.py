@@ -77,8 +77,8 @@ class InboxMonitor:
         Args:
             msg (pyjs8call.message): Incoming message object
         '''
-        if msg.cmd == 'HEARTBEAT':
-            msg_id = msg.value.split('MSG')[1].trim(' ' + Message.EOM)
+        if msg.cmd == Message.CMD_HEARTBEAT:
+            msg_id = msg.value.split(Message.CMD_MSG)[1].trim(' ' + Message.EOM)
             self._client.query_message_id(msg.origin, msg_id)
 
     def _callback(self, msgs):

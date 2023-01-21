@@ -552,7 +552,7 @@ class JS8Call:
         #TODO no example, test response and update code
         #elif msg.params['CMD'] == 'QUERY CALL':
 
-        elif msg.cmd == 'HEARTBEAT' and 'MSG' in msg.value:
+        elif msg.cmd == Message.CMD_HEARTBEAT and Message.CMD_MSG in msg.value:
             self._client.inbox_monitor.process_incoming_remote_message_id(msg)
                 
         if msg.cmd in Message.COMMANDS:
