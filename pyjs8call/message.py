@@ -628,17 +628,26 @@ class Message:
         elif isinstance(station, list):
             return any( [self.is_directed_to(str(callsign)) for callsign in station] )
 
-    def is_autoreply(self):
-        '''Message object contains autoreply command.
+    def dump(self):
+        '''Get object attributes as *str*.
 
-        Used internally.
-
-        A subset of commands are considered autoreply commands (see *Message.AUTOREPLY_COMMANDS*). Note that an autoreply command applies to incoming and outgoing messages. Just because the message containes an autoreply command does not mean it was sent automatically by the JS8Call application. For example, a manual SNR query message contains an autoreply command.
+        For use with *load()*.
 
         Returns:
-            bool: True if message contains an autoreply command, False otherwise
+            str: *dict* of attributes converted using *json.dumps*
         '''
-        return bool(self.cmd in Message.AUTOREPLY_COMMANDS)
+            return json.dumps( dict(zip(self.attributes, map(self.get, self.attributes))) )
+
+    def load(self, msg_str):
+        '''Load object attributes from *str*.
+
+        For use with *dump()*.
+
+        Args:
+            msg_str (str): *str* of attributes to convert using *json.loads*
+        '''
+        for attribute, value in json.loads(msg_str):
+            self.set(attribute, value)
 
     def __eq__(self, msg):
         '''Whether another message is considered equal to self.
