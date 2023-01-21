@@ -539,20 +539,7 @@ class JS8Call:
 
         ### command handling ###
 
-        if msg.cmd == Message.CMD_HEARING:
-            pass
-            #TODO validate response structure
-            #if not Message.ERR in msg.params['TEXT']:
-            #    hearing = msg.params['TEXT'].split()[3:]
-            #    for station in hearing:
-            #        if station not in self.spots[msg.params['FROM']].keys():
-            #            self.spots[msg.params['FROM']][station] = []
-            #        self.spots[msg.params['FROM']][station].append(msg)
-
-        #TODO no example, test response and update code
-        #elif msg.params['CMD'] == 'QUERY CALL':
-
-        elif msg.cmd == Message.CMD_HEARTBEAT and Message.CMD_MSG in msg.value:
+        if msg.cmd == Message.CMD_HEARTBEAT and Message.CMD_MSG in msg.value:
             self._client.inbox_monitor.process_incoming_remote_message_id(msg)
                 
         if msg.cmd in Message.COMMANDS:
