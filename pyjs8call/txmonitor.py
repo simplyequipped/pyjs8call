@@ -142,13 +142,8 @@ class TxMonitor:
         '''Compare queued message to tx text.'''
         for i in range(len(self._msg_queue)):
             msg = self._msg_queue.pop(0)
+            msg_value = msg.dict()['value'].strip()
 
-            # handle non-directed messages
-            if msg.destination is None:
-                msg_value = msg.value.strip()
-            else:
-                msg_value = msg.destination + '  ' + msg.value.strip()
-    
             if msg_value == tx_text and msg.status == Message.STATUS_QUEUED:
                 # msg text was added to js8call tx field, sending
                 msg.status = Message.STATUS_SENDING
