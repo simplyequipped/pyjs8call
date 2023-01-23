@@ -315,11 +315,12 @@ class Message:
     EOM = '♢'   # end of message, end of transmission
     ERR = '…'   # error
 
-    def __init__(self, destination=None, value=None):
+    def __init__(self, destination=None, cmd=None, value=None):
         '''Initialize message.
 
         Args:
             destination (bool): Callsign to send the message to, defaults to None
+            cmd (str): Command to use in message, defaults to None (see static commands)
             value (str): Message text to send, defaults to None
 
         Returns:
@@ -328,11 +329,12 @@ class Message:
         self.id = secrets.token_urlsafe(16)
         self.type = Message.TX_SEND_MESSAGE
         self.destination = destination
+        self.cmd = cmd
         self.value = value
         self.time = datetime.now(timezone.utc).timestamp()
         self.timestamp = time.time()
         self.params = {}
-        self.attributes = ['id', 'type', 'destination', 'value', 'time', 'params']
+        self.attributes = ['id', 'type', 'destination', 'cmd', 'value', 'time', 'params']
         self.status = Message.STATUS_CREATED
         self.raw = None
         
@@ -347,7 +349,6 @@ class Message:
             'from',
             'origin',
             'utc',
-            'cmd',
             'path',
             'text',
             'speed',
@@ -446,12 +447,15 @@ class Message:
                 # replace None with empty string, 'value' is always included
                 if value is None:
                     value = ''
+
                 # build directed message
-                elif self.type == Message.TX_SEND_MESSAGE and self.destination is not None:
+                if self.type == Message.TX_SEND_MESSAGE and self.destination is not None:
                     if self.cmd is None:
                         value = self.destination + ' ' + value
                     else:
                         value = self.destination + self.cmd + ' ' + value
+
+                value = value.strip()
 
             # add to dict if value is set
             if value is not None:
@@ -540,9 +544,6 @@ class Message:
                 })
 
         elif self.type == Message.RX_CALL_ACTIVITY:
-            #TODO
-            print(msg_str)
-
             self.call_activity = []
             for key, value in msg['params'].items():
                 if key == '_ID' or value is None:
@@ -557,9 +558,6 @@ class Message:
 
         #TODO can this replace activity monitor?
         elif self.type == Message.RX_BAND_ACTIVITY:
-            #TODO
-            print(msg_str)
-
             self.band_activity = []
             for key, value in msg['params'].items():
                 try:
@@ -592,17 +590,15 @@ class Message:
                 self.set('grid', grid)
                 
         elif self.cmd == Message.CMD_HEARING and self.text is not None:
-                #TODO investigate, why start at 3?
-                # hearing = msg.text.split()[3:]
-                hearing = msg.text.split()
-                self.set('hearing', hearing)
+            # 0 = origin, 1 = destination, 2 = command, -1 = EOM
+            hearing = self.text.split()[3:-1]
+            self.set('hearing', hearing)
 
 
         # relay path handling
 
         if self.path is not None and Message.CMD_RELAY in self.path:
             self.path = self.path.strip(Message.CMD_RELAY).split(Message.CMD_RELAY)
-        
 
         # allow usage like: msg = Message().parse(rx_str)
         return self
@@ -649,7 +645,7 @@ class Message:
         Returns:
             str: *dict* of attributes converted using *json.dumps*
         '''
-            return json.dumps( dict(zip(self.attributes, map(self.get, self.attributes))) )
+        return json.dumps( dict(zip(self.attributes, map(self.get, self.attributes))) )
 
     def load(self, msg_str):
         '''Load object attributes from *str*.
@@ -659,7 +655,7 @@ class Message:
         Args:
             msg_str (str): *str* of attributes to convert using *json.loads*
         '''
-        for attribute, value in json.loads(msg_str):
+        for attribute, value in json.loads(msg_str).items():
             self.set(attribute, value)
 
     def __eq__(self, msg):
