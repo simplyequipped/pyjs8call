@@ -75,21 +75,23 @@ class InboxMonitor:
         self._enabled = False
         self._client.callback.remove_incoming(self.process_incoming)
 
-    #TODO update docs
     def process_incoming(self, msg):
         '''Process incoming directed messages.
 
         This function is used internally.
 
-        Parses message ID and sends a query for the remote message (see *pyjs8call.client.query_message_id*).
+        Parses message ID and sends a query for the remote message (see *pyjs8call.client.query_message_id()*).
 
         Handles the following cases:
-        - Directed heartbeat message (ex. *ORIGIN*: *DESTINATION* HEARTBEAT SNR -11 MSG 42)
+        - Directed heartbeat message (ex. *ORIGIN*: *DESTINATION* HEARTBEAT SNR -11 MSG ID 42)
         - Message query response (ex. *ORIGIN*: *DESTINATION* YES MSG ID 42)
 
         Args:
             msg (pyjs8call.message): Incoming message object
         '''
+        if msg.destination != self._client.get_station_callsign():
+            return
+
         if msg.cmd in (Message.CMD_HEARTBEAT_SNR, Message.CMD_YES) and Message.CMD_MSG in msg.value:
             self._rx_queue.append(msg)
 
