@@ -539,9 +539,6 @@ class JS8Call:
 
         ### command handling ###
 
-        if msg.cmd == Message.CMD_HEARTBEAT and Message.CMD_MSG in msg.value:
-            self._client.inbox_monitor.process_incoming_remote_message_id(msg)
-                
         if msg.cmd in Message.COMMANDS:
             self.spot(msg)
 
