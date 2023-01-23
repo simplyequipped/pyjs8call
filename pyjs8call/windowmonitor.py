@@ -74,7 +74,7 @@ class WindowMonitor:
 
         self._enabled = True
         
-        self._client.callback.register_incoming(self.process_tx_msg, message_type = Message.TX_FRAME)
+        self._client.callback.register_incoming(self.process_tx_frame, message_type = Message.TX_FRAME)
         self._client.callback.register_incoming(self.process_rx_msg, message_type = Message.RX_DIRECTED)
         self._client.callback.register_incoming(self.process_rx_msg, message_type = Message.RX_ACTIVITY)
 
@@ -86,7 +86,7 @@ class WindowMonitor:
         '''Disable rx/tx window monitoring.'''
         self._enabled = False
         self._client.callback.remove_incoming(self.process_rx_msg)
-        self._client.callback.remove_incoming(self.process_tx_msg)
+        self._client.callback.remove_incoming(self.process_tx_frame)
 
     def _callback(self):
         '''Window transition callback function handling.
