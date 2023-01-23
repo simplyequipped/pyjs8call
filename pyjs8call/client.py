@@ -176,7 +176,6 @@ class Client:
         rx_thread.start()
         time.sleep(1)
 
-        self.activity_monitor = pyjs8call.ActivityMonitor(self)
         self.window_monitor = pyjs8call.WindowMonitor(self)
         self.spot_monitor = pyjs8call.SpotMonitor(self)
         self.offset_monitor = pyjs8call.OffsetMonitor(self)
@@ -304,11 +303,32 @@ class Client:
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(value = message)
-        self.js8call.send(msg)
 
         if self.monitor_tx:
             self.tx_monitor.monitor(msg)
 
+        self.js8call.send(msg)
+        return msg
+
+    def send_directed_command_message(self, destination, command, message=None):
+        '''Send a directed JS8Call command message.
+
+        Message format: *DESTINATION**COMMAND* *MESSAGE*
+
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+
+        Args:
+            destination (str): Callsign to direct the message to
+            command (str): Command to include in message (see *pyjs8call.message* static commands)
+            message (str): Message text to send, defaults to None
+        '''
+        # msg.type = Message.TX_SEND_MESSAGE by default
+        msg = Message(destination, command, message)
+
+        if self.monitor_tx:
+            self.tx_monitor.monitor(msg)
+
+        self.js8call.send(msg)
         return msg
     
     def send_directed_message(self, destination, message):
@@ -391,8 +411,7 @@ class Client:
         if len(grid) > 4:
             grid = grid[:4]
 
-        value = '@HB' + Message.CMD_HEARTBEAT + ' ' + grid
-        return self.send_message(value.strip())
+        return self.send_directed_command_message('@HB', Message.CMD_HEARTBEAT, grid)
 
     def send_aprs_grid(self, grid=None):
         '''Send a JS8Call message with APRS grid square.
@@ -419,7 +438,7 @@ class Client:
         if len(grid) > 4:
             grid = grid[:4]
 
-        return self.send_message('@APRSIS' + Message.CMD_GRID + ' ' + grid)
+        return self.send_directed_command_message('@APRSIS', Message.CMD_GRID, grid)
 
     def send_aprs_sms(self, phone, message):
         '''Send a JS8Call APRS message via a SMS gateway.
@@ -436,7 +455,8 @@ class Client:
             pyjs8call.message: Constructed message object
         '''
         phone = str(phone).replace('-', '').replace('.', '').replace('(', '').replace(')', '')
-        return self.send_message('@APRSIS' + Message.CMD_CMD + ' :SMSGATE   :@' + phone + ' ' + message)
+        message = ':SMSGATE   :@' + phone + ' ' + message
+        return self.send_directed_command_message('@APRSIS', Message.CMD_CMD, message)
     
     def send_aprs_email(self, email, message):
         '''Send a JS8Call APRS message via an e-mail gateway.
@@ -452,7 +472,8 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_message('@APRSIS' + Message.CMD_CMD + ' :EMAIL-2   :' + email + ' ' + message)
+        message = ':EMAIL-2   :' + email + ' ' + message
+        return self.send_directed_command_message('@APRSIS', Message.CMD_CMD, message)
     
     def send_aprs_pota_spot(self, park, freq, mode, message, callsign=None):
         '''Send JS8Call APRS POTA spot message.
@@ -476,10 +497,14 @@ class Client:
         if callsign is None:
             callsign = self.get_station_callsign()
 
-        return self.send_message('@APRSIS' + Message.CMD_CMD + ' :POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode + ' ' + message)
+        message = ':POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode + ' ' + message
+        return self.send_directed_command_message('@APRSIS', Message.CMD_CMD, message)
     
-    def get_inbox_messages(self):
+    def get_inbox_messages(self, unread=True):
         '''Get JS8Call inbox messages.
+
+        Args:
+            unread (bool): Get unread messages only if True, all messages if False
 
         Each inbox message is a *dict* with the following keys:
 
@@ -498,12 +523,16 @@ class Client:
         | type | *str* |
 
         Returns:
-            list: List of messages
+            list: List of inbox messages
         '''
         msg = Message()
         msg.type = Message.INBOX_GET_MESSAGES
         self.js8call.send(msg)
         messages = self.js8call.watch('inbox')
+
+        if messages is not None and len(messages) > 0 and unread:
+            messages = [msg for msg in messages if msg['type'] == 'unread']
+            
         return messages
 
     def send_inbox_message(self, destination, message):
@@ -520,26 +549,25 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        value = destination + Message.CMD_MSG + ' ' + message
-        return self.send_message(value)
+        return self.send_directed_command_message(destination, Message.CMD_MSG, message)
 
-    def forward_inbox_message(self, destination, forward, message):
+    def store_remote_inbox_message(self, remote, destination, message):
         '''Send JS8Call inbox message to be forwarded.
 
-        Message format: *DESTINATION* MSG TO:*FORWARD* *MESSAGE*
+        Message format: *REMOTE* MSG TO:*DESTINATION* *MESSAGE*
 
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct inbox message to
-            forward (str): Callsign to forward inbox message to
+            remote (str): Callsign of intermediate station storing the message
+            destination (str): Callsign of message recipient
             message (str): Message text to send
 
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        value = destination + Message.CMD_MSG_TO + forward + ' ' + message
-        return self.send_message(value)
+        message = destination + ' ' + message
+        return self.send_directed_command_message(remote, Message.CMD_MSG_TO, message)
 
     def store_local_inbox_message(self, destination, message):
         '''Store local JS8Call inbox message for future retrieval.
@@ -572,8 +600,8 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        message = Message.CMD_QUERY_CALL + ' ' + callsign + '?'
-        return self.send_directed_message(destination, message)
+        message = callsign + Message.CMD_Q
+        return self.send_directed_command_message(destination, Message.CMD_QUERY_CALL, message)
 
     def query_messages(self, destination):
         '''Send JS8Call stored message query.
@@ -588,7 +616,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, Message.CMD_QUERY_MSGS)
+        return self.send_directed_command_message(destination, Message.CMD_QUERY_MSGS)
 
     def query_message_id(self, destination, msg_id):
         '''Send JS8Call stored message ID query.
@@ -604,11 +632,11 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        message = Message.CMD_QUERY + Message.CMD_MSG + ' ' + msg_id
-        return self.send_directed_message(destination, message)
+        cmd = Message.CMD_QUERY + Message.CMD_MSG
+        return self.send_directed_command_message(destination, cmd, str(msg_id))
 
-    def query_heard(self, destination):
-        '''Send JS8Call heard query.
+    def query_hearing(self, destination):
+        '''Send JS8Call hearing query.
         
         Message format: *DESTINATION* HEARING?
 
@@ -620,7 +648,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, Message.CMD_HEARING_Q)
+        return self.send_directed_command_message(destination, Message.CMD_HEARING_Q)
 
     def query_snr(self, destination):
         '''Send JS8Call SNR query.
@@ -635,7 +663,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, Message.CMD_SNR_Q)
+        return self.send_directed_command_message(destination, Message.CMD_SNR_Q)
 
     def query_grid(self, destination):
         '''Send JS8Call grid query.
@@ -650,7 +678,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, Message.CMD_GRID_Q)
+        return self.send_directed_command_message(destination, Message.CMD_GRID_Q)
 
     def query_info(self, destination):
         '''Send JS8Call info query.
@@ -665,7 +693,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, Message.CMD_INFO_Q)
+        return self.send_directed_command_message(destination, Message.CMD_INFO_Q)
 
     def query_status(self, destination):
         '''Send JS8Call status query.
@@ -680,7 +708,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        return self.send_directed_message(destination, Message.CMD_STATUS_Q)
+        return self.send_directed_command_message(destination, Message.CMD_STATUS_Q)
 
     def query_call(self, destination, callsign):
         '''Send JS8Call call query.
@@ -695,8 +723,8 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        message = Message.CMD_QUERY_CALL + ' ' + callsign + Message.CMD_Q
-        return self.send_directed_message(destination, message)
+        message = callsign + Message.CMD_Q
+        return self.send_directed_command_message(destination, Message.CMD_QUERY_CALL, message)
 
     def get_station_spots(self, station=None, group=None, age=0):
         '''Get list of spotted messages.
