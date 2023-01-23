@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Monitor inbox messages.
+'''Monitor local and remote inbox messages.
 
 Set `client.callback.inbox` to receive new inbox messages as they arrive. See pyjs8call.client.Callbacks for *inbox* callback function details.
 '''
@@ -34,7 +34,8 @@ import threading
 from pyjs8call import Message
 
 class InboxMonitor:
-    '''Monitor inbox messages.'''
+    '''Monitor local and remote inbox messages.'''
+
     def __init__(self, client):
         '''Initialize inbox monitor object.
 
@@ -46,26 +47,37 @@ class InboxMonitor:
         '''
         self._client = client
         self._enabled = False
+        self._rx_queue = []
+        self._rx_queue_lock = threading.Lock()
 
-        self.enable()
+    def enable(self, query=True, destination='@ALLCALL', interval=60):
+        '''Enable inbox monitoring.
 
-    def enable(self):
-        '''Enable inbox monitoring.'''
+        If *query* is True a message query will be sent to *destination* every *interval* minutes. Incoming directed messages are responded to whether *query* is True or not. See *process_incoming()* for more information on incoming directed message handling.
+
+        Args:
+            query (bool): Transmit message queries periodically if True, defaults to True
+            destination (str): Outgoing message query destination, defaults to '@ALLCALL'
+            interval (int): Minutes between message queries, defaults to 60
+        '''
         if self._enabled:
             return
 
         self._enabled = True
+        self._client.callback.register_incoming(self.process_incoming, message_type = Message.RX_DIRECTED)
 
-        thread = threading.Thread(target=self._monitor)
+        thread = threading.Thread(target=self._monitor, args=(query, destination, interval))
         thread.daemon = True
         thread.start()
 
     def disable(self):
         '''Disable inbox monitoring.'''
         self._enabled = False
+        self._client.callback.remove_incoming(self.process_incoming)
 
-    def process_incoming_remote_message_id(self, msg):
-        '''Process incoming message with remote message ID.
+    #TODO update docs
+    def process_incoming(self, msg):
+        '''Process incoming directed messages.
 
         This function is used internally.
 
@@ -73,13 +85,18 @@ class InboxMonitor:
 
         Handles the following cases:
         - Directed heartbeat message (ex. *ORIGIN*: *DESTINATION* HEARTBEAT SNR -11 MSG 42)
+        - Message query response (ex. *ORIGIN*: *DESTINATION* YES MSG ID 42)
 
         Args:
             msg (pyjs8call.message): Incoming message object
         '''
-        if msg.cmd == Message.CMD_HEARTBEAT:
-            msg_id = msg.value.split(Message.CMD_MSG)[1].trim(' ' + Message.EOM)
-            self._client.query_message_id(msg.origin, msg_id)
+        if msg.cmd in (Message.CMD_HEARTBEAT_SNR, Message.CMD_YES) and Message.CMD_MSG in msg.value:
+            self._rx_queue.append(msg)
+
+    def _get_msg_id(self, msg):
+        '''Parse out inbox message ID'''
+        if msg.cmd in (Message.CMD_HEARTBEAT_SNR, Message.CMD_YES) and Message.CMD_MSG in msg.value:
+            return msg.value.split('ID')[1].strip(' ' + Message.EOM)
 
     def _callback(self, msgs):
         if self._client.callback.inbox is not None:
@@ -87,11 +104,45 @@ class InboxMonitor:
             thread.daemon = True
             thread.start()
 
-    def _monitor(self):
+    def _monitor(self, query, destination, query_interval):
         '''Inbox monitor thread.'''
         last_inbox = []
+        last_query_timestamp = time.time()
+        query_interval *= 60
+
+        rx_processing = False
+        last_tx_timestamp = 0
 
         while self._enabled:
+            window_duration = self._client.get_tx_window_duration()
+            response_delay = window_duration * 30
+
+            if len(self._rx_queue) > 0:
+                rx_processing = True
+                msg = self._rx_queue.pop(0)
+
+                if msg.get('msg_id') is None and (last_tx_timestamp + response_delay) < time.time():
+                    # process next msg response
+                    #TODO
+                    print(self._get_msg_id(msg))
+                    msg.set('msg_id', self._get_msg_id(msg))
+                    self._client.query_message_id(msg.origin, msg.msg_id)
+                    # reset age
+                    msg.set('timestamp', time.time())
+                    self._rx_queue.insert(0, msg)
+
+                elif msg.get('msg_id') is not None and msg.age() > response_delay:
+                    # cull old msg
+                    rx_processing = False
+                else:
+                    # wait for response
+                    self._rx_queue.insert(0, msg)
+
+            elif not rx_processing and query and (last_query_timestamp + query_interval) < time.time():
+                self._client.query_messages(destination)
+                last_query_timestamp = time.time()
+
+            # check local inbox for new msgs
             inbox = self._client.get_inbox_messages()
 
             if inbox is not None:
@@ -102,7 +153,7 @@ class InboxMonitor:
                     self._callback(new_msgs)
 
             # delay until next window transition
-            default_delay = self._client.get_tx_window_duration() / 3
+            default_delay = window_duration / 3
             delay = self._client.window_monitor.next_transition_seconds(count = 1, fallback = default_delay)
             time.sleep(delay)
 
