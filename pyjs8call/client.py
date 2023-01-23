@@ -315,10 +315,12 @@ class Client:
 
         Message format: *DESTINATION**COMMAND* *MESSAGE*
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct the message to
+            destination (str, list): Callsign(s) to direct the message to
             command (str): Command to include in message (see *pyjs8call.message* static commands)
             message (str): Message text to send, defaults to None
         '''
@@ -336,10 +338,12 @@ class Client:
         
         Message format: *DESTINATION* *MESSAGE*
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct the message to
+            destination (str, list): Callsign(s) to direct the message to
             message (str): Message text to send
 
         Returns:
@@ -540,10 +544,12 @@ class Client:
 
         Message format: *DESTINATION* MSG *MESSAGE*
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct inbox message to
+            destination (str, list): Callsign(s) to direct the message to
             message (str): Message text to send
 
         Returns:
@@ -556,10 +562,12 @@ class Client:
 
         Message format: *REMOTE* MSG TO:*DESTINATION* *MESSAGE*
 
+        If *remote* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            remote (str): Callsign of intermediate station storing the message
+            remote (str, list): Callsign of intermediate station storing the message
             destination (str): Callsign of message recipient
             message (str): Message text to send
 
@@ -591,10 +599,12 @@ class Client:
         
         Message format: *DESTINATION* QUERY CALL *CALLSIGN*?
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct query to
+            destination (str, list): Callsign(s) to direct the query to
             callsign (str): Callsign to query for
 
         Returns:
@@ -603,15 +613,17 @@ class Client:
         message = callsign + Message.CMD_Q
         return self.send_directed_command_message(destination, Message.CMD_QUERY_CALL, message)
 
-    def query_messages(self, destination):
+    def query_messages(self, destination='@ALLCALL'):
         '''Send JS8Call stored message query.
         
         Message format: *DESTINATION* QUERY MSGS
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct query to
+            destination (str, list): Callsign(s) to direct the query to, defaults to '@ALLCALL'
 
         Returns:
             pyjs8call.message: Constructed message object
@@ -623,10 +635,12 @@ class Client:
         
         Message format: *DESTINATION* QUERY MSG *ID*
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct query to
+            destination (str, list): Callsign(s) to direct the query to
             msg_id (str): Message ID to query for
 
         Returns:
@@ -640,10 +654,12 @@ class Client:
         
         Message format: *DESTINATION* HEARING?
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct query to
+            destination (str, list): Callsign(s) to direct the query to
 
         Returns:
             pyjs8call.message: Constructed message object
@@ -655,10 +671,12 @@ class Client:
         
         Message format: *DESTINATION* SNR?
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct query to
+            destination (str, list): Callsign(s) to direct the query to
 
         Returns:
             pyjs8call.message: Constructed message object
@@ -670,10 +688,12 @@ class Client:
         
         Message format: *DESTINATION* GRID?
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct query to
+            destination (str, list): Callsign(s) to direct the query to
 
         Returns:
             pyjs8call.message: Constructed message object
@@ -685,10 +705,12 @@ class Client:
         
         Message format: *DESTINATION* INFO?
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct query to
+            destination (str, list): Callsign(s) to direct the query to
 
         Returns:
             pyjs8call.message: Constructed message object
@@ -700,10 +722,12 @@ class Client:
         
         Message format: *DESTINATION* STATUS?
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct query to
+            destination (str, list): Callsign(s) to direct the query to
 
         Returns:
             pyjs8call.message: Constructed message object
@@ -715,10 +739,12 @@ class Client:
         
         Message format: *DESTINATION* QUERY CALL *CALLSIGN*?
 
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+
         The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
 
         Args:
-            destination (str): Callsign to direct query to
+            destination (str, list): Callsign(s) to direct the query to
 
         Returns:
             pyjs8call.message: Constructed message object
