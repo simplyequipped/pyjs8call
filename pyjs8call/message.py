@@ -326,20 +326,21 @@ class Message:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        self.id = secrets.token_urlsafe(16)
-        self.type = Message.TX_SEND_MESSAGE
-        self.destination = destination
-        self.cmd = cmd
-        self.value = value
-        self.time = datetime.now(timezone.utc).timestamp()
-        self.timestamp = time.time()
-        self.params = {}
-        self.attributes = ['id', 'type', 'destination', 'cmd', 'value', 'time', 'params']
-        self.status = Message.STATUS_CREATED
+        self.attributes = []
         self.raw = None
+
+        self.set('id', secrets.token_urlsafe(16))
+        self.set('type', Message.TX_SEND_MESSAGE)
+        self.set('destination', destination)
+        self.set('cmd', cmd)
+        self.set('value', value)
+        self.set('time', datetime.now(timezone.utc).timestamp())
+        self.set('timestamp', time.time())
+        self.set('params', {})
+        self.set('status', Message.STATUS_CREATED)
         
         # initialize common msg fields
-        attrs = [
+        common = [
             'freq',
             'dial',
             'offset',
@@ -359,15 +360,8 @@ class Message:
             'call_activity'
         ]
 
-        for attr in attrs:
-            self.set(attr, None)
-
-        # uppercase values in tx msg
-        if self.destination is not None:
-            self.destination = self.destination.upper()
-        if self.value is not None:
-            self.value = self.value.upper()
-            self.text = self.value
+        for attribute in common:
+            self.set(attribute, None)
 
     def set(self, attribute, value):
         '''Set message attribute value.
@@ -375,14 +369,17 @@ class Message:
         Uses *setattr* internally to add attributes to the message object. Added attributes are tracked in the *attributes* attribute. Attributes are converted to lowercase for consistency.
 
         Special attribute handling for consistency:
-        - *call*: also sets *from* to the same value if *call* is not None and *from* is None
-        - *from*: also sets *origin* to the same value
+        - *call*: set *from* to the same value if *call* is not None and *from* is None
+        - *from*: set *origin* to the same value
+        - *to*: set *destination* to the same value
+        - *value*: uppercase and set *text* to the same value if type *str*
+        - *destination*: uppercase if type *str*, uppercase all if type *list*
 
-        Note that attempting to access Message.from results in an error.
+        Note that attempting to access Message.from directly results in an error.
 
         Args:
             attribute (str): Name of attribute to set
-            value (str): Value of attribute to set
+            value (any): Value of attribute to set
         '''
         attribute = attribute.lower()
         setattr(self, attribute, value)
@@ -390,17 +387,31 @@ class Message:
         if attribute not in self.attributes:
             self.attributes.append(attribute)
 
-        # set 'from' = 'call' for consistency
         if attribute == 'call' and value is not None and self.get('from') is None:
+            # set 'from' = 'call' for consistency
             self.set('from', value)
 
-        # Message.from cannot be called directly, use origin instead
-        if attribute == 'from':
+        elif attribute == 'from':
+            # Message.from cannot be called directly, use origin instead
             self.set('origin', value)
 
-        # set 'destination' = 'to' for consistency
-        if attribute == 'to':
+        elif attribute == 'to':
+            # set 'destination' = 'to' for consistency
             self.set('destination', value)
+
+        elif attribute == 'value' and isinstance(value, str):
+            # uppercase so tx monitor can compare to tx text field
+            self.set('value', value.upper())
+            self.set('text', value.upper())
+
+        # uppercase so tx monitor can compare to tx text field
+        elif attribute == 'destination' and isinstance(value, list):
+            # handle relay
+            self.set('destination', [dest.upper() for dest in value])
+            
+        elif attribute == 'destination' and isinstance(value, str):
+            self.set('destination', value.upper())
+
 
     def get(self, attribute):
         '''Get message attribute value.
@@ -423,7 +434,7 @@ class Message:
         Special attribute handling:
         *value*
         - If None, set to '' (empty string)
-        - If set and Message.type is TX_SEND_MESSAGE and Message.destination is not None (i.e. directed message), set to Message.destination and Message.value joined with a space.
+        - For directed messages join *destination*, *cmd*, and *value* appropriately
 
         Args:
             exclude (list): Attribute names to exclude (see *pack*), defaults to *[]*
@@ -444,16 +455,22 @@ class Message:
 
             # handle special cases
             if attribute == 'value':
-                # replace None with empty string, 'value' is always included
+                # 'value' is always included
                 if value is None:
                     value = ''
 
-                # build directed message
+                # directed message
                 if self.type == Message.TX_SEND_MESSAGE and self.destination is not None:
-                    if self.cmd is None:
-                        value = self.destination + ' ' + value
+                    if isinstance(self.destination, list):
+                        # handle relay
+                        destination = Message.CMD_RELAY.strip().join(self.destination)
                     else:
-                        value = self.destination + self.cmd + ' ' + value
+                        destination = self.destination
+                    
+                    if self.cmd is None:
+                        value = destination + ' ' + value
+                    else:
+                        value = destination + self.cmd + ' ' + value
 
                 value = value.strip()
 
@@ -469,10 +486,13 @@ class Message:
         The following attributes are excluded by default:
         - id
         - destination
-        - time
-        - from
         - origin
+        - cmd
+        - from
+        - time
+        - timestamp
         - text
+        - status
 
         Args:
             exclude (list): Attribute names to exclude, defaults to None
@@ -484,7 +504,7 @@ class Message:
             exclude = [] 
 
         #TODO make sure 'text' is not used since it is excluded by default
-        exclude.extend(['id', 'destination', 'time', 'from', 'origin', 'text'])
+        exclude.extend(['id', 'destination', 'cmd', 'time', 'timestamp', 'from', 'origin', 'text', 'status'])
 
         data = self.dict(exclude = exclude)
         # convert dict to json string
@@ -597,8 +617,9 @@ class Message:
 
         # relay path handling
 
-        if self.path is not None and Message.CMD_RELAY in self.path:
-            self.path = self.path.strip(Message.CMD_RELAY).split(Message.CMD_RELAY)
+        if self.path is not None and Message.CMD_RELAY.strip() in self.path:
+            relay = Message.CMD_RELAY.strip()
+            self.path = self.path.strip(relay).split(relay)
 
         # allow usage like: msg = Message().parse(rx_str)
         return self
@@ -633,7 +654,8 @@ class Message:
             bool: True if message is a directed to the specified station, False otherwise
         '''
         if isinstance(station, str):
-            return bool(self.is_directed() and self.destination.upper() == station.upper())
+            return bool(self.is_directed() and self.destination == station.upper())
+
         elif isinstance(station, list):
             return any( [self.is_directed_to(str(callsign)) for callsign in station] )
 
