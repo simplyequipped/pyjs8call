@@ -95,7 +95,7 @@ class SpotMonitor:
                     thread.daemon = True
                     thread.start()
 
-                elif (
+                if (
                     self._client.callback.group_spot is not None and
                     spot.destination in self._group_watch_list
                 ):
