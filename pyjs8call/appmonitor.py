@@ -24,9 +24,6 @@
 
 This module is initialized by pyjs8call.client via pyjs8call.js8call.
 
-The JS8Call application must be installed. On Debian systems try:
-`sudo apt install js8call`
-
 To run JS8Call headless on Linux xvfb must be installed. On Debian systems try:
 `sudo apt install xvfb`
 '''
