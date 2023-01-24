@@ -102,7 +102,6 @@ class Message:
     | CMD_CQ | ' CQ' |
     | CMD_SNR | ' SNR' |
     | CMD_SNR_Q | ' SNR?' |
-    | CMD_Q | ' ?' |
     | CMD_GRID_Q | ' GRID?' |
     | CMD_GRID | ' GRID' |
     | CMD_INFO_Q | ' INFO?' |
@@ -132,7 +131,8 @@ class Message:
     | CMD_CMD | ' CMD' |
     | CMD_SNR | ' SNR' |
     | CMD_73 | ' 73' |
-    | CMD_RELAY | ' >' |
+    | CMD_RELAY | '>' |
+    | CMD_Q | '?' |
     | CMD_FREETEXT | '&nbsp;' &nbsp;&nbsp;(space) |
     | CMD_FREETEXT_2 | '&nbsp;&nbsp;' &nbsp;(space x2) |
     | &nbsp; | &nbsp; |
@@ -262,7 +262,6 @@ class Message:
     CMD_CQ                  = ' CQ'
     CMD_SNR                 = ' SNR'
     CMD_SNR_Q               = ' SNR?'
-    CMD_Q                   = ' ?'
     CMD_GRID_Q              = ' GRID?'
     CMD_GRID                = ' GRID'
     CMD_INFO_Q              = ' INFO?'
@@ -292,7 +291,8 @@ class Message:
     CMD_CMD                 = ' CMD'
     CMD_SNR                 = ' SNR'
     CMD_73                  = ' 73'
-    CMD_RELAY               = ' >'
+    CMD_RELAY               = '>'
+    CMD_Q                   = '?'
     CMD_FREETEXT            = ' '
     CMD_FREETEXT_2          = '  '
 
@@ -401,16 +401,16 @@ class Message:
 
         elif attribute == 'value' and isinstance(value, str):
             # uppercase so tx monitor can compare to tx text field
-            self.set('value', value.upper())
+            self.value = value.upper()
             self.set('text', value.upper())
 
         # uppercase so tx monitor can compare to tx text field
         elif attribute == 'destination' and isinstance(value, list):
             # handle relay
-            self.set('destination', [dest.upper() for dest in value])
+            self.destination = [dest.upper() for dest in value]
             
         elif attribute == 'destination' and isinstance(value, str):
-            self.set('destination', value.upper())
+            self.destination = value.upper()
 
 
     def get(self, attribute):
@@ -463,7 +463,7 @@ class Message:
                 if self.type == Message.TX_SEND_MESSAGE and self.destination is not None:
                     if isinstance(self.destination, list):
                         # handle relay
-                        destination = Message.CMD_RELAY.strip().join(self.destination)
+                        destination = Message.CMD_RELAY.join(self.destination)
                     else:
                         destination = self.destination
                     
@@ -617,9 +617,8 @@ class Message:
 
         # relay path handling
 
-        if self.path is not None and Message.CMD_RELAY.strip() in self.path:
-            relay = Message.CMD_RELAY.strip()
-            self.path = self.path.strip(relay).split(relay)
+        if self.path is not None and Message.CMD_RELAY in self.path:
+            self.path = self.path.strip(Message.CMD_RELAY).split(Message.CMD_RELAY)
 
         # allow usage like: msg = Message().parse(rx_str)
         return self
