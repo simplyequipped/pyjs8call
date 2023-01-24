@@ -109,7 +109,7 @@ class InboxMonitor:
     def _monitor(self, query, destination, query_interval):
         '''Inbox monitor thread.'''
         last_inbox = []
-        last_query_timestamp = time.time()
+        last_query_timestamp = 0
         query_interval *= 60
 
         rx_processing = False
