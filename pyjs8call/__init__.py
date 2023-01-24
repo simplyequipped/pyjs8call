@@ -35,7 +35,6 @@ from pyjs8call.spotmonitor import SpotMonitor
 from pyjs8call.appmonitor import AppMonitor
 from pyjs8call.message import Message
 # modules importing message module
-from pyjs8call.activitymonitor import ActivityMonitor
 from pyjs8call.windowmonitor import WindowMonitor
 from pyjs8call.inboxmonitor import InboxMonitor
 from pyjs8call.timemonitor import DriftMonitor
