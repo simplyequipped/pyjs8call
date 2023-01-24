@@ -358,37 +358,6 @@ class Client:
         self.js8call.send(msg)
         return msg
 
-    def send_relay_message(self, relay, destination, message):
-        '''Send JS8Call directed message via relay.
-
-        Message format: *RELAY>DESTINATION>MESSAGE*
-
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
-
-        Args:
-            destination (str): Callsign to direct the message to
-            relay (str, list): Relaying callsign, or list of relaying callsigns
-            message (str): Message text to send
-
-        Returns:
-            pyjs8call.message: Constructed message object
-
-        Raises:
-            TypeError: *relay* is a type other than *str* or *list*
-        '''
-        if isinstance(relay, str):
-            value = [relay]
-        elif isinstance(relay, list):
-            value = relay
-        else:
-            raise TypeError('Relay must be of type list or str')
-        
-        value.append(destination)
-        value.append(message)
-        value = Message.CMD_RELAY.join(value)
-
-        return self.send_message(value)
-
     def send_heartbeat(self, grid=None):
         '''Send a JS8Call heartbeat message.
 
