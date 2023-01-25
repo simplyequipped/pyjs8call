@@ -238,6 +238,28 @@ class Client:
         '''
         return self.js8call.connected
 
+    def identities(self):
+        '''Get identities associated with local stations.
+        
+        Returns:
+            list: Configured callsign and custom groups
+        '''
+        return self.config.get_groups().append(self.get_station_callsign())
+    
+    def msg_is_to_me(self, msg):
+        '''Determine if specified message is addressed to local station.
+        
+        Utilizes *msg.is_directed_to()* and *client.identities()* internally.
+        
+        Args:
+            msg (pyjs8call.message): Message object to evaluate
+            
+        Returns:
+            bool: True if *msg* is addressed to the local station, False otherwise
+        '''
+        
+        return msg.is_directed_to(self.identities())
+    
     def clean_rx_message_text(self, msg):
         '''Clean incoming message text.
 
