@@ -47,16 +47,16 @@ class DriftMonitor:
     Typical application example:
     ```
     # manual sync to @TIME group
-    client.drift_monitor.sync()
+    client.drift.sync()
 
     # manual sync to specific station
-    client.drift_monitor.sync_to_station('KT7RUN')
+    client.drift.sync_to_station('KT7RUN')
 
     # automatic sync to @TIME group every hour
-    client.drift_monitor.enable()
+    client.drift.enable_auto_sync()
 
     # find appropriate time drift to decode messages
-    client.drift_monitor.search()
+    client.drift.search()
     ```
 
     '''
@@ -73,6 +73,7 @@ class DriftMonitor:
         '''
         self._client = client
         self._enabled = False
+        self._paused = False
         self._searching = False
         self._search_activity = []
         
@@ -357,7 +358,7 @@ class DriftMonitor:
         '''
         return self.sync_to_group('@TIME', threshold = threshold, age = age)
 
-    def enable(self, station=None, group='@TIME', interval=60, threshold=0.5, age=15):
+    def enable_auto_sync(self, station=None, group='@TIME', interval=60, threshold=0.5, age=15):
         '''Enable automatic time drift monitoring.
         
         Uses *sync_to_group()* if *group* is specified (default).
@@ -382,25 +383,41 @@ class DriftMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable(self):
+    def disable_auto_sync(self):
         '''Disable automatic time drift monitoring.'''
         self._enabled = False
+
+    def pause_auto_sync(self):
+        '''Pause automatic time drift monitoring.'''
+        self._paused = True
+        
+    def resume_auto_sync(self):
+        '''Resume automatic time drift monitoring.'''
+        self._paused = False
         
     def _restart_client(self):
         tx_text = self._client.js8call.get_state('tx_text')
+
         # no active outgoing message
-        if tx_text is None or len(tx_text.strip()) == 0:
-            # restart preserves outgoing message buffer
-            self._client.restart()
+        while tx_text not in (None, ''):
+            time.sleep(1)
+            tx_text = self._client.js8call.get_state('tx_text')
+        
+        self._client.restart()
 
     def _monitor(self, station, group, interval, threshold, age):
         '''Auto time drift sync thread.'''
-        # sync as soon as loop starts
         interval *= 60
+        # sync as soon as loop starts
         last_sync_timestamp = 0
         
         while self._enabled:
+            time.sleep(1)
+
             if last_sync_timestamp + interval < time.time():
+                if self._paused:
+                    continue
+
                 if group is not None:
                     self.sync_to_group(group, threshold = threshold, age = age)
                 elif station is not None:
@@ -410,8 +427,6 @@ class DriftMonitor:
                 
                 last_sync_timestamp = time.time()
                 
-            time.sleep(1)
-
             
 class TimeMaster:
     '''Manage time master messaging.
