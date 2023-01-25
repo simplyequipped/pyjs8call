@@ -45,6 +45,7 @@ class HeartbeatMonitor:
         '''
         self._client = client
         self._enabled = False
+        self._paused = False
 
     def enable(self, interval=10):
         '''Enable heartbeat monitoring.
@@ -65,13 +66,20 @@ class HeartbeatMonitor:
         '''Disable heartbeat monitoring.'''
         self._enabled = False
 
+    def pause(self):
+        '''Pause heartbeat monitoring.'''
+        self._paused = True
+
+    def resume(self):
+        '''Resume heartbeat monitoring.'''
+        self._paused = False
+
     def _monitor(self, interval):
         '''Heartbeat monitor thread.'''
         interval *= 60
         last_hb_timestamp = time.time()
 
         while self._enabled:
-            # allow interval change while waiting
             while last_hb_timestamp + interval > time.time():
                 time.sleep(1)
 
@@ -79,6 +87,7 @@ class HeartbeatMonitor:
                 if not self._enabled:
                     return
 
-            self._client.send_heartbeat()
-            last_hb_timestamp = time.time()
+            if not self.paused:
+                self._client.send_heartbeat()
+                last_hb_timestamp = time.time()
 
