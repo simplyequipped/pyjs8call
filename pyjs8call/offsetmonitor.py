@@ -299,7 +299,7 @@ class OffsetMonitor:
         while self._enabled:
             # wait until 0.5 seconds before the end of the tx window
             default_delay = self._client.get_tx_window_duration() / 2
-            delay = self._client.window_monitor.next_transition_seconds(count = 1, fallback = default_delay) - 0.5
+            delay = self._client.window.next_transition_seconds(count = 1, fallback = default_delay) - 0.5
             time.sleep(delay)
 
             # skip processing if actively sending a message
