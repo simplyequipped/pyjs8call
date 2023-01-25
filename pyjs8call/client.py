@@ -76,9 +76,9 @@ class Client:
 
         Registers the Client.stop function with the atexit module.
         
-        Sets the following settings with the intent of running headless:
+        Configures the following settings:
         - enable autoreply at startup
-        - diable autoreply confirmation
+        - disable autoreply confirmation
 
         Args:
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
