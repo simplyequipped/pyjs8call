@@ -73,36 +73,6 @@ class SpotMonitor:
         '''Disable spot monitoring.'''
         self._enabled = False
 
-    def _callback(self, spots):
-        '''New spots callback function handling.
-
-        Calls the *pyjs8call.client.callback.spots*, *pyjs8call.client.callback.station_spot*, and *pyjs8call.client.callback.group_spot* callback functions using *threading.Thread*.
-
-        Args:
-            spots (list): Spotted message objects
-        '''
-        if self._client.callback.spots is not None:
-            thread = threading.Thread(target=self._client.callback.spots, args=(spots,))
-            thread.daemon = True
-            thread.start()
-
-            for spot in spots:
-                if (
-                    self._client.callback.station_spot is not None and
-                    spot.origin in self._station_watch_list
-                ):
-                    thread = threading.Thread(target=self._client.callback.station_spot, args=(spot,))
-                    thread.daemon = True
-                    thread.start()
-
-                if (
-                    self._client.callback.group_spot is not None and
-                    spot.destination in self._group_watch_list
-                ):
-                    thread = threading.Thread(target=self._client.callback.group_spot, args=(spot,))
-                    thread.daemon = True
-                    thread.start()
-
     def add_station_watch(self, station):
         '''Add watched station.
 
@@ -161,6 +131,36 @@ class SpotMonitor:
         '''
         return self._group_watch_list
 
+    def _callback(self, spots):
+        '''New spots callback function handling.
+
+        Calls the *pyjs8call.client.callback.spots*, *pyjs8call.client.callback.station_spot*, and *pyjs8call.client.callback.group_spot* callback functions using *threading.Thread*.
+
+        Args:
+            spots (list): Spotted message objects
+        '''
+        if self._client.callback.spots is not None:
+            thread = threading.Thread(target=self._client.callback.spots, args=(spots,))
+            thread.daemon = True
+            thread.start()
+
+            for spot in spots:
+                if (
+                    self._client.callback.station_spot is not None and
+                    spot.origin in self._station_watch_list
+                ):
+                    thread = threading.Thread(target=self._client.callback.station_spot, args=(spot,))
+                    thread.daemon = True
+                    thread.start()
+
+                if (
+                    self._client.callback.group_spot is not None and
+                    spot.destination in self._group_watch_list
+                ):
+                    thread = threading.Thread(target=self._client.callback.group_spot, args=(spot,))
+                    thread.daemon = True
+                    thread.start()
+
     def _monitor(self):
         '''Spot monitor thread.
 
@@ -170,7 +170,7 @@ class SpotMonitor:
 
         while self._enabled:
             default_delay = self._client.get_tx_window_duration() / 3
-            delay = self._client.window_monitor.next_transition_seconds(count = 1, fallback = default_delay)
+            delay = self._client.window.next_transition_seconds(count = 1, fallback = default_delay)
             time.sleep(delay)
 
             # get new spots since last update
