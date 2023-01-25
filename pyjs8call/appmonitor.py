@@ -67,7 +67,7 @@ class AppMonitor:
         self.restart = True
         self._owner = owner
         self._client = client
-        self._monitor_thread = None
+        self._thread = None
 
         try:
             self._exec_path = subprocess.check_output(['which', 'js8call']).decode('utf-8').strip()
@@ -108,10 +108,10 @@ class AppMonitor:
             time.sleep(0.1)
 
         # start the application monitoring thread
-        if self.running and self._monitor_thread is None:
-            self._monitor_thread = threading.Thread(target=self._monitor)
-            self._monitor_thread.daemon = True
-            self._monitor_thread.start()
+        if self.running and self._thread is None:
+            self._thread = threading.Thread(target=self._monitor)
+            self._thread.daemon = True
+            self._thread.start()
 
         elif not self.running:
             raise RuntimeError('JS8Call application failed to start')
