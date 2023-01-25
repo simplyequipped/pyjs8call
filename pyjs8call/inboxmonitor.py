@@ -28,7 +28,10 @@ Set `client.callback.inbox` to receive new inbox messages as they arrive. See py
 __docformat__ = 'google'
 
 
+import os
 import time
+import json
+import sqlite3
 import threading
 
 from pyjs8call import Message
@@ -47,8 +50,100 @@ class InboxMonitor:
         '''
         self._client = client
         self._enabled = False
+        self._paused = False
         self._rx_queue = []
         self._rx_queue_lock = threading.Lock()
+
+    def message(self, msg_id):
+        db_path = self._client.config.get('Configuration', 'AzElDir')
+        db_file = os.path.join(db_path, 'inbox.db3')
+        conn = sqlite3.connect(db_file)
+        msg = conn.cursor().execute('SELECT * FROM inbox_v1 WHERE id = ?;', (str(msg_id),)).fetchone()
+        conn.close()
+
+        if msg is None:
+            return None
+
+        msg_id, blob = msg
+        blob = json.loads(blob)
+        msg = {
+            'id': int(msg_id),
+            'cmd' : blob['params']['CMD'],
+            'freq' : blob['params']['DIAL'],
+            'offset' : blob['params']['OFFSET'],
+            'snr' : blob['params']['SNR'],
+            'speed' : blob['params']['SUBMODE'],
+            'time' : blob['params']['UTC'],
+            'origin' : blob['params']['FROM'],
+            'destination' : blob['params']['TO'],
+            'path' : blob['params']['PATH'],
+            'text' : blob['params']['TEXT'].strip(),
+            'value' : blob['value'],
+            'status' : blob['type'].lower(),
+            'unread': bool(blob['type'].lower() == 'unread')
+        }
+
+        return msg
+
+    def messages(self):
+        db_path = self._client.config.get('Configuration', 'AzElDir')
+        db_file = os.path.join(db_path, 'inbox.db3')
+        conn = sqlite3.connect(db_file)
+        inbox = conn.cursor().execute('SELECT * FROM inbox_v1;').fetchall()
+        conn.close()
+
+        if len(inbox) == 0:
+            return []
+
+        msgs = []
+        for msg_id, blob in inbox:
+            blob = json.loads(blob)
+            msgs.append({
+                'id': int(msg_id),
+                'cmd' : blob['params']['CMD'],
+                'freq' : blob['params']['DIAL'],
+                'offset' : blob['params']['OFFSET'],
+                'snr' : blob['params']['SNR'],
+                'speed' : blob['params']['SUBMODE'],
+                'time' : blob['params']['UTC'],
+                'origin' : blob['params']['FROM'],
+                'destination' : blob['params']['TO'],
+                'path' : blob['params']['PATH'],
+                'text' : blob['params']['TEXT'].strip(),
+                'value' : blob['value'],
+                'status' : blob['type'].lower(),
+                'unread': bool(blob['type'].lower() == 'unread')
+            }]
+
+        return msgs
+
+    def unread(self):
+        return [msg for msg in self.messages() if msg['unread']]
+
+    def unread_count(self):
+        db_path = self._client.config.get('Configuration', 'AzElDir')
+        db_file = os.path.join(db_path, 'inbox.db3')
+        conn = sqlite3.connect(db_file)
+        count = conn.cursor().execute('SELECT COUNT(*) FROM inbox_v1 WHERE json_extract(blob, "$.type") = "UNREAD"').fetchone()
+        conn.close()
+
+        return int(count[0])
+
+    def mark_read(self, msg_id):
+        db_path = self._client.config.get('Configuration', 'AzElDir')
+        db_file = os.path.join(db_path, 'inbox.db3')
+        conn = sqlite3.connect(db_file)
+        conn.cursor().execute('UPDATE inbox_v1 SET blob = json_set(blob, "$.type", "READ") WHERE id = ?;', (str(msg_id),))
+        conn.commit()
+        conn.close()
+
+    def mark_all_read(self):
+        db_path = self._client.config.get('Configuration', 'AzElDir')
+        db_file = os.path.join(db_path, 'inbox.db3')
+        conn = sqlite3.connect(db_file)
+        conn.cursor().execute('UPDATE inbox_v1 SET blob = json_set(blob, "$.type", "READ");')
+        conn.commit()
+        conn.close()
 
     def enable(self, query=True, destination='@ALLCALL', interval=60):
         '''Enable inbox monitoring.
@@ -74,6 +169,14 @@ class InboxMonitor:
         '''Disable inbox monitoring.'''
         self._enabled = False
         self._client.callback.remove_incoming(self.process_incoming)
+
+    def pause(self):
+        '''Pause inbox monitoring.'''
+        self._paused = True
+
+    def resume(self):
+        '''Resume inbox monitoring.'''
+        self._paused = False
 
     def process_incoming(self, msg):
         '''Process incoming directed messages.
@@ -141,8 +244,9 @@ class InboxMonitor:
                     self._rx_queue.insert(0, msg)
 
             elif not rx_processing and query and (last_query_timestamp + query_interval) < time.time():
-                self._client.query_messages(destination)
-                last_query_timestamp = time.time()
+                if not self.paused:
+                    self._client.query_messages(destination)
+                    last_query_timestamp = time.time()
 
             # check local inbox for new msgs
             inbox = self._client.get_inbox_messages()
@@ -156,7 +260,7 @@ class InboxMonitor:
 
             # delay until next window transition
             default_delay = window_duration / 3
-            delay = self._client.window_monitor.next_transition_seconds(count = 1, fallback = default_delay)
+            delay = self._client.window.next_transition_seconds(count = 1, fallback = default_delay)
             time.sleep(delay)
 
 
