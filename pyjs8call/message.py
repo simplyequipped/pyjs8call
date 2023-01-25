@@ -550,7 +550,7 @@ class Message:
             
             for message in msg['params']['MESSAGES']:
                 self.messages.append({
-                    'cmd' : message['params']['CMD'].strip(),
+                    'cmd' : message['params']['CMD'],
                     'freq' : message['params']['DIAL'],
                     'offset' : message['params']['OFFSET'],
                     'snr' : message['params']['SNR'],
@@ -560,7 +560,9 @@ class Message:
                     'destination' : message['params']['TO'],
                     'path' : message['params']['PATH'],
                     'text' : message['params']['TEXT'].strip(),
-                    'type' : message['type'].lower()
+                    'value' : message['value'],
+                    'status' : message['type'].lower(),
+                    'unread': bool(message['type'].lower() == 'unread')
                 })
 
         elif self.type == Message.RX_CALL_ACTIVITY:
