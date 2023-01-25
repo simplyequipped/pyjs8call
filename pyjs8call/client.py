@@ -53,14 +53,17 @@ class Client:
 
     Attributes:
         js8call (pyjs8call.js8call): Manages JS8Call application and TCP socket communication
-        spot_monitor (pyjs8call.spotmonitor): Monitors station activity and issues callbacks
-        window_monitor (pyjs8call.windowmonitor): Monitors the JS8Call transmit window
-        offset_monitor (pyjs8call.offsetmonitor): Manages JS8Call offset frequency
-        tx_monitor (pyjs8call.txmonitor): Monitors JS8Call transmit text for outgoing messages
-        drift_monitor (pyjs8call.timemonitor): Monitors JS8Call time drift
+        spots (pyjs8call.spotmonitor): Monitors station activity and issues callbacks
+        window (pyjs8call.windowmonitor): Monitors the JS8Call transmit window
+        offset (pyjs8call.offsetmonitor): Manages JS8Call offset frequency
+        outgoing (pyjs8call.txmonitor): Monitors JS8Call transmit text for outgoing messages
+        drift (pyjs8call.timemonitor): Monitors JS8Call time drift
         time_master (pyjs8call.timemonitor): Manages time master outgoing messages
-        inbox_monitor (pyjs8call.inboxmonitor): Monitors JS8Call inbox messages
+        inbox (pyjs8call.inboxmonitor): Monitors JS8Call inbox messages
         config (pyjs8call.confighandler): Manages JS8Call configuration file
+        heartbeat (pyjs8call.hbmonitor): Manages heartbeat outgoing messages
+        callback (pyjs8call.client.Callbacks): Callback function reference object
+        settings (pyjs8call.client.Settings): Configuration setting function reference object
         clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages
         monitor_directed_tx (bool): Monitor outgoing message status (see pyjs8call.txmonitor)
         host (str): IP address matching JS8Call *TCP Server Hostname* setting
@@ -72,6 +75,10 @@ class Client:
         '''Initialize JS8Call API client.
 
         Registers the Client.stop function with the atexit module.
+        
+        Sets the following settings with the intent of running headless:
+        - enable autoreply at startup
+        - diable autoreply confirmation
 
         Args:
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
@@ -98,19 +105,22 @@ class Client:
         self.online = False
 
         self.js8call = None
-        self.spot_monitor = None
-        self.window_monitor = None
-        self.offset_monitor = None
-        self.tx_monitor = None
-        self.drift_monitor = None
+        self.spots = None
+        self.window = None
+        self.offset = None
+        self.outgoing = None
+        self.drift = None
         self.time_master = None
-        self.inbox_monitor = None
+        self.inbox = None
+        self.heartbeat = None
+
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
 
         # initialize the config file handler
         self.config = pyjs8call.ConfigHandler(config_path = config_path)
+        self.settings = Settings(self)
 
         # initialize callback object
         self.callback = Callbacks()
@@ -118,26 +128,8 @@ class Client:
         # stop application and client at exit
         atexit.register(self.stop)
         
-    def set_config_profile(self, profile):
-        '''Set active JS8Call configuration profile in the JS8Call.ini file.
-
-        Restarts the JS8Call client (self) if already online.
-
-        Args:
-            profile (str): Profile name
-
-        Raises:
-            ValueError: Specified profile name does not exist
-        '''
-        if profile not in self.config.get_profile_list():
-            raise ValueError('Config profile ' + profile + ' does not exist')
-
-        # set the profile as active
-        self.config.change_profile(profile)
-
-        # restart the app to apply new profile if already running
-        if self.online:
-            self.restart()
+        self.settings.enable_autoreply_startup()
+        self.settings.disable_autoreply_confirmation()
 
     def start(self, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
@@ -149,6 +141,7 @@ class Client:
         - Tx monitor (see pyjs8call.txmonitor)
         - Time drift monitor (see pyjs8call.timemonitor)
         - Time master (see pyjs8call.timemonitor)
+        - Heartbeat monitor (see pyjs8call.hbmonitor)
         - Inbox master (see pyjs8call.inboxmonitor)
 
         Args:
@@ -176,14 +169,14 @@ class Client:
         rx_thread.start()
         time.sleep(1)
 
-        self.window_monitor = pyjs8call.WindowMonitor(self)
-        self.spot_monitor = pyjs8call.SpotMonitor(self)
-        self.offset_monitor = pyjs8call.OffsetMonitor(self)
-        self.tx_monitor = pyjs8call.TxMonitor(self)
-        self.drift_monitor = pyjs8call.DriftMonitor(self)
+        self.window = pyjs8call.WindowMonitor(self)
+        self.spot = pyjs8call.SpotMonitor(self)
+        self.offset = pyjs8call.OffsetMonitor(self)
+        self.outgoing = pyjs8call.TxMonitor(self)
+        self.drift = pyjs8call.DriftMonitor(self)
         self.time_master = pyjs8call.TimeMaster(self)
-        self.heartbeat_monitor = pyjs8call.HeartbeatMonitor(self)
-        self.inbox_monitor = pyjs8call.InboxMonitor(self)
+        self.heartbeat = pyjs8call.HeartbeatMonitor(self)
+        self.inbox = pyjs8call.InboxMonitor(self)
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.
@@ -203,6 +196,8 @@ class Client:
 
         pyjs8call.js8call settings are preserved.
         '''
+        # write any pending config file changes, convience
+        self.config.write()
         # save settings
         settings = self.js8call.restart_settings()
 
@@ -305,7 +300,7 @@ class Client:
         msg = Message(value = message)
 
         if self.monitor_tx:
-            self.tx_monitor.monitor(msg)
+            self.outgoing.monitor(msg)
 
         self.js8call.send(msg)
         return msg
@@ -328,7 +323,7 @@ class Client:
         msg = Message(destination, command, message)
 
         if self.monitor_tx:
-            self.tx_monitor.monitor(msg)
+            self.outgoing.monitor(msg)
 
         self.js8call.send(msg)
         return msg
@@ -353,7 +348,7 @@ class Client:
         msg = Message(destination = destination, value = message)
 
         if self.monitor_tx:
-            self.tx_monitor.monitor(msg)
+            self.outgoing.monitor(msg)
 
         self.js8call.send(msg)
         return msg
@@ -1077,38 +1072,6 @@ class Client:
 
         return self.submode_to_speed(speed)
 
-    def set_speed(self, speed):
-        '''Set JS8Call modem speed.
-
-        **NOTE: The JS8Call API only sets the modem speed in the menu without changing the configured modem speed, which makes this function useless. This is a JS8Call API issue.**
-
-        Possible modem speeds:
-        - slow
-        - normal
-        - fast
-        - turbo
-        - ultra
-
-        Args:
-            speed (str): Speed to set
-
-        Returns:
-            str: JS8Call modem speed setting
-        '''
-        if isinstance(speed, str):
-            speeds = {'slow':4, 'normal':0, 'fast':1, 'turbo':2, 'ultra':8}
-            if speed in speeds:
-                speed = speeds[speed]
-            else:
-                raise ValueError('Invalid speed: ' + str(speed))
-
-        msg = Message()
-        msg.set('type', Message.MODE_SET_SPEED)
-        msg.set('params', {'SPEED': speed})
-        self.js8call.send(msg)
-        time.sleep(self._set_get_delay)
-        return self.get_speed()
-
     def get_bandwidth(self, speed=None):
         '''Get JS8Call signal bandwidth based on modem speed.
 
@@ -1267,6 +1230,111 @@ class Client:
 #        callsign = self.get_station_callsign()
 #        heard = {}
         
+
+
+class Settings:
+    def __init__(self, client):
+        self._client = client
+
+    def enable_heartbeat_networking(self):
+        self._client.config.set('Common', 'SubModeHB', 'true')
+
+    def disable_heartbeat_networking(self):
+        self._client.config.set('Common', 'SubModeHB', 'false')
+
+    def enable_heartbeat_acknowledgements(self):
+        self._client.config.set('Common', 'SubModeHBAck', 'true')
+
+    def disable_heartbeat_acknowledgements(self):
+        self._client.config.set('Common', 'SubModeHBAck', 'false')
+
+    def enable_multi_decode(self):
+        self._client.config.set('Common', 'SubModeHBMultiDecode', 'true')
+
+    def disable_multi_decode(self):
+        self._client.config.set('Common', 'SubModeMultiDecode', 'false')
+
+    def enable_autoreply_startup(self):
+        self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'true')
+
+    def disable_autoreply_startup(self):
+        self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'false')
+
+    def enable_autoreply_confirmation(self):
+        self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'true')
+
+    def disable_autoreply_confirmation(self):
+        self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'false')
+
+    def enable_allcall(self):
+        self._client.config.set('Configuration', 'AvoidAllcall', 'false')
+
+    def disable_allcall(self):
+        self._client.config.set('Configuration', 'AvoidAllcall', 'true')
+
+    def enable_reporting(self):
+        self._client.config.set('Configuration', 'PSKReporter', 'true')
+
+    def disable_reporting(self):
+        self._client.config.set('Configuration', 'PSKReporter', 'false')
+
+    def enable_transmit(self):
+        self._client.config.set('Configuration', 'TransmitOFF', 'false')
+
+    def disable_autoreply_confirmation(self):
+        self._client.config.set('Configuration', 'TransmitOFF', 'true')
+
+    def set_profile(self, profile):
+        '''Set active JS8Call configuration profile.
+
+        Args:
+            profile (str): Profile name
+
+        Raises:
+            ValueError: Specified profile name does not exist
+        '''
+        if profile not in self._client.config.get_profile_list():
+            raise ValueError('Config profile ' + profile + ' does not exist')
+
+        # set the profile as active
+        self._client.config.change_profile(profile)
+
+    def set_speed(self, speed):
+        '''Set JS8Call modem speed.
+
+        The modem speed is set in the configuration file which requires that the application be restarted to utilize the new setting. See *client.restart()*.
+
+        Possible modem speeds:
+        - slow
+        - normal
+        - fast
+        - turbo
+        - ultra
+
+        Args:
+            speed (str): Speed to set
+
+        Returns:
+            str: JS8Call modem speed setting
+
+        '''
+        if isinstance(speed, str):
+            speeds = {'slow':4, 'normal':0, 'fast':1, 'turbo':2, 'ultra':8}
+            if speed in speeds:
+                speed = speeds[speed]
+            else:
+                raise ValueError('Invalid speed: ' + str(speed))
+
+        return self._client.config.set('Common', 'SubMode', speed)
+
+#        TODO this code sets speed via API, which doesn't work as of JS8Call v2.2
+#        msg = Message()
+#        msg.set('type', Message.MODE_SET_SPEED)
+#        msg.set('params', {'SPEED': speed})
+#        self.js8call.send(msg)
+#        time.sleep(self._set_get_delay)
+#        return self.get_speed()
+
 
 
 class Callbacks:
