@@ -69,8 +69,32 @@ class InboxMonitor:
     def message(self, msg_id):
         '''Get specified inbox message.
         
+        An inbox message is a *dict* with the following keys:
+        
+        | Key | Value Type |
+        | -------- | -------- |
+        | cmd | *str* |
+        | freq | *int* | 
+        | offset | *int* | 
+        | snr | *int* |
+        | speed | *int* |
+        | time | *str* |
+        | origin | *str* |
+        | destination | *str* |
+        | path | *str* |
+        | text | *str* |
+        | type | *str* |
+        | value | *str* |
+        | status | *str* |
+        | unread | *bool* |
+        | stored | *bool* |
+        
         Args:
             msg_id (int): ID of message to retrieve
+
+        Returns:
+            dict: Message information
+            None: Message with the specified ID does not exist
         '''
         db_path = self._client.config.get('Configuration', 'AzElDir')
         db_file = os.path.join(db_path, 'inbox.db3')
@@ -97,7 +121,8 @@ class InboxMonitor:
             'text' : blob['params']['TEXT'].strip(),
             'value' : blob['value'],
             'status' : blob['type'].lower(),
-            'unread': bool(blob['type'].lower() == 'unread')
+            'unread': bool(blob['type'].lower() == 'unread'),
+            'stored': bool(blob['type'].lower() == 'store')
         }
 
         return msg
@@ -123,6 +148,7 @@ class InboxMonitor:
         | value | *str* |
         | status | *str* |
         | unread | *bool* |
+        | stored | *bool* |
         
         Returns:
             list: List of inbox messages
@@ -153,19 +179,27 @@ class InboxMonitor:
                 'text' : blob['params']['TEXT'].strip(),
                 'value' : blob['value'],
                 'status' : blob['type'].lower(),
-                'unread': bool(blob['type'].lower() == 'unread')
-            }]
+                'unread': bool(blob['type'].lower() == 'unread'),
+                'stored': bool(blob['type'].lower() == 'store')
+            })
 
         return msgs
 
     def unread(self):
         '''Get unread messages addressed to local station.'''
-        callsign = self._client.get_station_callsign()
-        return [msg for msg in self.messages() if msg['unread'] and msg['to'] == callsign]
+        return [msg for msg in self.messages() if msg['unread']]
+
+    def stored(self):
+        '''Get stored messages addressed to remote stations.'''
+        return [msg for msg in self.messages() if msg['stored']]
 
     def unread_count(self):
         '''Get count of unread messages addressed to local station.'''
         return len(self.unread())
+
+    def stored_count(self):
+        '''Get count of stored messages addressed to remote stations.'''
+        return len(self.stored())
 
     def mark_read(self, msg_id):
         '''Mark specified inbox message as read.
@@ -180,16 +214,28 @@ class InboxMonitor:
         conn.commit()
         conn.close()
 
+    def mark_unread(self, msg_id):
+        '''Mark specified inbox message as unread.
+        
+        Args:
+            msg_id (int): ID of message to mark as unread
+        '''
+        db_path = self._client.config.get('Configuration', 'AzElDir')
+        db_file = os.path.join(db_path, 'inbox.db3')
+        conn = sqlite3.connect(db_file)
+        conn.cursor().execute('UPDATE inbox_v1 SET blob = json_set(blob, "$.type", "UNREAD") WHERE id = ?;', (str(msg_id),))
+        conn.commit()
+        conn.close()
+
     def mark_all_read(self):
         '''Mark all inbox messages addressed to local station as read.
         
         Messages stored for other stations are not changed.
         '''
-        callsign = self._client.get_station_callsign()
         db_path = self._client.config.get('Configuration', 'AzElDir')
         db_file = os.path.join(db_path, 'inbox.db3')
         conn = sqlite3.connect(db_file)
-        conn.cursor().execute('UPDATE inbox_v1 SET blob = json_set(blob, "$.type", "READ") WHERE json_extract(blob, "$.params.TO") = "?";', (callsign,))
+        conn.cursor().execute('UPDATE inbox_v1 SET blob = json_set(blob, "$.type", "READ") WHERE json_extract(blob, "$.type") != "STORE";')
         conn.commit()
         conn.close()
                 
@@ -201,15 +247,14 @@ class InboxMonitor:
         Args:
             unread (bool): Remove unread messages if True, only remove read messages if False, defaults to False
         '''
-        callsign = self._client.get_station_callsign()
         db_path = self._client.config.get('Configuration', 'AzElDir')
         db_file = os.path.join(db_path, 'inbox.db3')
         conn = sqlite3.connect(db_file)
                 
         if unread:
-            conn.cursor().execute('DELETE FROM inbox_v1 WHERE json_extract(blob, "$.params.TO") = "?");', (callsign,))
+            conn.cursor().execute('DELETE FROM inbox_v1 WHERE json_extract(blob, "$.type") != "STORE";')
         else:
-            conn.cursor().execute('DELETE FROM inbox_v1 WHERE json_extract(blob, "$.type") = "READ" AND json_extract(blob, "$.params.TO") = "?";', (callsign,))
+            conn.cursor().execute('DELETE FROM inbox_v1 WHERE json_extract(blob, "$.type") = "READ" AND json_extract(blob, "$.type") != "STORE";')
                 
         conn.commit()
         conn.close()
@@ -219,7 +264,6 @@ class InboxMonitor:
         
         Removes all messages including those stored for other stations. See *clear()* to only remove messages addressed to the local station.
         '''
-        callsign = self._client.get_station_callsign()
         db_path = self._client.config.get('Configuration', 'AzElDir')
         db_file = os.path.join(db_path, 'inbox.db3')
         conn = sqlite3.connect(db_file)
