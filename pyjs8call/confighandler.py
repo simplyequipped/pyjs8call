@@ -105,53 +105,51 @@ class ConfigHandler:
 
         Args:
             section (str): Section name containing the specified option
-            option (str): Option name to set value for
+            option (str): Option name to set the value of
             value (str, int, float, bool): Option value to set
 
         Returns:
-            str: Value of the specified option in the specified section, or None if value is a type other than those listed above
+            str: Value of the specified option in the specified section, or None if the specified option does not exist
 
         Raises:
-            RuntimeError: JS8Call onfig file does not contain a 'Configuration' section, likely because JS8Call has not be run before using pyjs8call
+            RuntimeError: JS8Call onfig file does not contain a 'Configuration' section
+            TypeError: Option value is a type other than str, int, float, or bool
         '''
         try:
             self.config.set(section, option, str(value))
         except configparser.NoSectionError as e:
-            if section == 'Configuration':
-                raise RuntimeError('JS8Call config file section \'Configuration\' does not exist, try running and configuring the JS8Call application normally before attempting to use pyjs8call') from e
-            else:
-                raise e
-
+            raise RuntimeError('JS8Call config file section \'' + str(section) + '\' does not exist.') from e
+            
         if isinstance(value, (str, int, float, bool)):
             return self.get(section, option, value_type=type(value))
         else:
-            return None
+            raise TypeError('Config option value must be of type str, int, float, or bool.')
 
-    def get(self, section, option, value_type=str(), fallback=None):
+    def get(self, section, option, value_type=str, fallback=None):
         '''Get an option value from a given section.
 
-        Values can be of the following types:
-            - str
-            - int
-            - float
-            - bool
+        *value_type* must be one of the following:
+        - str
+        - int
+        - float
+        - bool
 
         Args:
-            section (str): Section name containing the specified option
-            option (str): Option name to get value for
-            value_type (str, int, float, bool): A variable or constructor function of the same type as the value to be returned
-            fallback (any): The value to be returned if the given option is not found, defaults to None
+            section (str): Name of the section containing the specified option
+            option (str): Option name to get the value of
+            value_type (str, int, float, bool): The type class of the type to return, defaults to str
+            fallback (any): The value to be returned if the specified option is not found, defaults to None
 
         Returns:
             The value of the specified option in the specified section as the specified type, or the fallback value if the option is not found.
         '''
-        if isinstance(value_type, str):
+        if value_type is str:
             return self.config.get(section, option, fallback=fallback)
-        elif isinstance(value_type, int):
+        elif value_type is int:
             return self.config.getint(section, option, fallback=fallback)
-        elif isinstance(value_type, float):
+        elif value_type is float:
             return self.config.getfloat(section, option, fallback=fallback)
-        elif isinstance(value_type, bool):
+        elif value_type is bool:
             return self.config.getboolean(section, option, fallback=fallback)
 
     def clear_call_activity(self):
