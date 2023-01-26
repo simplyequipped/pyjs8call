@@ -141,6 +141,7 @@ class AppMonitor:
             # returns None when running
             code = self._process.poll()
 
+            # must handle None as well as return code 0, both evaluate to False
             if code is None:
                 running = True
             else:
