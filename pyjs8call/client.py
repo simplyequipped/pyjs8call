@@ -185,20 +185,16 @@ class Client:
         self.inbox = pyjs8call.InboxMonitor(self)
 
     def stop(self):
-        '''Stop all threads, close the TCP socket, and kill the JS8Call application.
-
-        Returns:
-            dict: Settings to re-initialize pyjs8call.js8call on restart, internal use only
-        '''
+        '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
         self.online = False
         
         try:
             return self.js8call.stop()
-        except:
+        except Exception:
             pass
 
     def restart(self):
-        '''Stop and restart all threads, the JS8Call application, and the TCP socket.
+        '''Stop and restart the JS8Call application and the associated TCP socket.
 
         pyjs8call.js8call settings are preserved.
         '''
@@ -730,24 +726,6 @@ class Client:
         '''
         return self.send_directed_command_message(destination, Message.CMD_STATUS_Q)
 
-    def query_call(self, destination, callsign):
-        '''Send JS8Call call query.
-        
-        Message format: *DESTINATION* QUERY CALL *CALLSIGN*?
-
-        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
-
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
-
-        Args:
-            destination (str, list): Callsign(s) to direct the query to
-
-        Returns:
-            pyjs8call.message: Constructed message object
-        '''
-        message = callsign + Message.CMD_Q
-        return self.send_directed_command_message(destination, Message.CMD_QUERY_CALL, message)
-
     def get_station_spots(self, station=None, group=None, age=0):
         '''Get list of spotted messages.
 
@@ -1228,7 +1206,7 @@ class Client:
             if callsign not in hearing:
                 hearing[callsign] = [spot.origin]
             elif spot.origin not in hearing[callsign]:
-                    hearing[callsign].append(spot.origin)
+                hearing[callsign].append(spot.origin)
                 
             if spot.cmd == Message.CMD_HEARING and spot.hearing is not None:
                 if spot.origin not in hearing:
