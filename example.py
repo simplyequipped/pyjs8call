@@ -18,6 +18,11 @@ def new_spots(spots):
 # callback for tx monitor status change
 def tx_status(msg):
     print('\tMessage ' + msg.id + ' status: ' + msg.status)
+    
+# callback for new inbox messages
+def new_inbox_msg(msgs):
+    for msg in msgs:
+        print('\t--- New inbox message from ' + msg['origin'])
 
 # function to send a directed message
 def send_message():
@@ -77,11 +82,15 @@ def show_menu():
 
 # initialize the client object and start the js8call application
 js8call = pyjs8call.Client()
-js8call.start()
 # set callback functions
 js8call.callback.register_incoming(rx_message)
 js8call.callback.spots = new_spots
 js8call.callback.outgoing = tx_status
+js8call.callback.inbox = new_inbox_msg
+js8call.start()
+
+# enable local inbox monitoring and periodic remote inbox message query
+js8call.inbox.enable()
 
 # read current configuration values
 freq = js8call.get_freq()
