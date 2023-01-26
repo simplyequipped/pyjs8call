@@ -151,7 +151,7 @@ class InboxMonitor:
         | stored | *bool* |
         
         Returns:
-            list: List of inbox messages
+            list: Inbox messages
         '''
         db_path = self._client.config.get('Configuration', 'AzElDir')
         db_file = os.path.join(db_path, 'inbox.db3')
@@ -186,19 +186,35 @@ class InboxMonitor:
         return msgs
 
     def unread(self):
-        '''Get unread messages addressed to local station.'''
+        '''Get unread messages addressed to local station.
+
+        Returns:
+            list: Unread messages
+        '''
         return [msg for msg in self.messages() if msg['unread']]
 
     def stored(self):
-        '''Get stored messages addressed to remote stations.'''
+        '''Get stored messages addressed to remote stations.
+
+        Returns:
+            list: Unread messages
+        '''
         return [msg for msg in self.messages() if msg['stored']]
 
     def unread_count(self):
-        '''Get count of unread messages addressed to local station.'''
+        '''Get count of unread messages addressed to local station.
+
+        Returns:
+            int: Number of unread messages in the local inbox
+        '''
         return len(self.unread())
 
     def stored_count(self):
-        '''Get count of stored messages addressed to remote stations.'''
+        '''Get count of stored messages addressed to remote stations.
+
+        Returns:
+            int: Number of stored messages in the local inbox
+        '''
         return len(self.stored())
 
     def mark_read(self, msg_id):

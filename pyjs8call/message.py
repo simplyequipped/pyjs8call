@@ -37,7 +37,7 @@ import secrets
 class Message:
     '''Message object for incoming and outgoing messages.
 
-    Static types:
+    Types:
 
     | Outgoing Type | Value |
     | -------- | -------- |
@@ -92,7 +92,7 @@ class Message:
 
     &nbsp;
 
-    Static commands:
+    Commands:
 
     | Command | Value |
     | -------- | -------- |
@@ -142,7 +142,7 @@ class Message:
 
     &nbsp;
 
-    Static statuses:
+    Statuses:
 
     | Status | Value |
     | -------- | -------- |
@@ -159,7 +159,7 @@ class Message:
 
     &nbsp;
 
-    Static characters:
+    Characters:
 
     | Character | Value |
     | -------- | -------- |
