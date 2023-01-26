@@ -562,7 +562,8 @@ class Message:
                     'text' : message['params']['TEXT'].strip(),
                     'value' : message['value'],
                     'status' : message['type'].lower(),
-                    'unread': bool(message['type'].lower() == 'unread')
+                    'unread': bool(message['type'].lower() == 'unread'),
+                    'stored': bool(message['type'].lower() == 'store')
                 })
 
         elif self.type == Message.RX_CALL_ACTIVITY:
