@@ -91,6 +91,7 @@ class Client:
 
         Raises:
             ProcessLookupError: JS8Call application is not installed
+            RuntimeError: JS8Call config file section does not exist (likely because JS8Call has not been run after installing)
         '''
         try:
             subprocess.check_output(['which', 'js8call'])
@@ -128,8 +129,13 @@ class Client:
         # stop application and client at exit
         atexit.register(self.stop)
         
-        self.settings.enable_autoreply_startup()
-        self.settings.disable_autoreply_confirmation()
+        try:
+            self.settings.enable_autoreply_startup()
+            self.settings.disable_autoreply_confirmation()
+        except RuntimeError as e:
+            raise RuntimeError('Try launching JS8Call, configuring audio and CAT interfaces as needed, '
+                               'and then exiting the application normally. When the application '
+                               'exits normally the first time it will initialize the config file.') from e
 
     def start(self, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
