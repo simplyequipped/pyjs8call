@@ -511,7 +511,11 @@ class Client:
         | path | *str* |
         | text | *str* |
         | type | *str* |
-
+        | value | *str* |
+        | status | *str* |
+        | unread | *bool* |
+        | stored | *bool* |
+        
         Returns:
             list: List of inbox messages
         '''
@@ -521,7 +525,7 @@ class Client:
         messages = self.js8call.watch('inbox')
 
         if messages is not None and len(messages) > 0 and unread:
-            messages = [msg for msg in messages if msg['type'] == 'unread']
+            messages = [msg for msg in messages if msg['unread']]
             
         return messages
 
