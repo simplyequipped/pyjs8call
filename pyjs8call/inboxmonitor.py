@@ -374,8 +374,8 @@ class InboxMonitor:
                     self._client.query_messages(destination)
                     last_query_timestamp = time.time()
 
-            # check local inbox for new msgs
-            inbox = self._client.get_inbox_messages()
+            # check local inbox for new unread msgs
+            inbox = self.unread()
 
             if inbox is not None:
                 new_msgs = [msg for msg in inbox if msg not in last_inbox]
