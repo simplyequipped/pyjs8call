@@ -27,7 +27,7 @@ See a simple example in the *example.py* file at the top level of the repo.
     pip3 install pyjs8call
     ```
 
-3. Launch JS8Call to configure audio and CAT interface settings.
+3. Launch JS8Call to configure audio and CAT interface settings. Launching the application and exiting normally will initilize the configuration file.
 
 &nbsp;
 
