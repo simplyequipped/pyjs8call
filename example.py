@@ -90,7 +90,8 @@ js8call.callback.inbox = new_inbox_msg
 js8call.start()
 
 # enable local inbox monitoring and periodic remote inbox message query
-js8call.inbox.enable()
+# WARNING: enabling the inbox monitor will cause JS8Call to transmit almost immediately
+#js8call.inbox.enable()
 
 # read current configuration values
 freq = js8call.get_freq()
