@@ -132,6 +132,7 @@ class Client:
         try:
             self.settings.enable_autoreply_startup()
             self.settings.disable_autoreply_confirmation()
+            self.settings.enable_transmit()
         except RuntimeError as e:
             raise RuntimeError('Try launching JS8Call, configuring audio and CAT interfaces as needed, '
                                'and then exiting the application normally. When the application '
@@ -1319,14 +1320,14 @@ class Settings:
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
-        self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'true')
+        self._client.config.set('Configuration', 'AutoreplyConfirmation', 'true')
 
     def disable_autoreply_confirmation(self):
         '''Disable autoreply confirmation via config file.
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
-        self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'false')
+        self._client.config.set('Configuration', 'AutoreplyConfirmation', 'false')
 
     def enable_allcall(self):
         '''Enable @ALLCALL participation via config file.
