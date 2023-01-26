@@ -4,20 +4,28 @@
 
 Initial publicly released version.
 
-**0.1.1** (WIP)
+**0.1.1**
 
 - Increase pyjs8call.js8call default maximum spots to 5000
-- Replace pyjs8call.spot with pyjs8call.message, eliminating pyjs8call.spot
+- Replace *pyjs8call.spot* with pyjs8call.message, eliminating the *pyjs8call.spot* object
 - Improve pyjs8call.spotmonitor efficiency by checking spots at each rx/tx window transition
-- Replace various callback functions with the pyjs8call.client.Callbacks class
+- Add group spot management functions in pyjs8call.spotmonitor
+- Add callback function for group spots
+- Add callback function for new inbox messages
 - Improve callback handling by calling functions using *threading.Thread*
 - Improve restart handling by not reinitializing modules unnecessarily
-- Improve restart handling by saving and restoring internal configuration and state
-- Improve pyjs8call.windowmonitor by utilizing incoming messages in addition to outgoing messages
-- Add callback function for group specific spots
+- Improve restart handling by saving and restoring internal configuration and state without restarting sub-modules
+- Improve message parsing for specific types and commands
+- Add all JS8Call message types and commands to pyjs8call.message
+- Improve pyjs8call.windowmonitor by utilizing incoming messages in addition to outgoing tx frames
+- Add pyjs8call.client.Settings with common configuration file management functions
 - Add pyjs8call.timemonitor module for syncing time drift and managing time master stations
 - Add pyjs8call.hbmonitor module for automating heartbeat messages
+- Add pyjs8call.inboxmonitor module for local inbox message handling and syncing of remote inbox messages
+- Add pyjs8call.client.Callbacks which replaces module-specific callback functions
+- Add pyjs8call.client.Client.hearing function to parse spots for network mapping
+- Add multiple pyjs8call.client query message functions
+- Improve pyjs8call.client outgoing message functions to support relay destinations
 - Improvements per pylint
 - Documentation improvements
-- Update examples and example.py
-
+- Update documentation examples and example.py
