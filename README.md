@@ -122,12 +122,11 @@ def station_spotted(spot):
     print(spot.origin + ' spotted!')
     
 js8call = pyjs8call.Client()
-js8call.start()
-
 # set spot monitor callback
 js8call.callback.spots = new_spots
 # set station watcher callback
 js8call.callback.station_spot = station_spotted
+js8call.start()
 
 # watch multiple stations
 js8call.spot_monitor.add_station_watch('N0GQ')
@@ -135,6 +134,24 @@ js8call.spot_monitor.add_station_watch('K6ARK')
 
 # remove a station watcher, no hard feelings Adam :)
 js8call.spot_monitor.remove_station_watch('K6ARK')
+```
+
+Using the inbox monitor:
+```
+import pyjs8call
+
+# callback function for new inbox message
+def new_inbox_msg(msgs):
+    for msg in msgs:
+        print('New inbox message from ' + msg['origin'])
+
+js8call = pyjs8call.Client()
+# set inbox monitor callback
+js8call.callback.inbox = new_inbox_msg
+js8call.start()
+
+# enable local inbox monitoring and periodic remote inbox message query
+js8call.inbox.enable()
 ```
 
 Using the tx monitor:
@@ -146,10 +163,9 @@ def tx_status(msg):
     print('Message ' + msg.id + ' status: ' + msg.status)
     
 js8call = pyjs8call.Client()
-js8call.start()
-
 # set tx monitor callback
 js8call.callback.outgoing = tx_status
+js8call.start()
 
 # monitor directed message tx automatically (default)
 js8call.send_directed_message('OH8STN', 'Thanks for the great content')
@@ -158,6 +174,18 @@ js8call.send_directed_message('OH8STN', 'Thanks for the great content')
 js8call.monitor_directed_tx = False
 msg = js8call.send_directed_message('KT7RUN', 'Thanks for the great content')
 js8call.tx_monitor.monitor(msg)
+```
+
+Set config file settings:
+```
+import pyjs8call
+
+js8call = pyjs8call.Client()
+# set config file settings before starting
+js8call.enable_heartbeat_acknowledgements()
+js8call.enable_reporting()
+js8call.set_speed('normal')
+js8call.start()
 ```
 
 &nbsp;
