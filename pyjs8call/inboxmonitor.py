@@ -386,7 +386,7 @@ class InboxMonitor:
                     self._rx_queue.insert(0, msg)
 
             elif not rx_processing and query and (last_query_timestamp + query_interval) < time.time():
-                if not self.paused:
+                if not self._paused:
                     self._client.query_messages(destination)
                     last_query_timestamp = time.time()
 
