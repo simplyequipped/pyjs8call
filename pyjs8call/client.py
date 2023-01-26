@@ -1527,7 +1527,7 @@ class Callbacks:
             message_type (str): Message type, defaults to RX_DIRECTED
         
         Returns:
-            list: Ccallback functions associated with the specified message type
+            list: Callback functions associated with the specified message type
         '''
         if message_type in self.incoming:
             return self.incoming[message_type]
