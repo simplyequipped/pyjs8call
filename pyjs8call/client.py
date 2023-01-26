@@ -1265,59 +1265,139 @@ class Client:
 
 
 class Settings:
+    '''Settings function container.
+    
+    This class is initilized by pyjs8call.client.Client.
+    '''
+    
     def __init__(self, client):
+        '''Initialize settings object.
+
+        Returns:
+            pyjs8call.client.Settings: Constructed setting object
+        '''
         self._client = client
 
     def enable_heartbeat_networking(self):
+        '''Enable heartbeat networking via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Common', 'SubModeHB', 'true')
 
     def disable_heartbeat_networking(self):
+        '''Disable heartbeat networking via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Common', 'SubModeHB', 'false')
 
     def enable_heartbeat_acknowledgements(self):
+        '''Enable heartbeat acknowledgements via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Common', 'SubModeHBAck', 'true')
 
     def disable_heartbeat_acknowledgements(self):
+        '''Disable heartbeat acknowledgements via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Common', 'SubModeHBAck', 'false')
 
     def enable_multi_decode(self):
+        '''Enable multi-speed decoding via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Common', 'SubModeHBMultiDecode', 'true')
 
     def disable_multi_decode(self):
+        '''Disable multi-speed decoding via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Common', 'SubModeMultiDecode', 'false')
 
     def enable_autoreply_startup(self):
+        '''Enable autoreply on start-up via config file.
+        
+        It is recommended that this function be called before calling *client.start()*.. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'true')
 
     def disable_autoreply_startup(self):
+        '''Disable autoreply on start-up via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'false')
 
     def enable_autoreply_confirmation(self):
+        '''Enable autoreply confirmation via config file.
+        
+        When running headless the autoreply confirmation dialog box will be inaccessible.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'true')
 
     def disable_autoreply_confirmation(self):
+        '''Disable autoreply confirmation via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'false')
 
     def enable_allcall(self):
+        '''Enable @ALLCALL participation via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Configuration', 'AvoidAllcall', 'false')
 
     def disable_allcall(self):
+        '''Disable @ALLCALL participation via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Configuration', 'AvoidAllcall', 'true')
 
     def enable_reporting(self):
+        '''Enable PSKReporter reporting via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Configuration', 'PSKReporter', 'true')
 
     def disable_reporting(self):
+        '''Disable PSKReporter reporting via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Configuration', 'PSKReporter', 'false')
 
     def enable_transmit(self):
+        '''Enable transmitting via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Configuration', 'TransmitOFF', 'false')
 
-    def disable_autoreply_confirmation(self):
+    def disable_transmit(self):
+        '''Disable transmitting via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
         self._client.config.set('Configuration', 'TransmitOFF', 'true')
 
     def set_profile(self, profile):
-        '''Set active JS8Call configuration profile.
+        '''Set active JS8Call configuration profile via config file.
+        
+        This is a convenience function. See pyjs8call.confighandler for other configuration profile related functions.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
 
         Args:
             profile (str): Profile name
@@ -1326,15 +1406,15 @@ class Settings:
             ValueError: Specified profile name does not exist
         '''
         if profile not in self._client.config.get_profile_list():
-            raise ValueError('Config profile ' + profile + ' does not exist')
+            raise ValueError('Config profile \'' + profile + '\' does not exist')
 
         # set the profile as active
         self._client.config.change_profile(profile)
 
     def set_speed(self, speed):
-        '''Set JS8Call modem speed.
+        '''Set JS8Call modem speed via config file.
 
-        The modem speed is set in the configuration file which requires that the application be restarted to utilize the new setting. See *client.restart()*.
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
 
         Possible modem speeds:
         - slow
@@ -1371,6 +1451,8 @@ class Settings:
 
 class Callbacks:
     '''Callback functions container.
+    
+    This class is initilized by pyjs8call.client.Client.
 
     Attributes:
         incoming (dict): Incoming message callback function lists organized by message type
