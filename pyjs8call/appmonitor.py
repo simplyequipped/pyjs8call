@@ -139,7 +139,12 @@ class AppMonitor:
         # handle process started by self
         else:
             # returns None when running
-            running = not bool(self._process.poll())
+            code = self._process.poll()
+
+            if code is None:
+                running = True
+            else:
+                running = False
 
         self.running = running
         return running
