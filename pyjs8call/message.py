@@ -518,7 +518,7 @@ class Message:
         *Message.parse* should be called inside a try/except block to handle parsing errors.
 
         Args:
-            msg_str (str): Received message string to parse and load
+            msg_str (str): Received message string to parse
 
         Returns:
             pyjs8call.message: self
@@ -600,19 +600,13 @@ class Message:
                 
         # command handling
 
-        #TODO copied from js8net, test
-        if self.cmd == Message.CMD_GRID and self.text is not None:
-            if Message.ERR in self.text:
-                self.set('grid', None)
-            else:
-                grid = self.text.split()
+        if self.cmd == Message.CMD_GRID and self.text is not None and Message.ERR not in self.text:
+            grid = self.text.split()
+            
+            if len(grid) >= 4:
+                self.set('grid', grid[3])
                 
-                if len(grid) >= 4:
-                    grid = grid[3]
-
-                self.set('grid', grid)
-                
-        elif self.cmd == Message.CMD_HEARING and self.text is not None:
+        elif self.cmd == Message.CMD_HEARING and self.text is not None and Message.ERR not in self.text:
             # 0 = origin, 1 = destination, 2 = command, -1 = EOM
             hearing = self.text.split()[3:-1]
             self.set('hearing', hearing)
@@ -620,7 +614,7 @@ class Message:
 
         # relay path handling
 
-        if self.path is not None and Message.CMD_RELAY in self.path:
+        if self.path is not None and Message.CMD_RELAY in self.path and Message.ERR not in self.path:
             self.path = self.path.strip(Message.CMD_RELAY).split(Message.CMD_RELAY)
 
         # allow usage like: msg = Message().parse(rx_str)
