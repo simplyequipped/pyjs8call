@@ -141,7 +141,7 @@ class Client:
     def start(self, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
 
-        Starts monitoring objects and associated threads:
+        Initializes sub-module objects:
         - Spot monitor (see pyjs8call.spotmonitor)
         - Window monitor (see pyjs8call.windowmonitor)
         - Offset monitor (see pyjs8call.offsetmonitor)
@@ -150,6 +150,10 @@ class Client:
         - Time master (see pyjs8call.timemonitor)
         - Heartbeat monitor (see pyjs8call.hbmonitor)
         - Inbox master (see pyjs8call.inboxmonitor)
+
+        Only the spot, window, offset, and tx monitors are started automatically.
+
+        Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
 
         Args:
             debugging (bool): Print message data to the console, defaults to False
@@ -160,6 +164,8 @@ class Client:
         self.config.set('Configuration', 'TCPServer', self.host)
         self.config.set('Configuration', 'TCPServerPort', str(self.port))
         self.config.set('Configuration', 'AcceptTCPRequests', 'true')
+        # support pyjs8call.timemonitor features
+        self.config.add_group('@TIME')
         self.config.write()
 
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
