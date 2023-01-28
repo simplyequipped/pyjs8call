@@ -824,7 +824,7 @@ class Client:
         '''
         msg = Message()
         msg.set('type', Message.RIG_SET_FREQ)
-        msg.set('params', {'DIAL': self.js8call.state['freq'], 'OFFSET': offset})
+        msg.set('params', {'DIAL': self.js8call.state['dial'], 'OFFSET': offset})
         self.js8call.send(msg)
         time.sleep(self._set_get_delay)
         return self.get_offset()
