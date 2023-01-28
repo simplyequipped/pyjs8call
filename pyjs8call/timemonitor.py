@@ -63,8 +63,6 @@ class DriftMonitor:
     def __init__(self, client):
         '''Initialize drift monitor object.
 
-        Adds the group @TIME to JS8Call groups via the configuration file.
-
         Args:
             client (pyjs8call.cient): Parent client object
 
@@ -76,16 +74,19 @@ class DriftMonitor:
         self._paused = False
         self._searching = False
         self._search_activity = []
-        
-        self._client.config.add_group('@TIME')
+        self._drift = self._client.config.get('MainWindow', 'TimeDrift', value_type=int)
 
     def get_drift(self):
         '''Get current time drift.
 
+        Time drift changes are tracked internally when *set_drift()* is called.
+
+        Note that if time drift is changed via the JS8Call user interface this function will return the incorrect time drift. Time drift information is only saved to the configuration file on exit and is not available via the JS8Call API while the application is running.
+
         Returns:
-            int: Current time drift per the JS8Call configuration file
+            int: Current time drift setting
         '''
-        return self._client.config.get('MainWindow', 'TimeDrift', value_type=int())
+        return self._drift
 
     def set_drift(self, drift):
         '''Set time drift.
@@ -102,10 +103,10 @@ class DriftMonitor:
         Returns:
             int: Current time drift per the JS8Call configuration file
         '''
-        self._client.config.set('MainWindow', 'TimeDrift', int(drift))
+        self._drift = self._client.config.set('MainWindow', 'TimeDrift', int(drift))
         self._client.config.write()
         self._restart_client()
-        return self.get_drift()
+        return self._drift
 
     def set_drift_from_message(self, msg):
         '''Set time drift from *Message*.
