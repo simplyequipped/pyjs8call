@@ -363,15 +363,13 @@ class JS8Call:
         '''Add message to log queue.'''
         if msg.type in Message.TX_TYPES:
             msg_type = 'TX'
-            msg_content = msg.pack().decode('utf-8').strip()
         elif msg.type in Message.RX_TYPES:
             msg_type = 'RX'
-            msg_content = json.dumps(msg.dict())
 
         msg_time = time.strftime('%x %X', time.localtime(msg.timestamp))
 
         with self._log_queue_lock:
-            self._log_queue += msg_time + '  ' + msg_type + '  ' + msg_content + '\n'
+            self._log_queue += msg_time + '  ' + msg_type + '  ' + msg.dump() + '\n'
 
     def _log_monitor(self):
         '''Log queue monitor thread.'''
