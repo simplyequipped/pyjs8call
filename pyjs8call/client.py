@@ -956,7 +956,7 @@ class Client:
                     spot_hearing = [station for station in spot.hearing if station not in hearing[spot.origin]]
                     hearing[spot.origin].extend(spot_hearing)
             
-            if spot.cmd == Message.CMD_ACK:
+            if spot.cmd in (Message.CMD_ACK, Message.CMD_HEARTBEAT_SNR):
                 if spot.origin not in hearing:
                     hearing[spot.origin] = []
 
