@@ -576,7 +576,9 @@ class Message:
                     'origin' : key,
                     'grid' : value['GRID'],
                     'snr' : value['SNR'],
-                    'time' : value['UTC']
+                    'time' : value['UTC'],
+                    # hearing data added in client.get_call_activity
+                    'hearing': []
                 })
 
         #TODO can this replace activity monitor?
