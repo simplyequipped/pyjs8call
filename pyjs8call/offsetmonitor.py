@@ -61,7 +61,7 @@ class OffsetMonitor:
         self.heard_station_age = 100 # seconds
         self.bandwidth = self._client.settings.get_bandwidth()
         self.bandwidth_safety_factor = 1.25
-        self.offset = self._client.settings.get_offset(update = False)
+        self.offset = self._client.settings.get_offset()
         self._enabled = False
 
         self.enable()
@@ -318,7 +318,7 @@ class OffsetMonitor:
 
             # get the current settings
             self.bandwidth = self._client.settings.get_bandwidth()
-            current_offset = self._client.settings.get_offset(update = False)
+            current_offset = self._client.settings.get_offset()
 
             if int(current_offset) != int(self.offset):
                 self.offset = current_offset

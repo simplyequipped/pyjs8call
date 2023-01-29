@@ -255,7 +255,7 @@ class Client:
             list: Configured callsign and custom groups
         '''
         ids = self.config.get_groups()
-        ids.append(self.settings.get_station_callsign(update = False))
+        ids.append(self.settings.get_station_callsign())
         return ids
     
     def msg_is_to_me(self, msg):
@@ -497,7 +497,7 @@ class Client:
             pyjs8call.message: Constructed message object
         '''
         if callsign is None:
-            callsign = self.settings.get_station_callsign(update = False)
+            callsign = self.settings.get_station_callsign()
 
         message = ':POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode + ' ' + message
         return self.send_directed_command_message('@APRSIS', Message.CMD_CMD, message)
@@ -903,7 +903,7 @@ class Client:
             list: Messages from the rx text field
         '''
         rx_text = self.get_rx_text()
-        callsign = self.settings.get_station_callsign(update = False)
+        callsign = self.settings.get_station_callsign()
         msgs = rx_text.split('\n')
         msgs = [m.strip() for m in msgs if len(m.strip()) > 0]
 
@@ -935,7 +935,7 @@ class Client:
             dict: Example format *{'station': ['station', ...], ...}*
         '''
         age *= 60
-        callsign = self.settings.get_station_callsign(update = False)
+        callsign = self.settings.get_station_callsign()
         hearing = {}
         
         for spot in self.get_spots(age = age):
@@ -978,7 +978,7 @@ class Client:
 #        '''Get information on which stations are heard other stations.
 #        
 #        '''
-#        callsign = self.settings.get_station_callsign(update = False)
+#        callsign = self.settings.get_station_callsign()
 #        heard = {}
         
 
@@ -1155,7 +1155,7 @@ class Settings:
         else:
             raise ValueError('Invalid submode \'' + str(submode) + '\'')
 
-    def get_speed(self, update=True):
+    def get_speed(self, update=False):
         '''Get JS8Call modem speed.
 
         Possible modem speeds:
@@ -1166,7 +1166,7 @@ class Settings:
         - ultra
 
         Args:
-            update (bool): Update speed if True or use local state if False, defaults to True
+            update (bool): Update speed if True or use local state if False, defaults to False
 
         Returns:
             str: JS8call modem speed setting
@@ -1214,14 +1214,14 @@ class Settings:
 #        msg.set('type', Message.MODE_SET_SPEED)
 #        msg.set('params', {'SPEED': speed})
 #        self._client.js8call.send(msg)
-#        time.sleep(self._set_get_delay)
+#        time.sleep(self._client._set_get_delay)
 #        return self.get_speed()
 
-    def get_freq(self, update=True):
+    def get_freq(self, update=False):
         '''Get JS8Call dial frequency.
 
         Args:
-            update (bool): Update if True or use local state if False, defaults to True
+            update (bool): Update if True or use local state if False, defaults to False
 
         Returns:
             int: Dial frequency in Hz
@@ -1249,14 +1249,14 @@ class Settings:
         msg.set('type', Message.RIG_SET_FREQ)
         msg.set('params', {'DIAL': freq, 'OFFSET': self._client.js8call.state['offset']})
         self._client.js8call.send(msg)
-        time.sleep(self._set_get_delay)
+        time.sleep(self._client._set_get_delay)
         return self.get_freq()
 
-    def get_offset(self, update=True):
+    def get_offset(self, update=False):
         '''Get JS8Call offset frequency.
 
         Args:
-            update (bool): Update if True or use local state if False, defaults to True
+            update (bool): Update if True or use local state if False, defaults to False
 
         Returns:
             int: Offset frequency in Hz
@@ -1284,14 +1284,14 @@ class Settings:
         msg.set('type', Message.RIG_SET_FREQ)
         msg.set('params', {'DIAL': self._client.js8call.state['dial'], 'OFFSET': offset})
         self._client.js8call.send(msg)
-        time.sleep(self._set_get_delay)
+        time.sleep(self._client._set_get_delay)
         return self.get_offset()
 
-    def get_station_callsign(self, update=True):
+    def get_station_callsign(self, update=False):
         '''Get JS8Call callsign.
 
         Args:
-            update (bool): Update if True or use local state if False, defaults to True
+            update (bool): Update if True or use local state if False, defaults to False
 
         Returns:
             str: JS8Call configured callsign
@@ -1327,11 +1327,11 @@ class Settings:
         else:
             raise ValueError('callsign must be <= 9 characters in length and contain at least 1 number')
 
-    def get_station_grid(self, update=True):
+    def get_station_grid(self, update=False):
         '''Get JS8Call grid square.
 
         Args:
-            update (bool): Update if True or use local state if False, defaults to True
+            update (bool): Update if True or use local state if False, defaults to False
 
         Returns:
             str: JS8Call configured grid square
@@ -1360,14 +1360,14 @@ class Settings:
         msg.type = Message.STATION_SET_GRID
         msg.value = grid
         self._client.js8call.send(msg)
-        time.sleep(self._set_get_delay)
+        time.sleep(self._client._set_get_delay)
         return self.get_station_grid()
 
-    def get_station_info(self, update=True):
+    def get_station_info(self, update=False):
         '''Get JS8Call station information.
 
         Args:
-            update (bool): Update if True or use local state if False, defaults to True
+            update (bool): Update if True or use local state if False, defaults to False
 
         Returns:
             str: JS8Call configured station information
@@ -1395,7 +1395,7 @@ class Settings:
         msg.type = Message.STATION_SET_INFO
         msg.value = info
         self._client.js8call.send(msg)
-        time.sleep(self._set_get_delay)
+        time.sleep(self._client._set_get_delay)
         return self.get_station_info()
 
     def get_bandwidth(self, speed=None):
@@ -1418,7 +1418,7 @@ class Settings:
             int: Bandwidth of JS8Call signal
         '''
         if speed is None:
-            speed = self.get_speed(update = False)
+            speed = self.get_speed()
         elif isinstance(speed, int):
             speed = self.submode_to_speed(speed)
 
@@ -1449,7 +1449,7 @@ class Settings:
             int: Duration of JS8Call rx/tx window in seconds
         '''
         if speed is None:
-            speed = self.get_speed(update = False)
+            speed = self.get_speed()
         elif isinstance(speed, int):
             speed = self.submode_to_speed(speed)
 

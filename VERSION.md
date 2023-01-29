@@ -2,12 +2,11 @@
 
 **0.1.2**
 
-- Improve efficiency by reducing internal JS8Call API calls
 - Reorganize several pyjs8call.client functions into pyjs8call.client.Settings
+- Improve efficiency by reducing JS8Call API calls in pyjs8call.client.Settings *get* functions
 - Rename pyjs8call.client function *get_station_spots* to *get_spots*
 - Rename pyjc8call.client function *get_tx_window_duration* to *get_window_duration*
 - pyjs8call.client function *set_station_callsign* no longer restarts JS8Call automatically
-- Rename pyjs8call.client.Client.spot to pyjs8call.client.Client.spots
 - Various minor bug fixes
 - Documentation improvements
 - Updated documentation examples and example.py

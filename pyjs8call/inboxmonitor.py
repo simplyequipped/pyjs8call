@@ -334,7 +334,7 @@ class InboxMonitor:
         Args:
             msg (pyjs8call.message): Incoming message object
         '''
-        if msg.destination != self._client.settings.get_station_callsign(update = False):
+        if msg.destination != self._client.settings.get_station_callsign():
             return
 
         if msg.cmd in (Message.CMD_HEARTBEAT_SNR, Message.CMD_YES) and Message.CMD_MSG in msg.value:
