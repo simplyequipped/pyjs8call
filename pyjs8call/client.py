@@ -1250,7 +1250,7 @@ class Settings:
         msg.set('params', {'DIAL': freq, 'OFFSET': self._client.js8call.state['offset']})
         self._client.js8call.send(msg)
         time.sleep(self._client._set_get_delay)
-        return self.get_freq()
+        return self.get_freq(update = True)
 
     def get_offset(self, update=False):
         '''Get JS8Call offset frequency.
@@ -1285,7 +1285,7 @@ class Settings:
         msg.set('params', {'DIAL': self._client.js8call.state['dial'], 'OFFSET': offset})
         self._client.js8call.send(msg)
         time.sleep(self._client._set_get_delay)
-        return self.get_offset()
+        return self.get_offset(update = True)
 
     def get_station_callsign(self, update=False):
         '''Get JS8Call callsign.
@@ -1322,8 +1322,7 @@ class Settings:
         callsign = callsign.upper()
 
         if len(callsign) <= 9 and any(char.isdigit() for char in callsign):
-            callsign = self.config.set('Configuration', 'MyCall', callsign)
-            return callsign
+            return self.config.set('Configuration', 'MyCall', callsign)
         else:
             raise ValueError('callsign must be <= 9 characters in length and contain at least 1 number')
 
@@ -1361,7 +1360,7 @@ class Settings:
         msg.value = grid
         self._client.js8call.send(msg)
         time.sleep(self._client._set_get_delay)
-        return self.get_station_grid()
+        return self.get_station_grid(update = True)
 
     def get_station_info(self, update=False):
         '''Get JS8Call station information.
@@ -1396,7 +1395,7 @@ class Settings:
         msg.value = info
         self._client.js8call.send(msg)
         time.sleep(self._client._set_get_delay)
-        return self.get_station_info()
+        return self.get_station_info(update = True)
 
     def get_bandwidth(self, speed=None):
         '''Get JS8Call signal bandwidth based on modem speed.
