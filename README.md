@@ -94,12 +94,12 @@ js8call = pyjs8call.Client()
 js8call.start()
 
 # set frequency and offset
-freq = js8call.set_freq(7078000)
-offset = js8call.set_offset(1500)
+freq = js8call.settings.set_freq(7078000)
+offset = js8call.settings.set_offset(1500)
 print('Frequency: ' + str(freq))
 print('Offset: ' + str(offset))
 
-# get inbox messages
+# get inbox messages via JS8Call API
 inbox = js8call.get_inbox_messages()
 for message in inbox:
     print(message)
@@ -129,11 +129,11 @@ js8call.callback.station_spot = station_spotted
 js8call.start()
 
 # watch multiple stations
-js8call.spot_monitor.add_station_watch('N0GQ')
-js8call.spot_monitor.add_station_watch('K6ARK')
+js8call.spots.add_station_watch('N0GQ')
+js8call.spots.add_station_watch('K6ARK')
 
 # remove a station watcher, no hard feelings Adam :)
-js8call.spot_monitor.remove_station_watch('K6ARK')
+js8call.spots.remove_station_watch('K6ARK')
 ```
 
 Using the inbox monitor:
@@ -170,10 +170,10 @@ js8call.start()
 # monitor directed message tx automatically (default)
 js8call.send_directed_message('OH8STN', 'Thanks for the great content')
 
-# monitor message tx manually
-js8call.monitor_directed_tx = False
+# monitor outgoing message manually
+js8call.monitor_outgoing = False
 msg = js8call.send_directed_message('KT7RUN', 'Thanks for the great content')
-js8call.tx_monitor.monitor(msg)
+js8call.outgoing.monitor(msg)
 ```
 
 Set config file settings:
@@ -182,9 +182,9 @@ import pyjs8call
 
 js8call = pyjs8call.Client()
 # set config file settings before starting
-js8call.enable_heartbeat_acknowledgements()
-js8call.enable_reporting()
-js8call.set_speed('normal')
+js8call.settings.enable_heartbeat_acknowledgements()
+js8call.settings.enable_reporting()
+js8call.settings.set_speed('normal')
 js8call.start()
 ```
 
