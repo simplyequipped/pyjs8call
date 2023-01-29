@@ -7,6 +7,8 @@
 - Rename pyjs8call.client function *get_station_spots* to *get_spots*
 - Rename pyjc8call.client function *get_tx_window_duration* to *get_window_duration*
 - pyjs8call.client function *set_station_callsign* no longer restarts JS8Call automatically
+- pyjs8call.client function *hearing* now includes heartbeat acknowledgements
+- Log message format now uses the pyjs8call.message function *dump*
 - Various minor bug fixes
 - Documentation improvements
 - Updated documentation examples and example.py
