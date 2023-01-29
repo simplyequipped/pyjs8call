@@ -164,18 +164,18 @@ class SpotMonitor:
     def _monitor(self):
         '''Spot monitor thread.
 
-        Uses *pyjs8call.client.get_station_spots* internally.
+        Uses *pyjs8call.client.Client.get_spots()* internally.
         '''
         last_spot_update_timestamp = 0
 
         while self._enabled:
-            default_delay = self._client.get_tx_window_duration() / 3
+            default_delay = self._client.settings.get_window_duration() / 3
             delay = self._client.window.next_transition_seconds(count = 1, fallback = default_delay)
             time.sleep(delay)
 
             # get new spots since last update
             time_since_last_update = time.time() - last_spot_update_timestamp
-            new_spots = self._client.get_station_spots(age = time_since_last_update)
+            new_spots = self._client.get_spots(age = time_since_last_update)
             last_spot_update_timestamp = time.time()
 
             if len(new_spots) > 0:

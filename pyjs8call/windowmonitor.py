@@ -108,7 +108,7 @@ class WindowMonitor:
         '''
         with self._timestamp_lock:
             self._last_tx_frame_timestamp = msg.timestamp
-            self._next_window_timestamp = msg.timestamp + self._client.get_tx_window_duration()
+            self._next_window_timestamp = msg.timestamp + self._client.settings.get_window_duration()
 
         # stop using rx messages
         if self._last_rx_msg_timestamp != 0:
@@ -129,7 +129,7 @@ class WindowMonitor:
             return
 
         # only process the first rx message per window cycle
-        window_duration = self._client.get_tx_window_duration()
+        window_duration = self._client.settings.get_window_duration()
         if (msg.timestamp - self._last_rx_msg_timestamp) > (window_duration / 2):
             with self._timestamp_lock:
                 self._last_rx_msg_timestamp = msg.timestamp
@@ -151,7 +151,7 @@ class WindowMonitor:
         if self._next_window_timestamp == 0:
             return fallback
         else:
-            window_duration = self._client.get_tx_window_duration()
+            window_duration = self._client.settings.get_window_duration()
             return round(self._next_window_timestamp + (window_duration * count), 3)
 
     def next_transition_seconds(self, count=0, fallback=None):
@@ -181,7 +181,7 @@ class WindowMonitor:
                     # window transiton notification via callback function
                     self._callback()
                     # update window duration in case speed setting changed
-                    window_duration = self._client.get_tx_window_duration()
+                    window_duration = self._client.settings.get_window_duration()
                     # increament the window timestamp
                     self._next_window_timestamp += window_duration
 

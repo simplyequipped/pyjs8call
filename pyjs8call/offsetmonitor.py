@@ -41,7 +41,7 @@ class OffsetMonitor:
         min_offset (int): Minimum offset for adjustment and recent activity monitoring
         max_offset (int): Maximum offset for adjustment and recent activity monitoring
         heard_station_age (int): Maximum age of a heard station to be considered recent activity
-        bandwidth (int): JS8Call tx signal bandwidth (see pyjs8call.client.Client.get_bandwidth)
+        bandwidth (int): JS8Call tx signal bandwidth (see pyjs8call.client.Client.settings.get_bandwidth)
         bandwidth_safety_factor (float): Safety factor to apply to tx bandwidth when looking for an unused portion of the pass band
         offset (int): Current JS8Call offset frequency in Hz
     '''
@@ -59,9 +59,9 @@ class OffsetMonitor:
         self.min_offset = 1000
         self.max_offset = 2500
         self.heard_station_age = 100 # seconds
-        self.bandwidth = self._client.get_bandwidth()
+        self.bandwidth = self._client.settings.get_bandwidth()
         self.bandwidth_safety_factor = 1.25
-        self.offset = self._client.get_offset(update = False)
+        self.offset = self._client.settings.get_offset(update = False)
         self._enabled = False
 
         self.enable()
@@ -152,7 +152,7 @@ class OffsetMonitor:
                 signal = (spot.offset, 160)
             else:
                 # map signal speed to signal bandwidth
-                bandwidth = self._client.get_bandwidth(speed = spot.speed)
+                bandwidth = self._client.settings.get_bandwidth(speed = spot.speed)
                 signal = (spot.offset, bandwidth)
 
             signals.append(signal)
@@ -298,7 +298,7 @@ class OffsetMonitor:
         '''
         while self._enabled:
             # wait until 0.5 seconds before the end of the tx window
-            default_delay = self._client.get_tx_window_duration() / 2
+            default_delay = self._client.settings.get_window_duration() / 2
             delay = self._client.window.next_transition_seconds(count = 1, fallback = default_delay) - 0.5
             time.sleep(delay)
 
@@ -307,7 +307,7 @@ class OffsetMonitor:
                 continue
 
             # get recent spots
-            activity = self._client.get_station_spots(age = self.heard_station_age) 
+            activity = self._client.get_spots(age = self.heard_station_age) 
 
             # skip processing if there is no activity
             if len(activity) == 0:
@@ -317,8 +317,8 @@ class OffsetMonitor:
             signals = self.parse_activity(activity)
 
             # get the current settings
-            self.bandwidth = self._client.get_bandwidth()
-            current_offset = self._client.get_offset(update = False)
+            self.bandwidth = self._client.settings.get_bandwidth()
+            current_offset = self._client.settings.get_offset(update = False)
 
             if int(current_offset) != int(self.offset):
                 self.offset = current_offset
@@ -338,5 +338,5 @@ class OffsetMonitor:
 
                 if new_offset is not None:
                     # set new offset
-                    self.offset = self._client.set_offset(new_offset)
+                    self.offset = self._client.settings.set_offset(new_offset)
 

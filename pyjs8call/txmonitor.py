@@ -133,7 +133,7 @@ class TxMonitor:
                 tx_text = tx_text.split(':')[1].strip(' ' + Message.EOM)
             
             # update msg max age based on speed setting (30 tx cycles)
-            self._msg_max_age = self._client.get_tx_window_duration() * 30
+            self._msg_max_age = self._client.settings.get_window_duration() * 30
             
             with self._msg_queue_lock:
                 self._process_queue(tx_text)

@@ -47,7 +47,7 @@ class JS8Call:
 
     Attributes:
         connected (bool): Whether the JS8Call TCP socket is connected
-        spots (list): List of station spots (see pyjs8call.client.Client.get_station_spots)
+        spots (list): List of station spots (see pyjs8call.client.Client.get_spots())
         max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
     '''
 
@@ -343,7 +343,7 @@ class JS8Call:
 
         The list of stored messages is culled once it exceeeds the maximum size set by *max_spots* by dropping the oldest message.
 
-        See pyjs8call.client.Client.get_station_spots to utilize spots.
+        See pyjs8call.client.Client.get_spots to utilize spots.
 
         Args:
             msg (pyjs8call.message): Message to spot

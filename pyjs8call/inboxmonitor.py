@@ -334,7 +334,7 @@ class InboxMonitor:
         Args:
             msg (pyjs8call.message): Incoming message object
         '''
-        if msg.destination != self._client.get_station_callsign():
+        if msg.destination != self._client.settings.get_station_callsign(update = False):
             return
 
         if msg.cmd in (Message.CMD_HEARTBEAT_SNR, Message.CMD_YES) and Message.CMD_MSG in msg.value:
@@ -361,7 +361,7 @@ class InboxMonitor:
         last_tx_timestamp = 0
 
         while self._enabled:
-            window_duration = self._client.get_tx_window_duration()
+            window_duration = self._client.settings.get_window_duration()
             response_delay = window_duration * 30
 
             if len(self._rx_queue) > 0:
