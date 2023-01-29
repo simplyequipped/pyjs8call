@@ -226,7 +226,7 @@ class ConfigHandler:
 
         return options
 
-    def get_profile_option(self, profile, section, option, value_type=str(), fallback=None):
+    def get_profile_option(self, profile, section, option, value_type=str, fallback=None):
         '''Get an option value from a given section in a given profile.
 
         Values can be of the following types:
@@ -239,7 +239,7 @@ class ConfigHandler:
             profile (str): Profile name containing the the specified section and option
             section (str): Section name containing the specified option
             option (str): Option name to get value for
-            value_type (str, int, float, bool): A variable or constructor function of the same type as the value to be returned
+            value_type (str, int, float, bool): The type class of the type to return, defaults to str
             fallback (any): The value to be returned if the given option is not found, defaults to None
 
         Returns:
