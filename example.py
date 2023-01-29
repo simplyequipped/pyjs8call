@@ -94,10 +94,10 @@ js8call.start()
 #js8call.inbox.enable()
 
 # read current configuration values
-freq = js8call.get_freq()
-offset = js8call.get_offset()
-grid = js8call.get_station_grid()
-callsign = js8call.get_station_callsign()
+freq = js8call.settings.get_freq()
+offset = js8call.settings.get_offset()
+grid = js8call.settings.get_station_grid()
+callsign = js8call.settings.get_station_callsign()
 # check if connected to js8call
 connected = js8call.connected()
 
