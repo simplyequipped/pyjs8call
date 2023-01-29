@@ -43,6 +43,7 @@ import time
 import atexit
 import threading
 import subprocess
+from datetime import datetime, timezone
 
 import pyjs8call
 from pyjs8call import Message
@@ -102,7 +103,7 @@ class Client:
         self.port = port
         self.headless = headless
         self.clean_directed_text = True
-        self.monitor_tx = True
+        self.monitor_outgoing = True
         self.online = False
 
         self.js8call = None
@@ -183,7 +184,7 @@ class Client:
         time.sleep(1)
 
         self.window = pyjs8call.WindowMonitor(self)
-        self.spot = pyjs8call.SpotMonitor(self)
+        self.spots = pyjs8call.SpotMonitor(self)
         self.offset = pyjs8call.OffsetMonitor(self)
         self.outgoing = pyjs8call.TxMonitor(self)
         self.drift = pyjs8call.DriftMonitor(self)
@@ -253,7 +254,9 @@ class Client:
         Returns:
             list: Configured callsign and custom groups
         '''
-        return self.config.get_groups().append(self.get_station_callsign())
+        ids = self.config.get_groups()
+        ids.append(self.settings.get_station_callsign(update = False))
+        return ids
     
     def msg_is_to_me(self, msg):
         '''Determine if specified message is addressed to local station.
@@ -319,7 +322,7 @@ class Client:
         
         Message format: *MESSAGE*
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             message (str): Message text to send
@@ -330,7 +333,7 @@ class Client:
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(value = message)
 
-        if self.monitor_tx:
+        if self.monitor_outgoing:
             self.outgoing.monitor(msg)
 
         self.js8call.send(msg)
@@ -343,7 +346,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
@@ -353,7 +356,7 @@ class Client:
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(destination, command, message)
 
-        if self.monitor_tx:
+        if self.monitor_outgoing:
             self.outgoing.monitor(msg)
 
         self.js8call.send(msg)
@@ -366,7 +369,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
@@ -378,7 +381,7 @@ class Client:
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(destination = destination, value = message)
 
-        if self.monitor_tx:
+        if self.monitor_outgoing:
             self.outgoing.monitor(msg)
 
         self.js8call.send(msg)
@@ -393,7 +396,7 @@ class Client:
 
         If no grid square is given the configured JS8Call grid square is used.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             grid (str): Grid square (truncated to 4 characters), defaults to None
@@ -402,7 +405,7 @@ class Client:
             pyjs8call.message: Constructed messsage object
         '''
         if grid is None:
-            grid = self.get_station_grid()
+            grid = self.settings.get_station_grid()
 
         if grid is None:
             grid = ''
@@ -419,7 +422,7 @@ class Client:
 
         If no grid square is given the configured JS8Call grid square is used.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             grid (str): Grid square (trucated to 4 characters), defaults to None
@@ -431,7 +434,7 @@ class Client:
             ValueError: Grid square not specified and JS8Call grid square not set
         '''
         if grid is None:
-            grid = self.get_station_grid()
+            grid = self.settings.get_station_grid()
         if grid in (None, ''):
             raise ValueError('Grid square cannot be None when sending an APRS grid message')
         if len(grid) > 4:
@@ -444,7 +447,7 @@ class Client:
         
         Message format: @APRSIS CMD :SMSGATE&nbsp;&nbsp;&nbsp;:@1234567890 *MESSAGE*
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             phone (str): Phone number to send SMS message to
@@ -462,7 +465,7 @@ class Client:
         
         Message format: @APRSIS CMD :EMAIL-2&nbsp;&nbsp;&nbsp;:EMAIL@DOMAIN.COM *MESSAGE*
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             email (str): Email address to send message to
@@ -481,7 +484,7 @@ class Client:
 
         JS8Call configured callsign is used if no callsign is given.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             park (str): Name of park being activated
@@ -494,7 +497,7 @@ class Client:
             pyjs8call.message: Constructed message object
         '''
         if callsign is None:
-            callsign = self.get_station_callsign()
+            callsign = self.settings.get_station_callsign(update = False)
 
         message = ':POTAGW   :' + callsign + ' ' + park + ' ' + str(freq) + ' ' + mode + ' ' + message
         return self.send_directed_command_message('@APRSIS', Message.CMD_CMD, message)
@@ -545,7 +548,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
@@ -563,7 +566,7 @@ class Client:
 
         If *remote* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             remote (str, list): Callsign of intermediate station storing the message
@@ -600,7 +603,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -619,7 +622,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to, defaults to '@ALLCALL'
@@ -636,7 +639,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -655,7 +658,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -672,7 +675,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -689,7 +692,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -706,7 +709,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -723,7 +726,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_tx* is True (default).
+        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -733,7 +736,7 @@ class Client:
         '''
         return self.send_directed_command_message(destination, Message.CMD_STATUS_Q)
 
-    def get_station_spots(self, station=None, group=None, age=0):
+    def get_spots(self, station=None, group=None, age=0):
         '''Get list of spotted messages.
 
         Spots are *pyjs8call.message* objects. All spots are returned if no filter criteria is specified.
@@ -765,199 +768,21 @@ class Client:
 
         return spots
 
-    def get_freq(self, update=True):
-        '''Get JS8Call dial frequency.
-
-        Args:
-            update (bool): Update if True or use local state if False, defaults to True
-
-        Returns:
-            int: Dial frequency in Hz
-        '''
-        freq = self.js8call.get_state('dial')
-
-        if update or freq is None:
-            msg = Message()
-            msg.type = Message.RIG_GET_FREQ
-            self.js8call.send(msg)
-            freq = self.js8call.watch('dial')
-
-        return freq
-
-    def set_freq(self, freq):
-        '''Set JS8Call dial frequency.
-
-        Args:
-            freq (int): Dial frequency in Hz
-
-        Returns:
-            int: Dial frequency in Hz
-        '''
-        msg = Message()
-        msg.set('type', Message.RIG_SET_FREQ)
-        msg.set('params', {'DIAL': freq, 'OFFSET': self.js8call.state['offset']})
-        self.js8call.send(msg)
-        time.sleep(self._set_get_delay)
-        return self.get_freq()
-
-    def get_offset(self, update=True):
-        '''Get JS8Call offset frequency.
-
-        Args:
-            update (bool): Update if True or use local state if False, defaults to True
-
-        Returns:
-            int: Offset frequency in Hz
-        '''
-        offset = self.js8call.get_state('offset')
-        
-        if update or offset is None:
-            msg = Message()
-            msg.type = Message.RIG_GET_FREQ
-            self.js8call.send(msg)
-            offset = self.js8call.watch('offset')
-
-        return offset
-
-    def set_offset(self, offset):
-        '''Set JS8Call offset frequency.
-
-        Args:
-            offset (int): Offset frequency in Hz
-
-        Returns:
-            int: Offset frequency in Hz
-        '''
-        msg = Message()
-        msg.set('type', Message.RIG_SET_FREQ)
-        msg.set('params', {'DIAL': self.js8call.state['dial'], 'OFFSET': offset})
-        self.js8call.send(msg)
-        time.sleep(self._set_get_delay)
-        return self.get_offset()
-
-    def get_station_callsign(self, update=True):
-        '''Get JS8Call callsign.
-
-        Args:
-            update (bool): Update if True or use local state if False, defaults to True
-
-        Returns:
-            str: JS8Call configured callsign
-        '''
-        callsign = self.js8call.get_state('callsign')
-
-        if update or callsign is None:
-            msg = Message()
-            msg.type = Message.STATION_GET_CALLSIGN
-            self.js8call.send(msg)
-            callsign = self.js8call.watch('callsign')
-
-        return callsign
-
-    def set_station_callsign(self, callsign):
-        '''Set JS8Call callsign.
-
-        Callsign must be a maximum of 9 characters and contain at least one number.
-
-        The JS8Call callsign can only be set via the config file. The Client is restarted if already online in order to utilize the updated config file.
-
-        Args:
-            callsign (str): Callsign to set
-
-        Returns:
-            str: JS8Call configured callsign
-        '''
-        callsign = callsign.upper()
-
-        if len(callsign) <= 9 and any(char.isdigit() for char in callsign):
-            self.config.set('Configuration', 'MyCall', callsign)
-            self.config.write()
-            # restart to apply new config if already running
-            if self.online:
-                self.restart()
-        else:
-            raise ValueError('callsign must be <= 9 characters in length and contain at least 1 number')
-
-    def get_station_grid(self, update=True):
-        '''Get JS8Call grid square.
-
-        Args:
-            update (bool): Update if True or use local state if False, defaults to True
-
-        Returns:
-            str: JS8Call configured grid square
-        '''
-        grid = self.js8call.get_state('grid')
-
-        if update or grid is None:
-            msg = Message()
-            msg.type = Message.STATION_GET_GRID
-            self.js8call.send(msg)
-            grid = self.js8call.watch('grid')
-
-        return grid
-
-    def set_station_grid(self, grid):
-        '''Set JS8Call grid square.
-
-        Args:
-            grid (str): Grid square
-
-        Returns:
-            str: JS8Call configured grid square
-        '''
-        grid = grid.upper()
-        msg = Message()
-        msg.type = Message.STATION_SET_GRID
-        msg.value = grid
-        self.js8call.send(msg)
-        time.sleep(self._set_get_delay)
-        return self.get_station_grid()
-
-    def get_station_info(self, update=True):
-        '''Get JS8Call station information.
-
-        Args:
-            update (bool): Update if True or use local state if False, defaults to True
-
-        Returns:
-            str: JS8Call configured station information
-        '''
-        info = self.js8call.get_state('info')
-
-        if update or info is None:
-            msg = Message()
-            msg.type = Message.STATION_GET_INFO
-            self.js8call.send(msg)
-            info = self.js8call.watch('info')
-
-        return info
-
-    def set_station_info(self, info):
-        '''Set JS8Call station information.
-
-        Args:
-            info (str): Station information
-
-        Returns:
-            str: JS8Call configured station information
-        '''
-        msg = Message()
-        msg.type = Message.STATION_SET_INFO
-        msg.value = info
-        self.js8call.send(msg)
-        time.sleep(self._set_get_delay)
-        return self.get_station_info()
-
-    #TODO add hearing and heard data
-    def get_call_activity(self):
+    def get_call_activity(self, age=60):
         '''Get JS8Call call activity.
 
         Each call activity item is a dictionary with the following keys:
-        - origin
-        - grid
-        - snr
-        - time
+
+        | Key | Value Type |
+        | -------- | -------- |
+        | origin | str |
+        | grid | str |
+        | snr | int |
+        | time (UTC) | int |
+        | hearing | list |
+
+        Args:
+            age (int): Maximum activity age in minutes, defaults to 60
 
         Returns:
             list: Call activity items
@@ -966,17 +791,35 @@ class Client:
         msg.type = Message.RX_GET_CALL_ACTIVITY
         self.js8call.send(msg)
         call_activity = self.js8call.watch('call_activity')
+
+        hearing = self.hearing(age = age)
+        age *= 60 # minutes to seconds
+        now = datetime.now(timezone.utc).timestamp()
+
+        for i in range(len(call_activity)):
+            origin = call_activity[i]['origin']
+            item_age = now - call_activity[i]['time']
+
+            if item_age > age:
+                continue
+
+            if origin in hearing:
+                call_activity[i]['hearing'] = hearing[origin]
+
         return call_activity
 
     def get_band_activity(self):
         '''Get JS8Call band activity.
 
         Each band activity item is a dictionary with the following keys:
-        - freq
-        - offset
-        - snr
-        - time
-        - text
+
+        | Key | Value Type |
+        | -------- | -------- |
+        | freq (Hz) | int |
+        | offset (Hz) | int |
+        | snr | int |
+        | time (UTC) | int |
+        | text | str |
 
         Returns:
             list: Band activity items
@@ -1038,115 +881,6 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_tx_text()
 
-    def submode_to_speed(self, submode):
-        '''Map submode *int* to speed *str*.
-
-        | Submode | Speed |
-        | -------- | -------- |
-        | 0 | normal |
-        | 1 | fast |
-        | 2 | turbo |
-        | 4 | slow |
-        | 8 | ultra |
-
-        Args:
-            submode (int): Submode to map to text
-
-        Returns:
-            str: Speed as text
-        '''
-        # map integer to text
-        speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo', 8:'ultra'}
-
-        if int(submode) in speeds:
-            return speeds[int(submode)]
-        else:
-            raise ValueError('Invalid submode \'' + str(submode) + '\'')
-
-    def get_speed(self, update=True):
-        '''Get JS8Call modem speed.
-
-        Possible modem speeds:
-        - slow
-        - normal
-        - fast
-        - turbo
-        - ultra
-
-        Args:
-            update (bool): Update speed if True or use local state if False, defaults to True
-
-        Returns:
-            str: JS8call modem speed setting
-        '''
-        speed = self.js8call.get_state('speed')
-
-        if update or speed is None:
-            msg = Message()
-            msg.set('type', Message.MODE_GET_SPEED)
-            self.js8call.send(msg)
-            speed = self.js8call.watch('speed')
-
-        return self.submode_to_speed(speed)
-
-    def get_bandwidth(self, speed=None):
-        '''Get JS8Call signal bandwidth based on modem speed.
-
-        Uses JS8Call configured speed if no speed is given.
-
-        | Speed | Bandwidth |
-        | -------- | -------- |
-        | slow | 25 Hz |
-        | normal | 50 Hz |
-        | fast | 80 Hz |
-        | turbo | 160 Hz |
-        | ultra | 250 Hz |
-
-        Args:
-            speed (str): Speed setting, defaults to None
-
-        Returns:
-            int: Bandwidth of JS8Call signal
-        '''
-        if speed is None:
-            speed = self.get_speed(update = False)
-        elif isinstance(speed, int):
-            speed = self.submode_to_speed(speed)
-
-        bandwidths = {'slow':25, 'normal':50, 'fast':80, 'turbo':160, 'ultra':250}
-
-        if speed in bandwidths:
-            return bandwidths[speed]
-        else:
-            raise ValueError('Invalid speed \'' + speed + '\'')
-
-    def get_tx_window_duration(self, speed=None):
-        '''Get JS8Call tx window duration based on modem speed.
-
-        Uses JS8Call configured speed if no speed is given.
-
-        | Speed | Duration |
-        | -------- | -------- |
-        | slow | 30 seconds |
-        | normal | 15 seconds |
-        | fast | 10 seconds |
-        | turbo | 6 seconds |
-        | ultra | 4 seconds |
-
-        Args:
-            speed (str): Speed setting, defaults to None
-
-        Returns:
-            int: Duration of JS8Call tx window in seconds
-        '''
-        if speed is None:
-            speed = self.get_speed(update = False)
-        elif isinstance(speed, int):
-            speed = self.submode_to_speed(speed)
-
-        duration = {'slow': 30, 'normal': 15, 'fast': 10, 'turbo': 6, 'ultra':4}
-        return duration[speed]
-
     def raise_window(self):
         '''Raise the JS8Call application window.'''
         msg = Message()
@@ -1169,7 +903,7 @@ class Client:
             list: Messages from the rx text field
         '''
         rx_text = self.get_rx_text()
-        mycall = self.get_station_callsign()
+        callsign = self.settings.get_station_callsign(update = False)
         msgs = rx_text.split('\n')
         msgs = [m.strip() for m in msgs if len(m.strip()) > 0]
 
@@ -1184,7 +918,7 @@ class Client:
                 'text' : parts[2].split(':')[1].strip(' \n' + Message.EOM)
             }
 
-            if not own and data['callsign'] == mycall:
+            if not own and data['callsign'] == callsign:
                 continue
 
             rx_messages.append(data)
@@ -1201,10 +935,10 @@ class Client:
             dict: Example format *{'station': ['station', ...], ...}*
         '''
         age *= 60
-        callsign = self.get_station_callsign()
+        callsign = self.settings.get_station_callsign(update = False)
         hearing = {}
         
-        for spot in self.get_station_spots(age = age):
+        for spot in self.get_spots(age = age):
             # only process msgs with directed commands
             if spot.cmd is None:
                 continue
@@ -1244,7 +978,7 @@ class Client:
 #        '''Get information on which stations are heard other stations.
 #        
 #        '''
-#        callsign = self.get_station_callsign()
+#        callsign = self.settings.get_station_callsign(update = False)
 #        heard = {}
         
 
@@ -1308,7 +1042,7 @@ class Settings:
     def enable_autoreply_startup(self):
         '''Enable autoreply on start-up via config file.
         
-        It is recommended that this function be called before calling *client.start()*.. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'true')
 
@@ -1396,6 +1130,57 @@ class Settings:
         # set the profile as active
         self._client.config.change_profile(profile)
 
+    def submode_to_speed(self, submode):
+        '''Map submode *int* to speed *str*.
+
+        | Submode | Speed |
+        | -------- | -------- |
+        | 0 | normal |
+        | 1 | fast |
+        | 2 | turbo |
+        | 4 | slow |
+        | 8 | ultra |
+
+        Args:
+            submode (int): Submode to map to text
+
+        Returns:
+            str: Speed as text
+        '''
+        # map integer to text
+        speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo', 8:'ultra'}
+
+        if int(submode) in speeds:
+            return speeds[int(submode)]
+        else:
+            raise ValueError('Invalid submode \'' + str(submode) + '\'')
+
+    def get_speed(self, update=True):
+        '''Get JS8Call modem speed.
+
+        Possible modem speeds:
+        - slow
+        - normal
+        - fast
+        - turbo
+        - ultra
+
+        Args:
+            update (bool): Update speed if True or use local state if False, defaults to True
+
+        Returns:
+            str: JS8call modem speed setting
+        '''
+        speed = self._client.js8call.get_state('speed')
+
+        if update or speed is None:
+            msg = Message()
+            msg.set('type', Message.MODE_GET_SPEED)
+            self._client.js8call.send(msg)
+            speed = self._client.js8call.watch('speed')
+
+        return self.submode_to_speed(speed)
+
     def set_speed(self, speed):
         '''Set JS8Call modem speed via config file.
 
@@ -1428,9 +1213,248 @@ class Settings:
 #        msg = Message()
 #        msg.set('type', Message.MODE_SET_SPEED)
 #        msg.set('params', {'SPEED': speed})
-#        self.js8call.send(msg)
+#        self._client.js8call.send(msg)
 #        time.sleep(self._set_get_delay)
 #        return self.get_speed()
+
+    def get_freq(self, update=True):
+        '''Get JS8Call dial frequency.
+
+        Args:
+            update (bool): Update if True or use local state if False, defaults to True
+
+        Returns:
+            int: Dial frequency in Hz
+        '''
+        freq = self._client.js8call.get_state('dial')
+
+        if update or freq is None:
+            msg = Message()
+            msg.type = Message.RIG_GET_FREQ
+            self._client.js8call.send(msg)
+            freq = self._client.js8call.watch('dial')
+
+        return freq
+
+    def set_freq(self, freq):
+        '''Set JS8Call dial frequency.
+
+        Args:
+            freq (int): Dial frequency in Hz
+
+        Returns:
+            int: Dial frequency in Hz
+        '''
+        msg = Message()
+        msg.set('type', Message.RIG_SET_FREQ)
+        msg.set('params', {'DIAL': freq, 'OFFSET': self._client.js8call.state['offset']})
+        self._client.js8call.send(msg)
+        time.sleep(self._set_get_delay)
+        return self.get_freq()
+
+    def get_offset(self, update=True):
+        '''Get JS8Call offset frequency.
+
+        Args:
+            update (bool): Update if True or use local state if False, defaults to True
+
+        Returns:
+            int: Offset frequency in Hz
+        '''
+        offset = self._client.js8call.get_state('offset')
+        
+        if update or offset is None:
+            msg = Message()
+            msg.type = Message.RIG_GET_FREQ
+            self._client.js8call.send(msg)
+            offset = self._client.js8call.watch('offset')
+
+        return offset
+
+    def set_offset(self, offset):
+        '''Set JS8Call offset frequency.
+
+        Args:
+            offset (int): Offset frequency in Hz
+
+        Returns:
+            int: Offset frequency in Hz
+        '''
+        msg = Message()
+        msg.set('type', Message.RIG_SET_FREQ)
+        msg.set('params', {'DIAL': self._client.js8call.state['dial'], 'OFFSET': offset})
+        self._client.js8call.send(msg)
+        time.sleep(self._set_get_delay)
+        return self.get_offset()
+
+    def get_station_callsign(self, update=True):
+        '''Get JS8Call callsign.
+
+        Args:
+            update (bool): Update if True or use local state if False, defaults to True
+
+        Returns:
+            str: JS8Call configured callsign
+        '''
+        callsign = self._client.js8call.get_state('callsign')
+
+        if update or callsign is None:
+            msg = Message()
+            msg.type = Message.STATION_GET_CALLSIGN
+            self._client.js8call.send(msg)
+            callsign = self._client.js8call.watch('callsign')
+
+        return callsign
+
+    def set_station_callsign(self, callsign):
+        '''Set JS8Call callsign.
+
+        Callsign must be a maximum of 9 characters and contain at least one number.
+
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+
+        Args:
+            callsign (str): Callsign to set
+
+        Returns:
+            str: JS8Call configured callsign
+        '''
+        callsign = callsign.upper()
+
+        if len(callsign) <= 9 and any(char.isdigit() for char in callsign):
+            callsign = self.config.set('Configuration', 'MyCall', callsign)
+            return callsign
+        else:
+            raise ValueError('callsign must be <= 9 characters in length and contain at least 1 number')
+
+    def get_station_grid(self, update=True):
+        '''Get JS8Call grid square.
+
+        Args:
+            update (bool): Update if True or use local state if False, defaults to True
+
+        Returns:
+            str: JS8Call configured grid square
+        '''
+        grid = self._client.js8call.get_state('grid')
+
+        if update or grid is None:
+            msg = Message()
+            msg.type = Message.STATION_GET_GRID
+            self._client.js8call.send(msg)
+            grid = self._client.js8call.watch('grid')
+
+        return grid
+
+    def set_station_grid(self, grid):
+        '''Set JS8Call grid square.
+
+        Args:
+            grid (str): Grid square
+
+        Returns:
+            str: JS8Call configured grid square
+        '''
+        grid = grid.upper()
+        msg = Message()
+        msg.type = Message.STATION_SET_GRID
+        msg.value = grid
+        self._client.js8call.send(msg)
+        time.sleep(self._set_get_delay)
+        return self.get_station_grid()
+
+    def get_station_info(self, update=True):
+        '''Get JS8Call station information.
+
+        Args:
+            update (bool): Update if True or use local state if False, defaults to True
+
+        Returns:
+            str: JS8Call configured station information
+        '''
+        info = self._client.js8call.get_state('info')
+
+        if update or info is None:
+            msg = Message()
+            msg.type = Message.STATION_GET_INFO
+            self._client.js8call.send(msg)
+            info = self._client.js8call.watch('info')
+
+        return info
+
+    def set_station_info(self, info):
+        '''Set JS8Call station information.
+
+        Args:
+            info (str): Station information
+
+        Returns:
+            str: JS8Call configured station information
+        '''
+        msg = Message()
+        msg.type = Message.STATION_SET_INFO
+        msg.value = info
+        self._client.js8call.send(msg)
+        time.sleep(self._set_get_delay)
+        return self.get_station_info()
+
+    def get_bandwidth(self, speed=None):
+        '''Get JS8Call signal bandwidth based on modem speed.
+
+        Uses JS8Call configured speed if no speed is given.
+
+        | Speed | Bandwidth |
+        | -------- | -------- |
+        | slow | 25 Hz |
+        | normal | 50 Hz |
+        | fast | 80 Hz |
+        | turbo | 160 Hz |
+        | ultra | 250 Hz |
+
+        Args:
+            speed (str): Speed setting, defaults to None
+
+        Returns:
+            int: Bandwidth of JS8Call signal
+        '''
+        if speed is None:
+            speed = self.get_speed(update = False)
+        elif isinstance(speed, int):
+            speed = self.submode_to_speed(speed)
+
+        bandwidths = {'slow':25, 'normal':50, 'fast':80, 'turbo':160, 'ultra':250}
+
+        if speed in bandwidths:
+            return bandwidths[speed]
+        else:
+            raise ValueError('Invalid speed \'' + speed + '\'')
+
+    def get_window_duration(self, speed=None):
+        '''Get JS8Call rx/tx window duration based on modem speed.
+
+        Uses JS8Call configured speed if no speed is given.
+
+        | Speed | Duration |
+        | -------- | -------- |
+        | slow | 30 seconds |
+        | normal | 15 seconds |
+        | fast | 10 seconds |
+        | turbo | 6 seconds |
+        | ultra | 4 seconds |
+
+        Args:
+            speed (str): Speed setting, defaults to None
+
+        Returns:
+            int: Duration of JS8Call rx/tx window in seconds
+        '''
+        if speed is None:
+            speed = self.get_speed(update = False)
+        elif isinstance(speed, int):
+            speed = self.submode_to_speed(speed)
+
+        duration = {'slow': 30, 'normal': 15, 'fast': 10, 'turbo': 6, 'ultra':4}
+        return duration[speed]
 
 
 
