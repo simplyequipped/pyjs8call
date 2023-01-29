@@ -1,8 +1,16 @@
 ### Versions
 
-**0.1.0**
+**0.1.2**
 
-Initial publicly released version.
+- Improve efficiency by reducing internal JS8Call API calls
+- Reorganize several pyjs8call.client functions into pyjs8call.client.Settings
+- Rename pyjs8call.client function *get_station_spots* to *get_spots*
+- Rename pyjc8call.client function *get_tx_window_duration* to *get_window_duration*
+- pyjs8call.client function *set_station_callsign* no longer restarts JS8Call automatically
+- Rename pyjs8call.client.Client.spot to pyjs8call.client.Client.spots
+- Various minor bug fixes
+- Documentation improvements
+- Updated documentation examples and example.py
 
 **0.1.1**
 
@@ -29,3 +37,7 @@ Initial publicly released version.
 - Improvements per pylint
 - Documentation improvements
 - Update documentation examples and example.py
+
+**0.1.0**
+
+Initial publicly released version.
