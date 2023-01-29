@@ -49,6 +49,8 @@ class JS8Call:
         connected (bool): Whether the JS8Call TCP socket is connected
         spots (list): List of station spots (see pyjs8call.client.Client.get_spots())
         max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
+        last_incoming (float): Timestamp of last incoming message, defaults to 0 (zero)
+        last_outgoing (float): Timestamp of last outgoing message, defaults to 0 (zero)
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442, headless=False):
@@ -96,6 +98,8 @@ class JS8Call:
         self.max_spots = 5000
         self._recent_spots = []
         self.connected = False
+        self.last_incoming = 0
+        self.last_outgoing = 0
 
         self.state = {
             'ptt' : False,
@@ -247,6 +251,14 @@ class JS8Call:
         
         if log_all:
             self._log_all = True
+
+    def active(self):
+        outgoing = bool(self.get_state('tx_text') not in (None, ''))
+
+        with self._tx_queue_lock:
+            tx_queue_size = len(self._tx_queue)
+
+        return bool(outgoing or tx_queue_size > 0)
 
     def connect(self):
         '''Connect to the TCP socket of the JS8Call application.
@@ -436,6 +448,7 @@ class JS8Call:
     
                     try:
                         self._socket.sendall(packed)
+                        self.last_outgoing = time.time()
                         self._tx_queue.remove(msg)
                         # make sure the next queued msg doesn't get sent before the tx text state updates
                         if msg.type == Message.TX_SEND_MESSAGE:
@@ -518,6 +531,7 @@ class JS8Call:
                 if self._log and (self._log_all or (msg.type not in self._debug_log_type_blacklist)):
                     self._log_msg(msg)
 
+                self.last_incoming = time.time()
                 self._process_message(msg)
 
         time.sleep(0.1)
