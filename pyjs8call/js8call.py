@@ -253,6 +253,11 @@ class JS8Call:
             self._log_all = True
 
     def active(self):
+        '''Whether there is outgoing activity.
+
+        Returns:
+            bool: True if there is text in the tx text field or queued outgoing messages, False otherwise
+        '''
         outgoing = bool(self.get_state('tx_text') not in (None, ''))
 
         with self._tx_queue_lock:
