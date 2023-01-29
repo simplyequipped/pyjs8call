@@ -58,7 +58,7 @@ class OffsetMonitor:
         self._client = client
         self.min_offset = 1000
         self.max_offset = 2500
-        self.heard_station_age = 100 # seconds
+        self.heard_station_age = self._client.settings.get_window_duration() * 5
         self.bandwidth = self._client.settings.get_bandwidth()
         self.bandwidth_safety_factor = 1.25
         self.offset = self._client.settings.get_offset()
@@ -297,8 +297,10 @@ class OffsetMonitor:
         Update activity 0.5 seconds before the end of the current tx window. This allows a new offset to be selected before the next tx window if new activity overlaps with the current offset. Activity is not updated if a message is being sent (i.e. there is text in the tx text box).
         '''
         while self._enabled:
+            window_duration = self._client.settings.get_window_duration()
+            self.heard_station_age = window_duration * 5
             # wait until 0.5 seconds before the end of the tx window
-            default_delay = self._client.settings.get_window_duration() / 2
+            default_delay = window_duration / 2
             delay = self._client.window.next_transition_seconds(count = 1, fallback = default_delay) - 0.5
             time.sleep(delay)
 
@@ -333,6 +335,11 @@ class OffsetMonitor:
             if overlap:
                 # find unused spectrum (between heard signals)
                 unused_spectrum = self.find_unused_spectrum(signals)
+
+                # if no unused spectrum, stop processing
+                if len(unused_spectrum) == 0:
+                    continue
+
                 # find nearest unused spectrum and determine new offset
                 new_offset = self.find_new_offset(unused_spectrum)
 
