@@ -401,8 +401,5 @@ class InboxMonitor:
                     self._callback(new_msgs)
 
             # delay until next window transition
-            default_delay = window_duration / 3
-            delay = self._client.window.next_transition_seconds(count = 1, fallback = default_delay)
-            time.sleep(delay)
-
+            self._client.window.sleep_until_next_transition(within = 0.5)
 

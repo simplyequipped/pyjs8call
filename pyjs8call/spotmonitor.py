@@ -169,9 +169,7 @@ class SpotMonitor:
         last_spot_update_timestamp = 0
 
         while self._enabled:
-            default_delay = self._client.settings.get_window_duration() / 3
-            delay = self._client.window.next_transition_seconds(count = 1, fallback = default_delay)
-            time.sleep(delay)
+            self._client.window.sleep_until_next_transition()
 
             # get new spots since last update
             time_since_last_update = time.time() - last_spot_update_timestamp
