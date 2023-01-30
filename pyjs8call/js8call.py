@@ -47,7 +47,7 @@ class JS8Call:
 
     Attributes:
         connected (bool): Whether the JS8Call TCP socket is connected
-        spots (list): List of station spots (see pyjs8call.client.Client.get_spots())
+        spots (list): List of spot messages (see pyjs8call.spotmonitor to utilize spots)
         max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
         last_incoming (float): Timestamp of last incoming message, defaults to 0 (zero)
         last_outgoing (float): Timestamp of last outgoing message, defaults to 0 (zero)
@@ -94,7 +94,7 @@ class JS8Call:
         ]
         self._watching = None
         self._watch_timeout = 3 # seconds
-        self.spots = []
+        self._spots = []
         self.max_spots = 5000
         self._recent_spots = []
         self.connected = False
@@ -353,14 +353,14 @@ class JS8Call:
         self._watching = None
         return self.state[item]
 
-    def spot(self, msg):
+    def _spot(self, msg):
         '''Store a message when a station is heard.
 
         The message is compared to a list of recent messages (heard within the last 10 seconds) to prevent duplicate spots from multiple JS8Call API messages associated with the same station event.
 
         The list of stored messages is culled once it exceeeds the maximum size set by *max_spots* by dropping the oldest message.
 
-        See pyjs8call.client.Client.get_spots to utilize spots.
+        See pyjs8call.spotmonitor to utilize spots.
 
         Args:
             msg (pyjs8call.message): Message to spot
@@ -569,7 +569,7 @@ class JS8Call:
         ### command handling ###
 
         if msg.cmd in Message.COMMANDS:
-            self.spot(msg)
+            self._spot(msg)
 
 
         ### message type handling ###
@@ -578,14 +578,14 @@ class JS8Call:
             self.state['inbox'] = msg.messages
 
         elif msg.type == Message.RX_SPOT:
-            self.spot(msg)
+            self._spot(msg)
 
         elif msg.type == Message.RX_DIRECTED:
             # clean msg text to remove callsigns, etc
             if self._client.clean_directed_text:
                 msg = self._client.clean_rx_message_text(msg)
 
-            self.spot(msg)
+            self._spot(msg)
 
         elif msg.type == Message.RIG_FREQ:
             self.state['dial'] = msg.dial
