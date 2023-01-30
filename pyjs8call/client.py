@@ -44,6 +44,7 @@ import atexit
 import threading
 import subprocess
 from datetime import datetime, timezone
+from math import radians, degrees, sin, cos, asin, acos, sqrt
 
 import pyjs8call
 from pyjs8call import Message
@@ -981,6 +982,107 @@ class Client:
 #        callsign = self.settings.get_station_callsign()
 #        heard = {}
         
+    def grid_distance(self, grid_a, grid_b=None, miles=True):
+        '''Calculate great circle distance between grid squares.
+
+        If *grid_b* is *None* the configured JS8Call grid square is used.
+
+        *grid* must be a 4 or 6 character Maidenhead grid square (ex. EM19 or EM19es). If *grid* is longer than 6 characters it will be truncated to 6 characters.
+
+        Args:
+            grid_a (str): First grid square
+            grid_b (str): Second grid square, defaults to None
+            miles (bool): Calculate distance in miles if True, in km if False, defaults to True
+
+        Returns:
+            int: Distance between specified grid squares
+
+        Raises:
+            ValueError: *grid_b* is *None* and JS8Call grid square is not set
+        '''
+        earth_radius_km = 6371
+        earth_radius_mi = 3958.756
+
+        if grid_b is None:
+            grid_b = self.settings.get_station_grid()
+
+        if grid_b in (None, ''):
+            raise ValueError('Second grid square required and JS8Call grid square not set.')
+
+        lat_a, lon_a = self.grid_to_lat_lon(grid_a)
+        lat_b, lon_b = self.grid_to_lat_lon(grid_b)
+
+        # calculate great circle distance
+        lat_a, lon_a, lat_b, lon_b = map(radians, [lat_a, lon_a, lat_b, lon_b])
+        gcd = acos(sin(lat_a) * sin(lat_b) + cos(lat_a) * cos(lat_b) * cos(lon_a - lon_b))
+        
+        if miles:
+            return int(earth_radius_mi * gcd)
+        else:
+            return int(earth_radius_km * gcd)
+
+    def grid_to_lat_lon(self, grid):
+        '''Convert grid square to latitude/longitude.
+
+        *grid* must be a 4 or 6 character Maidenhead grid square (ex. EM19 or EM19es). If *grid* is longer than 6 characters it will be truncated to 6 characters.
+
+        Latitude and longitude are rounded to 3 decimal places.
+
+        Reference: http://www.w8bh.net/grid_squares.pdf
+
+        Args:
+            grid (str): Grid square to convert to latitude/longitude
+
+        Returns:
+            tuple: Latitude/longitude pair (ex. (39.750, -97.667))
+
+        Raises:
+            ValueError: Invalid grid square format
+        '''
+        if len(grid) > 6:
+            grid = grid[:6]
+
+        if len(grid) not in (4, 6):
+            raise ValueError('Grid must contain 4 or 6 characters (ex. EM19 or EM19es)')
+
+        grid = grid.upper()
+
+        letter_map = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R']
+        field_lon_deg = 20
+        field_lat_deg = 10
+        square_lon_deg = 2
+        square_lat_deg = 1
+        sub_square_lon_deg = 1/12
+        sub_square_lat_deg = 1/24
+
+        grid_lon = [grid[i] for i in range(0, len(grid), 2)]
+        grid_lat = [grid[i] for i in range(1, len(grid), 2)]
+
+        try:
+            lon = letter_map.index(grid_lon[0]) * field_lon_deg
+            lon += int(grid_lon[1]) * square_lon_deg
+
+            if len(grid_lon) == 3:
+                lon += letter_map.index(grid_lon[2]) * sub_square_lon_deg
+
+            lon -= 180
+            lon = round(lon, 3)
+
+            lat = letter_map.index(grid_lat[0]) * field_lat_deg
+            lat += int(grid_lat[1]) * square_lat_deg
+
+            if len(grid_lat) == 3:
+                lat += letter_map.index(grid_lat[2]) * sub_square_lat_deg
+
+            lat -= 90
+            lat = round(lat, 3)
+
+        except ValueError as e:
+            raise ValueError('Invalid grid square format. Field and sub-square must be letters A-R '
+                             '(case insensitive), and square must be numbers 0-9 (ex. EM19es).') from e
+
+        return (lat, lon)
+
 
 
 class Settings:
