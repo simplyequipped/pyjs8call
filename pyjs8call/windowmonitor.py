@@ -136,42 +136,83 @@ class WindowMonitor:
                 # message rx occurs approximately two second before the end of the tx window
                 self._next_window_timestamp = msg.timestamp + 2
 
-    def next_transition_timestamp(self, count=0, fallback=None):
+    def next_transition_timestamp(self, cycles=0, default=None):
         '''Get timestamp of next rx/tx window transition.
 
         The returned timestamp is rounded to three decimal places.
 
         Args:
-            count (int): Number of window durations to calculate, defaults to 0 (zero)
-            fallback (any): Value to return if the next transition is unknown, defaults to None
+            cycles (int): Number of rx/tx cycles ahead to calculate, defaults to 0 (zero)
+            default (int, float): Value to return if the next transition is unknown, defaults to None
 
         Returns:
-            float: Timestamp of the next window transition, or *fallback* if no messages have been sent or received
+            float: Timestamp of the next window transition, or *default* if no messages have been sent or received
         '''
         if self._next_window_timestamp == 0:
-            return fallback
+            return default
         else:
             window_duration = self._client.settings.get_window_duration()
-            return round(self._next_window_timestamp + (window_duration * count), 3)
+            return round(self._next_window_timestamp + (window_duration * cycles), 3)
 
-    def next_transition_seconds(self, count=0, fallback=None):
+    def next_transition_seconds(self, cycles=0, default=None):
         '''Get number of seconds until next rx/tx window transition.
 
         The returned number of seconds is reduced by 0.1 seconds to allow time for program execution without missing the next window transition.  The returned number of seconds is also rounded to one decimal place.
 
         Args:
-            count (int): Number of window durations to calculate, defaults to 0 (zero)
-            fallback (any): Value to return if the next transition is unknown, defaults to None
+            cycles (int): Number of rx/tx cycles ahead to calculate, defaults to 0 (zero)
+            default (int, float): Value to return if the next transition is unknown, defaults to None
 
         Returns:
-            float: Number of seconds until the next window transition, or *fallback* if no messages have been sent or received
+            float: Number of seconds until the next window transition, or *default* if no messages have been sent or received
         '''
-        transition = self.next_transition_timestamp(count = count, fallback = fallback)
+        transition = self.next_transition_timestamp(cycles = cycles, default = default)
 
-        if transition == fallback:
-            return fallback
+        if transition == default:
+            return default
         else:
-            return round(transition - time.time() - 0.1, 1)
+            return round(transition - time.time() - 0.01, 1)
+
+    def sleep_until_next_transition(self, cycles=0, before=0, within=0, default=None):
+        '''Sleep until next rx/tx window transition.
+
+        This function is blocking via the *time.sleep()* function.
+
+        If the next transtion occurs within *before* seconds, the following transition is assumed.
+        Args:
+            cycles (int): Number of rx/tx cycles ahead to sleep, defaults to 0 (zero)
+            before (int, float): Number of seconds before the transition to return
+            within (int, float): Seconds from next transition to assume the following transition, defaults to 0
+            default (int, float): Seconds to sleep if the next transition is unknown, defaults to (window duration / 2)
+
+        Examples:
+
+        The next transition: 
+        `client.window.sleep_until_next_transition()`
+
+        One second before the next transition:
+        `client.window.sleep_until_next_transition(before = 1)`
+
+        The following transition if within 0.5 seconds of the next transition:
+        `client.window.sleep_until_next_transition(within = 0.5)`
+        '''
+        next_transition = self.next_transition_seconds()
+
+        if next_transition is None:
+            if default is None:
+                delay = self._client.settings.get_window_duration() / 2
+            else:
+                delay = default
+
+        elif cycles == 0 and (next_transition < before or next_transition <= within):
+            delay = self.next_transition_seconds(cycles = 1) - before
+        else:
+            delay = self.next_transition_seconds(cycles = cycles) - before
+
+        if delay <= 0:
+            return
+
+        time.sleep(delay)
 
     def _monitor(self):
         '''Window monitor thread.'''
