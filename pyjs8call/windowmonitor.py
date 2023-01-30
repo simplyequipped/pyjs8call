@@ -111,7 +111,7 @@ class WindowMonitor:
             self._next_window_timestamp = msg.timestamp + self._client.settings.get_window_duration()
 
         # stop using rx messages
-        if self._last_rx_msg_timestamp != 0:
+        if self._last_tx_msg_timestamp != 0:
             self._client.callback.remove_incoming(self.process_rx_msg)
             self._last_rx_msg_timestamp = 0
 
