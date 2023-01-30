@@ -29,10 +29,10 @@ Typical usage example:
 
     ```
     js8call = pyjs8call.Client()
-    js8call.callback.register_incoming(rx_func)
+    js8call.callback.register_incoming(incoming_callback_function)
     js8call.start()
 
-    js8call.send_directed_message('KT1RUN', 'Great content thx')
+    js8call.send_directed_message('KT7RUN', 'Great content thx')
     ```
 '''
 
@@ -737,38 +737,6 @@ class Client:
         '''
         return self.send_directed_command_message(destination, Message.CMD_STATUS_Q)
 
-    def get_spots(self, station=None, group=None, age=0):
-        '''Get list of spotted messages.
-
-        Spots are *pyjs8call.message* objects. All spots are returned if no filter criteria is specified.
-
-        Note that filtering on a station applies to the message origin, while filtering on a group applies to the message destination.
-
-        Specified *station* and *group* strings are converted to uppercase.
-
-        Args:
-            station (str): Message origin callsign
-            group (str): Message destination group designator (ex. *@QRP*)
-            age (int): Maximum message age in seconds
-
-        Returns:
-            list: Spotted messages matching specified criteria
-        '''
-        # avoid processing loop if no filters specified
-        if station is None and group is None and age == 0:
-            return self.js8call.spots
-
-        spots = []
-        for spot in self.js8call.spots:
-            if (
-                (age == 0 or spot.age() <= age) and
-                (station is None or station.upper() == spot.origin) and 
-                (group is None or group.upper() == spot.destination)
-            ):
-                spots.append(spot)
-
-        return spots
-
     def get_call_activity(self, age=60):
         '''Get JS8Call call activity.
 
@@ -939,7 +907,7 @@ class Client:
         callsign = self.settings.get_station_callsign()
         hearing = {}
         
-        for spot in self.get_spots(age = age):
+        for spot in self.spots.filter(age = age):
             # only process msgs with directed commands
             if spot.cmd is None:
                 continue

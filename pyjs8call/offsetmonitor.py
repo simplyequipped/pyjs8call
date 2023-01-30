@@ -318,7 +318,7 @@ class OffsetMonitor:
 
             # get recent spots
             heard_station_age = int(self._client.settings.get_window_duration() * 1.5)
-            activity = self._client.get_spots(age = heard_station_age) 
+            activity = self._client.spots.filter(age = heard_station_age) 
 
             # skip processing if there is no activity
             if len(activity) == 0:

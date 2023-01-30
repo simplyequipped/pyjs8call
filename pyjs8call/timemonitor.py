@@ -194,7 +194,7 @@ class DriftMonitor:
             timeout = time.time() + timeout
 
         # avoid searching if spots in the last 15 minutes
-        spots = self._client.get_spots(age = 15 * 60)
+        spots = self._client.spots.filter(age = 15 * 60)
         if len(spots) > 0:
             self.sync_to_activity()
             self.stop_search()
@@ -263,7 +263,7 @@ class DriftMonitor:
         
         if activity is None:
             # sync against all recent activity
-            spots = self._client.get_spots(age = age)
+            spots = self._client.spots.filter(age = age)
         else:
             spots = activity
 
@@ -302,7 +302,7 @@ class DriftMonitor:
             raise ValueError('Group designators must begin with \'@\'')
             
         # sync against recent group activity
-        spots = self._client.get_spots(group = group, age = age)
+        spots = self._client.spots.filter(destination = group, age = age)
 
         if len(spots) == 0:
             # no activity to get time drift from
@@ -331,14 +331,14 @@ class DriftMonitor:
             bool: True if sync occured, False otherwise
         '''
         # sync against last station message
-        spots = self._client.get_spots(station = station)
+        spots = self._client.spots.filter(origin = station, count = 1)
 
         if len(spots) == 0:
             # no activity to get time drift from
             return False
         
         # last heard station message
-        msg = spots[-1]
+        msg = spots[0]
 
         if msg.get('tdrift') is not None and abs(msg.tdrift) >= threshold:
             self.set_drift_from_msg(msg)
