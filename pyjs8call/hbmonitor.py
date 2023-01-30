@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Monitor heartbeat messaging.'''
+'''Monitor heartbeat messaging interval.'''
 
 __docformat__ = 'google'
 
@@ -32,9 +32,9 @@ import random
 from pyjs8call import OffsetMonitor
 
 class HeartbeatMonitor:
-    '''Monitor heartbeat messaging.
+    '''Monitor heartbeat messaging interval.
 
-    Send heaertbeat messages automatically on a timed interval.
+    Send heaertbeat messages automatically on a timed interval. The JS8Call offset will automatically change to an available offset in the heartbeat sub-band (500 - 1000 Hz) during transmit, and back to the previous offset at the end of the rx/tx cycle. If no frequency is determined to be available, the highest frequency in the sub-band is used.
     '''
     def __init__(self, client):
         '''Initialize heartbeat monitor object.
