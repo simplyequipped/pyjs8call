@@ -3,8 +3,9 @@
 **0.1.2**
 
 - Reorganize several pyjs8call.client functions into pyjs8call.client.Settings
+- Reorganize spot related function under pyjs8call.spotmonitor
+- pyjs8call.client function *get_spots* moved to pyjs8call.spotmonitor *filter*
 - Improve efficiency by reducing JS8Call API calls in pyjs8call.client.Settings *get* functions
-- Rename pyjs8call.client function *get_station_spots* to *get_spots*
 - Rename pyjc8call.client function *get_tx_window_duration* to *get_window_duration*
 - pyjs8call.client function *set_station_callsign* no longer restarts JS8Call automatically
 - Improve pyjs8call.client function *hearing* to include heartbeat acknowledgements
