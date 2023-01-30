@@ -106,6 +106,23 @@ for message in inbox:
 
 # send a directed message
 js8call.send_directed_message('N0GQ', 'Thanks for your work on js8net')
+
+# see who is hearing who in the last hour
+js8call.hearing()
+
+# get a list of spot messages from a specific station
+js8call.spots.filter(origin = 'OH8STN')
+
+# get a list of spot messages sent to a specific group
+js8call.spots.filter(destination = '@AMRRON')
+
+# get a list of spot messages within 1000 km
+# (or miles, depending on JS8Call settings)
+js8call.spots.filter(distance = 1000)
+
+# get a list of spot messages in the last 15 minutes
+max_age = 15 * 60 # convert minutes to seconds
+js8call.spots.filter(age = max_age)
 ```
 
 Using the spot monitor:
@@ -120,12 +137,18 @@ def new_spots(spots):
 # callback function for watched station spots
 def station_spotted(spot):
     print(spot.origin + ' spotted!')
+
+# callback function for watched group spots
+def group_spotted(spot):
+    print(spot.destination + ' spotted!')
     
 js8call = pyjs8call.Client()
 # set spot monitor callback
 js8call.callback.spots = new_spots
 # set station watcher callback
 js8call.callback.station_spot = station_spotted
+# set group watcher callback
+js8call.callback.group_spot = group_spotted
 js8call.start()
 
 # watch multiple stations
@@ -134,6 +157,9 @@ js8call.spots.add_station_watch('K6ARK')
 
 # remove a station watcher, no hard feelings Adam :)
 js8call.spots.remove_station_watch('K6ARK')
+
+# watch a group
+js8call.spots.add_group_watch('@AMMRON')
 ```
 
 Using the inbox monitor:
