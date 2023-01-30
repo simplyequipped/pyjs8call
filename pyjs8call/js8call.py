@@ -553,6 +553,18 @@ class JS8Call:
         Args:
             msg (pyjs8call.message): Message to process
         '''
+        # try to get distance and bearing
+        if msg.grid is not None:
+            miles = bool(self._client.config.get('Configuration', 'Miles') == 'true')
+
+            try:
+                # raises ValueError for incorrect grid format
+                distance, bearing = self._client.get_distance(msg.grid, miles = miles)
+                msg.set('distance', distance)
+                msg.set('bearing', bearing)
+            except ValueError:
+                pass
+
 
         ### command handling ###
 
