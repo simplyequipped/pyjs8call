@@ -55,6 +55,7 @@ class SpotMonitor:
         self._enabled = False
         self._station_watch_list = []
         self._group_watch_list = []
+        self._spots_lock = threading.Lock()
 
         self.enable()
 
@@ -72,6 +73,58 @@ class SpotMonitor:
     def disable(self):
         '''Disable spot monitoring.'''
         self._enabled = False
+
+    def all(self):
+        '''Get all stored spot messages.'''
+        with self._spots_lock:
+            return self._client.js8call.spots
+
+    def filter(self, origin=None, destination=None, distance=0, age=0, count=0):
+        '''Get filtered spot messages.
+
+        Spots are *pyjs8call.message* objects. Specified *origin* and *destination* strings are converted to uppercase.
+
+        When *distance*, *age*, or *count* are 0 (zero) they are ignored.
+
+        Args:
+            origin (str): Message origin callsign to match
+            destination (str): Message destination callsign or group designator to match
+            distance (int): Maximum message grid square distance, defaults to 0 (zero)
+            age (int): Maximum message age in seconds, defaults to 0 (zero)
+            count (int): Number of most recent spot messages to return, defaults to 0 (zero)
+
+        Returns:
+            list: Spot messages matching specified filter criteria
+        '''
+        spots = []
+        with self._spots_lock:
+            for spot in self._client.js8call.spots:
+                if (
+                    (age == 0 or spot.age() <= age) and
+                    (distance == 0 or (spot.distance is not None and spot.distance <= distance)) and
+                    (origin is None or origin.upper() == spot.origin) and 
+                    (destination is None or destination.upper() == spot.destination)
+                ):
+                    spots.append(spot)
+
+        if 0 < count < len(spots):
+            count *= -1
+            spots = spots[:count]
+
+        return spots
+
+    def last_heard(self, count=1):
+        '''Get last heard spot messages.
+
+        Args:
+            count (int): Number of spot messages to return
+
+        Returns:
+            list: Last *count* spot messages received
+        '''
+        count *= -1
+        with self._spots_lock:
+            return self._client.js8call.spots[:count]
 
     def add_station_watch(self, station):
         '''Add watched station.
@@ -164,7 +217,7 @@ class SpotMonitor:
     def _monitor(self):
         '''Spot monitor thread.
 
-        Uses *pyjs8call.client.Client.get_spots()* internally.
+        Uses *filter()* internally.
         '''
         last_spot_update_timestamp = 0
 
@@ -173,7 +226,7 @@ class SpotMonitor:
 
             # get new spots since last update
             time_since_last_update = time.time() - last_spot_update_timestamp
-            new_spots = self._client.get_spots(age = time_since_last_update)
+            new_spots = self.filter(age = time_since_last_update)
             last_spot_update_timestamp = time.time()
 
             if len(new_spots) > 0:
