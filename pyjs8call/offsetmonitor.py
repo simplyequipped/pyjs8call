@@ -40,7 +40,6 @@ class OffsetMonitor:
     Attributes:
         min_offset (int): Minimum offset for adjustment and recent activity monitoring
         max_offset (int): Maximum offset for adjustment and recent activity monitoring
-        heard_station_age (int): Maximum age of a heard station to be considered recent activity
         bandwidth (int): JS8Call tx signal bandwidth (see pyjs8call.client.Client.settings.get_bandwidth)
         bandwidth_safety_factor (float): Safety factor to apply to tx bandwidth when looking for an unused portion of the pass band
         offset (int): Current JS8Call offset frequency in Hz
@@ -58,11 +57,11 @@ class OffsetMonitor:
         self._client = client
         self.min_offset = 1000
         self.max_offset = 2500
-        self.heard_station_age = self._client.settings.get_window_duration() * 5
         self.bandwidth = self._client.settings.get_bandwidth()
         self.bandwidth_safety_factor = 1.25
         self.offset = self._client.settings.get_offset()
         self._enabled = False
+        self._paused = False
 
         self.enable()
 
@@ -80,6 +79,17 @@ class OffsetMonitor:
     def disable(self):
         '''Disable automatic offset monitoring.'''
         self._enabled = False
+
+    def pause(self):
+        '''Pause offset monitoring.'''
+        self._paused = True
+
+    def resume(self):
+        '''Resume offset monitoring.'''
+        self._paused = False
+
+    def paused(self):
+        return self._paused
 
     def _min_signal_freq(self, offset, bandwidth):
         '''Get lower edge of signal.
@@ -175,7 +185,6 @@ class OffsetMonitor:
         unused_spectrum = []
 
         for i in range(len(signals)):
-            min_signal_freq = self._min_signal_freq(*signals[i])
             min_signal_freq = self._min_signal_freq(*signals[i])
             max_signal_freq = self._max_signal_freq(*signals[i])
             lower_limit_below = None
@@ -297,19 +306,19 @@ class OffsetMonitor:
         Update activity 0.5 seconds before the end of the current tx window. This allows a new offset to be selected before the next tx window if new activity overlaps with the current offset. Activity is not updated if a message is being sent (i.e. there is text in the tx text box).
         '''
         while self._enabled:
-            window_duration = self._client.settings.get_window_duration()
-            self.heard_station_age = window_duration * 5
-            # wait until 0.5 seconds before the end of the tx window
-            default_delay = window_duration / 2
-            delay = self._client.window.next_transition_seconds(count = 1, fallback = default_delay) - 0.5
-            time.sleep(delay)
+            # wait until 0.5 seconds before the end of the rx/tx window
+            self._client.window.sleep_until_next_transition(before = 1)
+
+            if self._paused:
+                continue
 
             # skip processing if actively sending a message
-            if self._client.js8call.get_state('tx_text') != '':
+            if self._client.js8call.active():
                 continue
 
             # get recent spots
-            activity = self._client.get_spots(age = self.heard_station_age) 
+            heard_station_age = int(self._client.settings.get_window_duration() * 1.5)
+            activity = self._client.get_spots(age = heard_station_age) 
 
             # skip processing if there is no activity
             if len(activity) == 0:
