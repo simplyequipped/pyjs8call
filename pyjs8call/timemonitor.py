@@ -493,4 +493,3 @@ class TimeMaster:
                 last_outgoing_timestamp = time.time()
 
             time.sleep(1)
-
