@@ -49,12 +49,7 @@ class HeartbeatNetworking:
         self._enabled = False
         self._paused = False
         self._last_hb_timestamp = 0
-
-        self._offset = OffsetMonitor(self._client)
-        self._offset.pause()
-        self._offset.min_offset = 500
-        self._offset.max_offset = 1000
-        self._offset.bandwidth_safety_factor = 1.1
+        self._offset = None
 
     def enable_networking(self, interval=10):
         '''Enable heartbeat networking.
@@ -67,6 +62,13 @@ class HeartbeatNetworking:
 
         self._enabled = True
 
+        self._offset = OffsetMonitor(self._client)
+        self._offset.min_offset = 500
+        self._offset.max_offset = 1000
+        self._offset.bandwidth_safety_factor = 1.1
+        self._offset.pause_monitoring()
+        self._offset.enable_monitoring()
+
         thread = threading.Thread(target=self._monitor, args=(interval,))
         thread.daemon = True
         thread.start()
@@ -74,11 +76,11 @@ class HeartbeatNetworking:
     def disable_networking(self):
         '''Disable heartbeat monitoring.'''
         self._enabled = False
+        self._offset.disable_networking()
 
     def pause_networking(self):
         '''Pause heartbeat monitoring.'''
         self._paused = True
-        self._offset.pause()
 
     def resume_networking(self):
         '''Resume heartbeat monitoring.'''
@@ -121,10 +123,10 @@ class HeartbeatNetworking:
 
             # pause main offset monitor
             main_offset_was_paused = self._client.offset.paused()
-            self._client.offset.pause()
+            self._client.offset.pause_monitoring()
             last_offset = self._client.settings.get_offset()
             # resume hb offset monitor
-            self._offset.resume()
+            self._offset.resume_monitoring()
 
             # no free heartbeat offset found, force to max heartbeat offset
             self._client.window.sleep_until_next_transition(before = 0.5)
@@ -142,11 +144,11 @@ class HeartbeatNetworking:
             # wait until the end of the following cycle
             self._client.window.sleep_until_next_transition(within = 1)
             # pause hb offset monitor
-            self._offset.pause()
+            self._offset.pause_monitoring()
             # restore main offset
             self._client.settings.set_offset(last_offset)
             time.sleep(3)
                 
             if not main_offset_was_paused:
-                self._client.offset.resume()
+                self._client.offset.resume_monitoring()
 
