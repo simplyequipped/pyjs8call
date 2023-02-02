@@ -1089,6 +1089,8 @@ class Settings:
         '''Enable heartbeat networking via config file.
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        
+        Note that this function disables JS8Call application heartbeat networking via the config file. To enable the pyjs8call heartbeat network messaging module see pyjs8call.hbnetwork.HeartbeatNetworking.enable_networking().
         '''
         self._client.config.set('Common', 'SubModeHB', 'true')
 
@@ -1096,6 +1098,8 @@ class Settings:
         '''Disable heartbeat networking via config file.
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        
+        Note that this function disables JS8Call application heartbeat networking via the config file. To disable the pyjs8call heartbeat network messaging module see pyjs8call.hbnetwork.HeartbeatNetworking.disable_networking().
         '''
         self._client.config.set('Common', 'SubModeHB', 'false')
 
