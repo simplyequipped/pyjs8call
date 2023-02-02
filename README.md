@@ -63,13 +63,13 @@ Monitors the next rx/tx window transition. JS8Call API messages associated with 
 
 Manages JS8Call offset frequency based on activity in the pass band. The offset frequency is automatically moved to an unsed portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the modem speed of each heard signal. Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
 
-**TX Monitor** (pyjs8call.txmonitor)
+**Outgoing Monitor** (pyjs8call.outgoingmonitor)
 
-Monitors JS8Call tx text for queued outgoing messages. Notification of a message status change is handled via callback function.
+Monitors JS8Call outgoing message text. Notification of a message status change is handled via callback function.
 
-**Heartbeat Monitor** (pyjs8call.hbmonitor)
+**Heartbeat Networking** (pyjs8call.hbnetwork)
 
-Sends a heartbeat message on a time interval.
+Sends a heartbeat message in the heartbeat sub-band on a time interval.
 
 **Time Monitor** (pyjs8call.timemonitor)
 
@@ -159,7 +159,7 @@ js8call.spots.add_station_watch('K6ARK')
 js8call.spots.remove_station_watch('K6ARK')
 
 # watch a group
-js8call.spots.add_group_watch('@AMMRON')
+js8call.spots.add_group_watch('@AMRRON')
 ```
 
 Using the inbox monitor:
@@ -177,10 +177,10 @@ js8call.callback.inbox = new_inbox_msg
 js8call.start()
 
 # enable local inbox monitoring and periodic remote inbox message query
-js8call.inbox.enable()
+js8call.inbox.enable_monitoring()
 ```
 
-Using the tx monitor:
+Using the outgoing message monitor:
 ```
 import pyjs8call
 
@@ -189,7 +189,7 @@ def tx_status(msg):
     print('Message ' + msg.id + ' status: ' + msg.status)
     
 js8call = pyjs8call.Client()
-# set tx monitor callback
+# set outgoing monitor callback
 js8call.callback.outgoing = tx_status
 js8call.start()
 
