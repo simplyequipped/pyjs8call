@@ -39,7 +39,7 @@ from pyjs8call.windowmonitor import WindowMonitor
 from pyjs8call.inboxmonitor import InboxMonitor
 from pyjs8call.timemonitor import DriftMonitor
 from pyjs8call.timemonitor import TimeMaster
-from pyjs8call.txmonitor import TxMonitor
+from pyjs8call.outgoingmonitor import OutgoingMonitor
 from pyjs8call.js8call import JS8Call
 from pyjs8call.client import Client
 
