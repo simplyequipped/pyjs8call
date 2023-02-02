@@ -353,4 +353,3 @@ class OffsetMonitor:
                 if new_offset is not None:
                     # set new offset
                     self.offset = self._client.settings.set_offset(new_offset)
-
