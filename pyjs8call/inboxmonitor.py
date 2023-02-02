@@ -22,6 +22,8 @@
 
 '''Monitor local and remote inbox messages.
 
+**CAUTION: Enabling inbox monitoring will cause your radio to transmit almost immediately. Consider cabling and antenna connections prior to enabling inbox monitoring.**
+
 Set `client.callback.inbox` to receive new inbox messages as they arrive. See pyjs8call.client.Callbacks for *inbox* callback function details.
 '''
 
@@ -287,7 +289,7 @@ class InboxMonitor:
         conn.commit()
         conn.close()
         
-    def enable(self, query=True, destination='@ALLCALL', interval=60):
+    def enable_monitoring(self, query=True, destination='@ALLCALL', interval=60):
         '''Enable inbox monitoring.
 
         If *query* is True a message query will be sent to *destination* every *interval* minutes. Incoming directed messages are responded to whether *query* is True or not. See *process_incoming()* for more information on incoming directed message handling.
@@ -307,16 +309,16 @@ class InboxMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable(self):
+    def disable_monitoring(self):
         '''Disable inbox monitoring.'''
         self._enabled = False
         self._client.callback.remove_incoming(self.process_incoming)
 
-    def pause(self):
+    def pause_monitoring(self):
         '''Pause inbox monitoring.'''
         self._paused = True
 
-    def resume(self):
+    def resume_monitoring(self):
         '''Resume inbox monitoring.'''
         self._paused = False
 
