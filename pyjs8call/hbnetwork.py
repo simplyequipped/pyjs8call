@@ -20,7 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Monitor heartbeat networking messaging.'''
+'''Manage outgoing heartbeat network messaging.
+
+Heartbeat networking cannot be started while running JS8Call headless. This module recreates basic outgoing heartbeat network messaging while running headless. This module only sends heartbeat messages on a time interval in the heartbeat sub-band. Automatic replies such as heartbeat acknowledgements are handled by the JS8Call application.
+'''
 
 __docformat__ = 'google'
 
@@ -32,9 +35,9 @@ import random
 from pyjs8call import OffsetMonitor
 
 class HeartbeatNetworking:
-    '''Manage heartbeat networking messaging.
+    '''Manage outgoing heartbeat network messaging.
 
-    Send heartbeat messages automatically on a timed interval. The JS8Call offset frequency will automatically change to an available offset in the heartbeat sub-band (500 - 1000 Hz) during transmit, and back to the previous offset at the end of the rx/tx cycle. If no frequency is determined to be available, the highest frequency in the heartbeat sub-band is used.
+    Send heartbeat messages automatically on a time interval. The JS8Call offset frequency will automatically change to an available offset in the heartbeat sub-band (500 - 1000 Hz) during transmit, and back to the previous offset at the end of the rx/tx cycle. If no frequency is determined to be available, the highest frequency in the heartbeat sub-band is used.
     '''
     def __init__(self, client):
         '''Initialize heartbeat networking object.
