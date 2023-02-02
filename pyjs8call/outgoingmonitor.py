@@ -20,9 +20,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Monitor JS8Call tx text for queued outgoing messages.
+'''Monitor JS8Call outgoing message text.
 
-Directed messages are monitored by default (see pyjs8call.client.Client.monitor_directed_tx).
+Directed messages are monitored by default (see pyjs8call.client.Client.monitor_outgoing).
 
 Set `client.callback.outgoing` to receive outgoing message status updates. See pyjs8call.client.Callbacks for *outgoing* callback function details.
 '''
@@ -36,8 +36,8 @@ import threading
 from pyjs8call import Message
 
 
-class TxMonitor:
-    '''Monitor JS8Call tx text for queued outgoing messages.
+class OutgoingMonitor:
+    '''Monitor JS8Call outgoing message text.
     
     Monitored messages can have the the following status:
     - STATUS_QUEUED
@@ -61,13 +61,13 @@ class TxMonitor:
     '''
 
     def __init__(self, client):
-        '''Initialize tx monitor.
+        '''Initialize outgoing message monitor.
 
         Args:
             client (pyjs8call.client): Parent client object
 
         Returns:
-            pyjs8call.txmonitor: Constructed tx monitor object
+            pyjs8call.outgoingmonitor: Constructed outgoing message monitor object
         '''
         self._client = client
         self._enabled = False
@@ -76,9 +76,7 @@ class TxMonitor:
         # initialize msg max age to 30 tx cycles in fast mode (10 sec cycles)
         self._msg_max_age = 10 * 30 # 5 minutes
 
-        self.enable()
-
-    def enable(self):
+    def enable_monitoring(self):
         if self._enabled:
             return
 
@@ -88,7 +86,7 @@ class TxMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable(self):
+    def disable_monitoring(self):
         self._enabled = False
 
     def _callback(self, msg):
