@@ -58,16 +58,17 @@ class Client:
         spots (pyjs8call.spotmonitor): Monitors station activity and issues callbacks
         window (pyjs8call.windowmonitor): Monitors the JS8Call transmit window
         offset (pyjs8call.offsetmonitor): Manages JS8Call offset frequency
-        outgoing (pyjs8call.txmonitor): Monitors JS8Call transmit text for outgoing messages
+        outgoing (pyjs8call.outgoingmonitor): Monitors JS8Call outgoing message text
         drift (pyjs8call.timemonitor): Monitors JS8Call time drift
         time_master (pyjs8call.timemonitor): Manages time master outgoing messages
         inbox (pyjs8call.inboxmonitor): Monitors JS8Call inbox messages
         config (pyjs8call.confighandler): Manages JS8Call configuration file
-        heartbeat (pyjs8call.hbmonitor): Manages heartbeat outgoing messages
+        heartbeat (pyjs8call.hbnetwork): Manages heartbeat outgoing messages
         callback (pyjs8call.client.Callbacks): Callback function reference object
         settings (pyjs8call.client.Settings): Configuration setting function reference object
-        clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages
-        monitor_directed_tx (bool): Monitor outgoing message status (see pyjs8call.txmonitor)
+        clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages, defaults to True
+        monitor_outgoing (bool): Monitor outgoing message status (see pyjs8call.outgoingmonitor), defaults to True
+        online (bool): Whether the JS8Call application and pyjs8call interface are online
         host (str): IP address matching JS8Call *TCP Server Hostname* setting
         port (int): Port number matching JS8Call *TCP Server Port* setting
         headless (bool): Run JS8Call headless via xvfb (linux only)
@@ -81,6 +82,7 @@ class Client:
         Configures the following settings:
         - enable autoreply at startup
         - disable autoreply confirmation
+        - enable transmit
 
         Args:
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
@@ -117,15 +119,11 @@ class Client:
         self.inbox = None
         self.heartbeat = None
 
-
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
 
-        # initialize the config file handler
         self.config = pyjs8call.ConfigHandler(config_path = config_path)
         self.settings = Settings(self)
-
-        # initialize callback object
         self.callback = Callbacks()
 
         # stop application and client at exit
@@ -147,13 +145,13 @@ class Client:
         - Spot monitor (see pyjs8call.spotmonitor)
         - Window monitor (see pyjs8call.windowmonitor)
         - Offset monitor (see pyjs8call.offsetmonitor)
-        - Tx monitor (see pyjs8call.txmonitor)
+        - Outgoing monitor (see pyjs8call.outgoingmonitor)
         - Time drift monitor (see pyjs8call.timemonitor)
         - Time master (see pyjs8call.timemonitor)
-        - Heartbeat monitor (see pyjs8call.hbmonitor)
+        - Heartbeat networking (see pyjs8call.hbnetwork)
         - Inbox master (see pyjs8call.inboxmonitor)
 
-        Only the spot, window, offset, and tx monitors are started automatically.
+        Spot, window, offset, and outgoing monitors are started automatically.
 
         Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
 
@@ -187,11 +185,16 @@ class Client:
         self.window = pyjs8call.WindowMonitor(self)
         self.spots = pyjs8call.SpotMonitor(self)
         self.offset = pyjs8call.OffsetMonitor(self)
-        self.outgoing = pyjs8call.TxMonitor(self)
+        self.outgoing = pyjs8call.OutgoingMonitor(self)
         self.drift = pyjs8call.DriftMonitor(self)
         self.time_master = pyjs8call.TimeMaster(self)
         self.heartbeat = pyjs8call.HeartbeatNetworking(self)
         self.inbox = pyjs8call.InboxMonitor(self)
+        
+        self.window.enable_monitoring()
+        self.spots.enable_monioring()
+        self.offset.enable_monitoring()
+        self.outgoing.enable_monitoring()
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
