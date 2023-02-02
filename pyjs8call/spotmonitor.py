@@ -229,4 +229,3 @@ class SpotMonitor:
 
             if len(new_spots) > 0:
                 self._callback(new_spots)
-
