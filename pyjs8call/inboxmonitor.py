@@ -372,8 +372,6 @@ class InboxMonitor:
 
                 if msg.get('msg_id') is None and (last_tx_timestamp + response_delay) < time.time():
                     # process next msg response
-                    #TODO
-                    print(self._get_msg_id(msg))
                     msg.set('msg_id', self._get_msg_id(msg))
                     self._client.query_message_id(msg.origin, msg.msg_id)
                     # reset age
