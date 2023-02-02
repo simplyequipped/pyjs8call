@@ -67,7 +67,7 @@ class WindowMonitor:
 
         self.enable()
 
-    def enable(self):
+    def enable_monitoring(self):
         '''Enable rx/tx window monitoring.'''
         if self._enabled:
             return
@@ -82,7 +82,7 @@ class WindowMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable(self):
+    def disable_monitoring(self):
         '''Disable rx/tx window monitoring.'''
         self._enabled = False
         self._client.callback.remove_incoming(self.process_rx_msg)
