@@ -640,4 +640,3 @@ class JS8Call:
             pass
 
         self.append_to_rx_queue(msg)
-
