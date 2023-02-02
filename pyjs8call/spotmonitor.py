@@ -57,9 +57,7 @@ class SpotMonitor:
         self._group_watch_list = []
         self._spots_lock = threading.Lock()
 
-        self.enable()
-
-    def enable(self):
+    def enable_monitoring(self):
         '''Enable spot monitoring.'''
         if self._enabled:
             return
@@ -70,7 +68,7 @@ class SpotMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable(self):
+    def disable_monitoring(self):
         '''Disable spot monitoring.'''
         self._enabled = False
 
