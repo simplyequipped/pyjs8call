@@ -402,4 +402,3 @@ class InboxMonitor:
 
             # delay until next window transition
             self._client.window.sleep_until_next_transition(within = 0.5)
-
