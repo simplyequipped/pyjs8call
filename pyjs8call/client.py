@@ -190,7 +190,7 @@ class Client:
         self.outgoing = pyjs8call.TxMonitor(self)
         self.drift = pyjs8call.DriftMonitor(self)
         self.time_master = pyjs8call.TimeMaster(self)
-        self.heartbeat = pyjs8call.HeartbeatMonitor(self)
+        self.heartbeat = pyjs8call.HeartbeatNetworking(self)
         self.inbox = pyjs8call.InboxMonitor(self)
 
     def stop(self):
