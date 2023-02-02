@@ -2,6 +2,9 @@
 
 **0.1.2**
 
+- Rename pyjs8call.txmonitor to pyjs8call.outgoingmonitor
+- Rename pyjs8call.hbmonitor to pyjs8call.hbnetwork
+- Rename several module enable/disable/pause/resume functions
 - Reorganize several pyjs8call.client functions into pyjs8call.client.Settings
 - Reorganize spot related function under pyjs8call.spotmonitor
 - pyjs8call.client function *get_spots* moved to pyjs8call.spotmonitor *filter*
@@ -13,7 +16,7 @@
 - Change pyjs8call.windowmonitor function *next_transition_seconds* arguments to *cycles* and *default*
 - Change pyjs8call.windowmonitor function *next_transition_timestamp* arguments to *cycles* and *default*
 - Add pyjs8call.windowmonitor function *sleep_until_next_transition*
-- Improve pyjs8call.hbmonitor QSY to the heartbeat sub-band while transmitting
+- Implement offset QSY to the heartbeat sub-band while sending heartbeat messages in pyjs8call.hbnetwork
 - Various minor bug fixes
 - Documentation improvements
 - Updated documentation examples and example.py
