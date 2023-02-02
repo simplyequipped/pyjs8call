@@ -20,7 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Monitor heartbeat messaging interval.'''
+'''Monitor heartbeat networking messaging.'''
 
 __docformat__ = 'google'
 
@@ -31,13 +31,13 @@ import random
 
 from pyjs8call import OffsetMonitor
 
-class HeartbeatMonitor:
-    '''Monitor heartbeat messaging interval.
+class HeartbeatNetworking:
+    '''Manage heartbeat networking messaging.
 
-    Send heaertbeat messages automatically on a timed interval. The JS8Call offset will automatically change to an available offset in the heartbeat sub-band (500 - 1000 Hz) during transmit, and back to the previous offset at the end of the rx/tx cycle. If no frequency is determined to be available, the highest frequency in the sub-band is used.
+    Send heartbeat messages automatically on a timed interval. The JS8Call offset frequency will automatically change to an available offset in the heartbeat sub-band (500 - 1000 Hz) during transmit, and back to the previous offset at the end of the rx/tx cycle. If no frequency is determined to be available, the highest frequency in the heartbeat sub-band is used.
     '''
     def __init__(self, client):
-        '''Initialize heartbeat monitor object.
+        '''Initialize heartbeat networking object.
 
         Args:
             client (pyjs8call.client): Parent client object
@@ -56,8 +56,8 @@ class HeartbeatMonitor:
         self._offset.max_offset = 1000
         self._offset.bandwidth_safety_factor = 1.1
 
-    def enable(self, interval=10):
-        '''Enable heartbeat monitoring.
+    def enable_networking(self, interval=10):
+        '''Enable heartbeat networking.
 
         Args:
             interval (int): Number of minutes between outgoing messages, defaults to 10
@@ -71,16 +71,16 @@ class HeartbeatMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable(self):
+    def disable_networking(self):
         '''Disable heartbeat monitoring.'''
         self._enabled = False
 
-    def pause(self):
+    def pause_networking(self):
         '''Pause heartbeat monitoring.'''
         self._paused = True
         self._offset.pause()
 
-    def resume(self):
+    def resume_networking(self):
         '''Resume heartbeat monitoring.'''
         self._last_hb_timestamp = time.time()
         self._paused = False
