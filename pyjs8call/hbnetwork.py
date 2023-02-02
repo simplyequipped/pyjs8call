@@ -154,4 +154,3 @@ class HeartbeatNetworking:
                 
             if not main_offset_was_paused:
                 self._client.offset.resume_monitoring()
-
