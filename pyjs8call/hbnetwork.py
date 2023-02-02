@@ -43,7 +43,7 @@ class HeartbeatNetworking:
             client (pyjs8call.client): Parent client object
 
         Returns:
-            pyjs8call.hbmonitor: Constructed heartbeat object
+            pyjs8call.hbnetwork: Constructed heartbeat object
         '''
         self._client = client
         self._enabled = False
