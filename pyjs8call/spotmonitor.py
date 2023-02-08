@@ -96,7 +96,7 @@ class SpotMonitor:
         '''
         spots = []
         with self._spots_lock:
-            for spot in self._client.js8call.spots:
+            for spot in self._client.js8call.get_spots():
                 if (
                     (age == 0 or spot.age() <= age) and
                     (distance == 0 or (spot.distance is not None and spot.distance <= distance)) and
