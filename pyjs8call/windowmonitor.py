@@ -65,8 +65,6 @@ class WindowMonitor:
         self._next_window_timestamp = 0
         self._timestamp_lock = threading.Lock()
 
-        self.enable()
-
     def enable_monitoring(self):
         '''Enable rx/tx window monitoring.'''
         if self._enabled:
