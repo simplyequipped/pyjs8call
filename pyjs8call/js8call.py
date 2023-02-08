@@ -278,6 +278,17 @@ class JS8Call:
             queued_outgoing = len(self._tx_queue)
 
         return bool(outgoing_text or queued_outgoing > 0)
+    
+    def block_until_no_activity(self, age=0):
+        '''Block until not outgoing activity.
+        
+        See *activity()* for more details.
+        
+        Args:
+            age (int): Maximum age of outgoing activity to consider active, defaults to 0
+        '''
+        while self.activity(age = age):
+            time.sleep(0.1)
 
     def connect(self):
         '''Connect to the TCP socket of the JS8Call application.
