@@ -173,6 +173,14 @@ class JS8Call:
 
         return {setting: getattr(self, setting) for setting in settings}
 
+    def get_spots(self):
+        '''Get list of spot messages.
+        
+        Returns:
+            list: All spot message objects
+        '''
+        return self._spots
+
     def get_state(self, state):
         '''Get asynchronous state value.
 
