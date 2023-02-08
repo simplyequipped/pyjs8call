@@ -279,7 +279,7 @@ class JS8Call:
 
         return bool(outgoing_text or queued_outgoing > 0)
     
-    def block_until_no_activity(self, age=0):
+    def block_until_inactive(self, age=0):
         '''Block until not outgoing activity.
         
         See *activity()* for more details.
