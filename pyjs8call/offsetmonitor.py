@@ -304,7 +304,7 @@ class OffsetMonitor:
         Update activity 0.5 seconds before the end of the current tx window. This allows a new offset to be selected before the next tx window if new activity overlaps with the current offset. Activity is not updated if a message is being sent (i.e. there is text in the tx text box).
         '''
         while self._enabled:
-            # wait until 0.5 seconds before the end of the rx/tx window
+            # wait until 1 second before the end of the rx/tx window
             self._client.window.sleep_until_next_transition(before = 1)
 
             if self._paused:
