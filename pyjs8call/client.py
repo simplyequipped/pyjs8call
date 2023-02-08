@@ -192,7 +192,7 @@ class Client:
         self.inbox = pyjs8call.InboxMonitor(self)
         
         self.window.enable_monitoring()
-        self.spots.enable_monioring()
+        self.spots.enable_monitoring()
         self.offset.enable_monitoring()
         self.outgoing.enable_monitoring()
 
