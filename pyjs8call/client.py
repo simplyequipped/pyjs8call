@@ -231,6 +231,25 @@ class Client:
         # restore settings
         self.js8call.reinitialize(settings)
 
+    def restart_when_inactive(self, age=0):
+        '''Restart the JS8Call application once there is no outgoing activity.
+        
+        This function is non-blocking due to the use of *threading.Thread* internally.
+        
+        See *pyjs8call.js8call.activity()* for more details.
+        
+        Args:
+            age (int): Maximum age of outgoing activity to consider active, defaults to 0
+        '''
+        thread = threading.Thread(target=self._restart_when_inactive, args=(age,))
+        thread.daemon = True
+        thread.start()
+        
+    def _restart_when_inactive(self, age):
+        '''Thread function to restart once there is no outgoing activity.'''
+        self.js8call.block_until_inactive(age = age)
+        self.restart()
+        
     def _rx(self):
         '''Rx thread function.'''
         while self.online:
