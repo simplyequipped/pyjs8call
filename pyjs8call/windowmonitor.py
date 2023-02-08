@@ -64,7 +64,7 @@ class WindowMonitor:
         self._last_rx_msg_timestamp = 0
         self._next_window_timestamp = 0
         self._timestamp_lock = threading.Lock()
-        self._ignore_next = False
+        self._ignore_next_tx_frame = False
 
     def enable_monitoring(self):
         '''Enable rx/tx window monitoring.'''
@@ -100,49 +100,47 @@ class WindowMonitor:
     def ignore_next_tx_frame(self):
         '''Ignore the next tx frame.
 
-        Used to ignore outgoing messages that may cause cumulative tx frame offset errors, such as pyjs8call heartbeat networking messages, when there are no other outgoing messages.
+        Used to ignore outgoing messages that may cause cumulative tx frame offset errors when there are no other outgoing messages (ex. pyjs8call heartbeat networking messages).
         '''
-        self._ignore_next = True
+        self._ignore_next_tx_frame = True
 
     def process_tx_frame(self, msg):
         '''Process tx frame message.
 
-        Use the timestamp of a tx frame to indicate the rx/tx window transition.
+        This function is for internal use only.
+
+        Use the timestamp of a tx frame API message to mark the beginning of a rx/tx window transition.
 
         Args:
             msg (pyjs8call.message): Tx frame message object
         '''
-        if self._ignore_next:
-            self._ignore_next = False
+        if self._ignore_next_tx_frame:
+            self._ignore_next_tx_frame = False
             return
+
+        window_duration = self._client.settings.get_window_duration()
 
         with self._timestamp_lock:
             self._last_tx_frame_timestamp = msg.timestamp
-            self._next_window_timestamp = msg.timestamp + self._client.settings.get_window_duration()
-
-        # stop using rx messages
-        self._client.callback.remove_incoming(self.process_rx_msg)
-        self._last_rx_msg_timestamp = 0
+            self._next_window_timestamp = msg.timestamp + window_duration
 
     def process_rx_msg(self, msg):
         '''Process incoming message.
 
-        Use the timestamp of an incoming message to calculate the rx/tx window transition. Useful for listen-only stations.
+        This function is for internal use only.
 
-        Only one incoming message is processed per rx/tx window cycle. Once the more accurate tx frame has been heard incoming messages are no longer utilized. 
+        Use the timestamp of an incoming message to calculate the rx/tx window transition.
 
         Args:
             msg (pyjs8call.message): Received message object
         '''
-        if self._last_tx_frame_timestamp != 0:
-            return
-
-        # only process the first rx message per window cycle
+        # only process the first incoming message per rx/tx cycle
         window_duration = self._client.settings.get_window_duration()
+
         if (msg.timestamp - self._last_rx_msg_timestamp) > (window_duration / 2):
             with self._timestamp_lock:
                 self._last_rx_msg_timestamp = msg.timestamp
-                # message rx occurs approximately two second before the end of the tx window
+                # message rx occurs approximately 2 second before the end of the tx window
                 self._next_window_timestamp = msg.timestamp + 2
 
     def next_transition_timestamp(self, cycles=0, default=None):
