@@ -397,13 +397,8 @@ class DriftMonitor:
         self._paused = False
         
     def _restart_client(self):
-        tx_text = self._client.js8call.get_state('tx_text')
-
-        # no active outgoing message
-        while tx_text not in (None, ''):
-            time.sleep(1)
-            tx_text = self._client.js8call.get_state('tx_text')
-        
+        '''Restart client when there is no activity.'''
+        self._client.js8call.block_until_inactive():
         self._client.restart()
 
     def _monitor(self, station, group, interval, threshold, age):
