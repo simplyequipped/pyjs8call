@@ -161,7 +161,7 @@ class JS8Call:
         '''
         settings = [
             'state',
-            'spots',
+            '_spots',
             'max_spots',
             '_tx_queue',
             '_debug',
