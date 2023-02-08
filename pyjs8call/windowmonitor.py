@@ -64,6 +64,7 @@ class WindowMonitor:
         self._last_rx_msg_timestamp = 0
         self._next_window_timestamp = 0
         self._timestamp_lock = threading.Lock()
+        self._ignore_next = False
 
     def enable_monitoring(self):
         '''Enable rx/tx window monitoring.'''
@@ -96,6 +97,13 @@ class WindowMonitor:
             thread.daemon = True
             thread.start()
 
+    def ignore_next_tx_frame(self):
+        '''Ignore the next tx frame.
+
+        Used to ignore outgoing messages that may cause cumulative tx frame offset errors, such as pyjs8call heartbeat networking messages, when there are no other outgoing messages.
+        '''
+        self._ignore_next = True
+
     def process_tx_frame(self, msg):
         '''Process tx frame message.
 
@@ -104,6 +112,10 @@ class WindowMonitor:
         Args:
             msg (pyjs8call.message): Tx frame message object
         '''
+        if self._ignore_next:
+            self._ignore_next = False
+            return
+
         with self._timestamp_lock:
             self._last_tx_frame_timestamp = msg.timestamp
             self._next_window_timestamp = msg.timestamp + self._client.settings.get_window_duration()
