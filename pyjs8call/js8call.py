@@ -46,6 +46,7 @@ class JS8Call:
     Initializes pyjs8call.appmonitor as well as rx, tx, logging, and application heartbeat threads.
 
     Attributes:
+        app (pyjs8call.appmonitor): Application monitor object
         connected (bool): Whether the JS8Call TCP socket is connected
         spots (list): List of spot messages (see pyjs8call.spotmonitor to utilize spots)
         max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
@@ -72,10 +73,8 @@ class JS8Call:
         self._rx_queue_lock = threading.Lock()
         self._tx_queue = []
         self._tx_queue_lock = threading.Lock()
-        self._last_rx_timestamp = 0
         self._socket = None
-        self._socket_heartbeat_delay = 60 * 5 # seconds
-        self._app = None
+        self._socket_ping_delay = 60 * 5 # seconds
         self._debug = False
         self._debug_all = False
         self._log = False
@@ -121,8 +120,8 @@ class JS8Call:
         self.online = True
 
         # start the application monitor
-        self.app_monitor = pyjs8call.AppMonitor(self, client)
-        self.app_monitor.start(headless=headless)
+        self.app = pyjs8call.AppMonitor(self, client)
+        self.app.start(headless=headless)
         
         tx_thread = threading.Thread(target=self._tx)
         tx_thread.daemon = True
@@ -132,7 +131,7 @@ class JS8Call:
         rx_thread.daemon = True
         rx_thread.start()
 
-        hb_thread = threading.Thread(target=self._hb)
+        hb_thread = threading.Thread(target=self._ping)
         hb_thread.daemon = True
         hb_thread.start()
 
@@ -260,18 +259,25 @@ class JS8Call:
         if log_all:
             self._log_all = True
 
-    def active(self):
+    def activity(self, age=0):
         '''Whether there is outgoing activity.
+        
+        Args:
+            age (int): Maximum age of outgoing activity to consider active, defaults to 0 (disabled)
 
         Returns:
-            bool: True if there is text in the tx text field or queued outgoing messages, False otherwise
+            bool: True if text in the tx text field, queued outgoing messages, or recent activity, False otherwise
         '''
-        outgoing = bool(self.get_state('tx_text') not in (None, ''))
+        activity_age = time.time() - self.last_outgoing
+        if activity_age < age:
+            return True
+        
+        outgoing_text = bool(self.get_state('tx_text') not in (None, ''))
 
         with self._tx_queue_lock:
-            tx_queue_size = len(self._tx_queue)
+            queued_outgoing = len(self._tx_queue)
 
-        return bool(outgoing or tx_queue_size > 0)
+        return bool(outgoing_text or queued_outgoing > 0)
 
     def connect(self):
         '''Connect to the TCP socket of the JS8Call application.
@@ -406,14 +412,14 @@ class JS8Call:
                     self._log_queue = ''
             time.sleep(1)
 
-    def _hb(self):
-        '''JS8Call application heartbeat thread.
+    def _ping(self):
+        '''JS8Call application ping thread.
 
         If no messages have been received from the JS8Call in the last 5 minutes, a request is issued to the application to make sure it is still connected and functioning as expected.
         '''
         while self.online:
             # if no recent rx, check the connection by making a request
-            timeout = self._last_rx_timestamp + self._socket_heartbeat_delay
+            timeout = self.last_incoming + self._socket_ping_delay
 
             if time.time() > timeout:
                 self.connected = False
@@ -512,7 +518,7 @@ class JS8Call:
             if len(data_str) == 0:
                 continue
 
-            self._last_rx_timestamp = time.time()
+            # restore connected state after being disconnected
             self.connected = True
 
             # split received data into messages
@@ -536,6 +542,8 @@ class JS8Call:
                 if msg.value is not None and Message.ERR in msg.value:
                     continue
 
+                self.last_incoming = time.time()
+                
                 # print msg in debug mode
                 if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
                     print('RX: ' + json.dumps(msg.dict()))
@@ -544,7 +552,6 @@ class JS8Call:
                 if self._log and (self._log_all or (msg.type not in self._debug_log_type_blacklist)):
                     self._log_msg(msg)
 
-                self.last_incoming = time.time()
                 self._process_message(msg)
 
         time.sleep(0.1)
