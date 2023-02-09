@@ -50,8 +50,8 @@ class JS8Call:
         connected (bool): Whether the JS8Call TCP socket is connected
         spots (list): List of spot messages (see pyjs8call.spotmonitor to utilize spots)
         max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
-        last_incoming (float): Timestamp of last incoming message, defaults to 0 (zero)
-        last_outgoing (float): Timestamp of last outgoing message, defaults to 0 (zero)
+        last_incoming (float): Timestamp of last incoming user message, defaults to 0 (zero)
+        last_outgoing (float): Timestamp of last outgoing user message, defaults to 0 (zero)
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442, headless=False):
@@ -275,7 +275,8 @@ class JS8Call:
         outgoing_text = bool(self.get_state('tx_text') not in (None, ''))
 
         with self._tx_queue_lock:
-            queued_outgoing = len(self._tx_queue)
+            # count of queued outgoing user msgs
+            queued_outgoing = len([msg for msg in self._tx_queue if msg.type in Message.USER_MSG_TYPES])
 
         return bool(outgoing_text or queued_outgoing > 0)
     
@@ -478,8 +479,11 @@ class JS8Call:
     
                     try:
                         self._socket.sendall(packed)
-                        self.last_outgoing = time.time()
                         self._tx_queue.remove(msg)
+                    
+                        if msg.type in Message.USER_MSG_TYPES:
+                            self.last_outgoing = time.time()
+                        
                         # make sure the next queued msg doesn't get sent before the tx text state updates
                         if msg.type == Message.TX_SEND_MESSAGE:
                             force_tx_text = True
@@ -553,7 +557,8 @@ class JS8Call:
                 if msg.value is not None and Message.ERR in msg.value:
                     continue
 
-                self.last_incoming = time.time()
+                if msg.type in Message.USER_MSG_TYPES:
+                    self.last_incoming = time.time()
                 
                 # print msg in debug mode
                 if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
