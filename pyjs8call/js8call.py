@@ -232,7 +232,7 @@ class JS8Call:
     def stop(self):
         '''Stop threads and JS8Call application.'''
         self.online = False
-        self.app_monitor.stop()
+        self.app.stop()
         self._socket.close()
 
     def enable_debugging(self, debug_all=False):
@@ -395,11 +395,11 @@ class JS8Call:
 
         if msg not in self._recent_spots:
             self._recent_spots.append(msg)
-            self.spots.append(msg)
+            self._spots.append(msg)
 
         # cull spots
-        if len(self.spots) > self.max_spots:
-            self.spots.pop(0)
+        if len(self._spots) > self.max_spots:
+            self._spots.pop(0)
 
     def _log_msg(self, msg):
         '''Add message to log queue.'''
@@ -580,12 +580,12 @@ class JS8Call:
             msg (pyjs8call.message): Message to process
         '''
         # try to get distance and bearing
-        if msg.grid is not None:
+        if msg.grid not in (None, ''):
             miles = bool(self._client.config.get('Configuration', 'Miles') == 'true')
 
             try:
                 # raises ValueError for incorrect grid format
-                distance, bearing = self._client.get_distance(msg.grid, miles = miles)
+                distance, bearing = self._client.grid_distance(msg.grid, miles = miles)
                 msg.set('distance', distance)
                 msg.set('bearing', bearing)
             except ValueError:
