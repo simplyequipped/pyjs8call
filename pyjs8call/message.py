@@ -88,6 +88,8 @@ class Message:
     | **Types** | **Value** |
     | TX_TYPES | *list* of outgoing types |
     | RX_TYPES | *list* of incoming types |
+    | DIRECTED_TYPES | *list* of directed types |
+    | USER_MSG_TYPES | *list* of in/out msg types |
     | TYPES | *list* of all types |
 
     &nbsp;
@@ -256,6 +258,7 @@ class Message:
 
     TYPES = TX_TYPES + RX_TYPES
     DIRECTED_TYPES = [RX_DIRECTED, RX_DIRECTED_ME]
+    USER_MSG_TYPES = DIRECTED_TYPES + [TX_SEND_MESSAGE]
 
     # command types
     CMD_HB                  = ' HB'
