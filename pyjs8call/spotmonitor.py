@@ -75,7 +75,7 @@ class SpotMonitor:
     def all(self):
         '''Get all stored spot messages.'''
         with self._spots_lock:
-            return self._client.js8call.spots
+            return self._client.js8call.get_spots()
 
     def filter(self, origin=None, destination=None, distance=0, age=0, count=0):
         '''Get filtered spot messages.
@@ -107,7 +107,7 @@ class SpotMonitor:
 
         if 0 < count < len(spots):
             count *= -1
-            spots = spots[:count]
+            spots = spots[count:]
 
         return spots
 
@@ -122,7 +122,7 @@ class SpotMonitor:
         '''
         count *= -1
         with self._spots_lock:
-            return self._client.js8call.spots[:count]
+            return self._client.js8call.get_spots()[count:]
 
     def add_station_watch(self, station):
         '''Add watched station.
