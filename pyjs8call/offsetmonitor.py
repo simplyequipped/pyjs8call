@@ -311,7 +311,7 @@ class OffsetMonitor:
                 continue
 
             # skip processing if actively sending a message
-            if self._client.js8call.active():
+            if self._client.js8call.activity():
                 continue
 
             # get recent spots
