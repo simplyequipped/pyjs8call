@@ -398,7 +398,7 @@ class DriftMonitor:
         
     def _restart_client(self):
         '''Restart client when there is no activity.'''
-        self._client.js8call.block_until_inactive():
+        self._client.js8call.block_until_inactive()
         self._client.restart()
 
     def _monitor(self, station, group, interval, threshold, age):
