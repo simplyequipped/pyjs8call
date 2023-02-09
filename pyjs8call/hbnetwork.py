@@ -79,7 +79,7 @@ class HeartbeatNetworking:
     def disable_networking(self):
         '''Disable heartbeat monitoring.'''
         self._enabled = False
-        self._offset.disable_networking()
+        self._offset.disable_monitoring()
 
     def pause_networking(self):
         '''Pause heartbeat monitoring.'''
@@ -98,16 +98,16 @@ class HeartbeatNetworking:
         while self._enabled:
             time.sleep(1)
 
+            # outgoing activity, reset interval timer
+            if self._client.js8call.activity():
+                self._last_hb_timestamp = time.time()
+                continue
+
             # wait for accurate window timing
             if self._client.window.next_transition_seconds() is None:
                 continue
 
             if (self._last_hb_timestamp + interval) > time.time() or self._paused:
-                continue
-
-            # outgoing activity, reset interval timer
-            if self._client.js8call.active():
-                self._last_hb_timestamp = time.time()
                 continue
 
             # if we made it this far we are ready to send a heartbeat
@@ -144,10 +144,11 @@ class HeartbeatNetworking:
             # send heartbeat on next cycle
             self._client.window.ignore_next_tx_frame()
             self._client.send_heartbeat()
-            self._last_hb_timestamp = time.time()
             
             # wait until the end of the following cycle
             self._client.window.sleep_until_next_transition(within = 1, before = 1)
+            # set timestamp at the end of the cycle
+            self._last_hb_timestamp = time.time()
             # pause hb offset monitor
             self._offset.pause_monitoring()
             # restore main offset
