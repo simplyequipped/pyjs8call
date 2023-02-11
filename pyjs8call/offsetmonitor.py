@@ -38,11 +38,13 @@ class OffsetMonitor:
     '''Monitor offset frequency based on activity in the pass band.
 
     Attributes:
-        min_offset (int): Minimum offset for adjustment and recent activity monitoring
-        max_offset (int): Maximum offset for adjustment and recent activity monitoring
-        bandwidth (int): JS8Call tx signal bandwidth (see pyjs8call.client.Client.settings.get_bandwidth)
-        bandwidth_safety_factor (float): Safety factor to apply to tx bandwidth when looking for an unused portion of the pass band
+        min_offset (int): Minimum offset for adjustment and recent activity monitoring, defaults to 1000
+        max_offset (int): Maximum offset for adjustment and recent activity monitoring, defaults to 2500
+        bandwidth (int): Outgoing signal bandwidth, defaults to bandwidth assocaited with JS8Call configured speed
+        bandwidth_safety_factor (float): Safety factor to apply around outgoing signal bandwith, defaults to 1.25
         offset (int): Current JS8Call offset frequency in Hz
+        before_transition (int, float): Seconds before the rx/tx window transition to process activity, defaults to 1
+        activity_cycles (int, float): rx/tx cycles to consider recent activity, defaults to 1.5
     '''
 
     def __init__(self, client):
@@ -60,6 +62,8 @@ class OffsetMonitor:
         self.bandwidth = self._client.settings.get_bandwidth()
         self.bandwidth_safety_factor = 1.25
         self.offset = self._client.settings.get_offset()
+        self.before_transition = 1
+        self.activity_cycles = 1.5
         self._enabled = False
         self._paused = False
 
@@ -301,11 +305,11 @@ class OffsetMonitor:
     def _monitor(self):
         '''Offset monitor thread.
 
-        Update activity 0.5 seconds before the end of the current tx window. This allows a new offset to be selected before the next tx window if new activity overlaps with the current offset. Activity is not updated if a message is being sent (i.e. there is text in the tx text box).
+        Update activity just before the end of the current tx window. This allows a new offset to be selected before the next rx/tx window if new activity overlaps with the current offset. Activity is not updated if a message is being sent (i.e. there is text in the tx text box).
         '''
         while self._enabled:
             # wait until 1 second before the end of the rx/tx window
-            self._client.window.sleep_until_next_transition(before = 1)
+            self._client.window.sleep_until_next_transition(before = self.before_transition)
 
             if self._paused:
                 continue
@@ -314,9 +318,21 @@ class OffsetMonitor:
             if self._client.js8call.activity():
                 continue
 
+            # get the current settings
+            self.bandwidth = self._client.settings.get_bandwidth()
+            current_offset = self._client.settings.get_offset(update=True)
+
+            if current_offset != self.offset:
+                self.offset = current_offset
+
+            # force offset into specified pass band
+            if self.offset < self.min_offset or self.offset > self.max_offset:
+                mid_range = ((self.max_offset - self.min_offset) / 2) + self.min_offset
+                self._client.settings.set_offset(mid_range)
+
             # get recent spots
-            heard_station_age = int(self._client.settings.get_window_duration() * 1.5)
-            activity = self._client.spots.filter(age = heard_station_age) 
+            activity_age = int(self.activity_cycles * self._client.settings.get_window_duration())
+            activity = self._client.spots.filter(age = activity_age) 
 
             # skip processing if there is no activity
             if len(activity) == 0:
@@ -324,13 +340,6 @@ class OffsetMonitor:
 
             # process activity into signal tuples (min_freq, max_freq)
             signals = self.parse_activity(activity)
-
-            # get the current settings
-            self.bandwidth = self._client.settings.get_bandwidth()
-            current_offset = self._client.settings.get_offset()
-
-            if int(current_offset) != int(self.offset):
-                self.offset = current_offset
 
             # check for signals overlapping our signal
             overlap = False
@@ -353,3 +362,4 @@ class OffsetMonitor:
                 if new_offset is not None:
                     # set new offset
                     self.offset = self._client.settings.set_offset(new_offset)
+
