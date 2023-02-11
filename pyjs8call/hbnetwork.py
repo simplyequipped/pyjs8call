@@ -37,7 +37,9 @@ from pyjs8call import OffsetMonitor
 class HeartbeatNetworking:
     '''Manage outgoing heartbeat network messaging.
 
-    Send heartbeat messages automatically on a time interval. The JS8Call offset frequency will automatically change to an available offset in the heartbeat sub-band (500 - 1000 Hz) during transmit, and back to the previous offset at the end of the rx/tx cycle. If no frequency is determined to be available, the highest frequency in the heartbeat sub-band is used.
+    Send heartbeat messages automatically on a time interval. The JS8Call offset frequency will automatically change to an available offset in the heartbeat sub-band (500 - 1000 Hz) during transmit, and back to the previous offset at the end of the rx/tx cycle. If no frequency is determined to be available, or if there is no recent activity, a random frequency in the heartbeat sub-band is used.
+
+    Outgoing activity via pyjs8call will reset the timer for the next heartbeat message. Activity not handled by pyjs8call (ex. JS8Call autoreplies) will not reset the interval timer.
     '''
     def __init__(self, client):
         '''Initialize heartbeat networking object.
@@ -51,7 +53,7 @@ class HeartbeatNetworking:
         self._client = client
         self._enabled = False
         self._paused = False
-        self._last_hb_timestamp = 0
+        self._last_outgoing = 0
         self._offset = None
 
     def enable_networking(self, interval=10):
@@ -69,6 +71,8 @@ class HeartbeatNetworking:
         self._offset.min_offset = 500
         self._offset.max_offset = 1000
         self._offset.bandwidth_safety_factor = 1.1
+        self._offset.activity_cycles = 4
+        self._offset.before_transition = 0.5
         self._offset.pause_monitoring()
         self._offset.enable_monitoring()
 
@@ -87,34 +91,32 @@ class HeartbeatNetworking:
 
     def resume_networking(self):
         '''Resume heartbeat monitoring.'''
-        self._last_hb_timestamp = time.time()
+        self._last_outgoing = time.time()
         self._paused = False
 
     def _monitor(self, interval):
         '''Heartbeat monitor thread.'''
         interval *= 60
-        self._last_hb_timestamp = time.time()
+        self._last_outgoing = time.time()
 
         while self._enabled:
             time.sleep(1)
 
             # outgoing activity, reset interval timer
-            if self._client.js8call.activity():
-                self._last_hb_timestamp = time.time()
+            if self._client.js8call.activity(age = interval):
+                self._last_outgoing = self._client.js8call.last_outgoing
                 continue
 
             # wait for accurate window timing
             if self._client.window.next_transition_seconds() is None:
                 continue
 
-            if (self._last_hb_timestamp + interval) > time.time() or self._paused:
+            if (self._last_outgoing + interval) > time.time() or self._paused:
                 continue
 
             # if we made it this far we are ready to send a heartbeat
-            # offset monitor processes new activity 1 second before transition
-            # toggle main and hb offset monitors 2 seconds before transition
 
-            self._client.window.sleep_until_next_transition(before = 2)
+            self._client.window.sleep_until_next_transition(before = 0.75)
             
             # allow disable as late as possible
             if not self._enabled:
@@ -125,36 +127,27 @@ class HeartbeatNetworking:
                 continue
 
             # pause main offset monitor
-            main_offset_was_paused = self._client.offset.paused()
+            main_offset_is_paused = self._client.offset.paused()
             self._client.offset.pause_monitoring()
             last_offset = self._client.settings.get_offset()
+
+            # if no free hb offset or no activity, use pre-set random offset
+            max_offset = self._offset.max_offset - self._offset.bandwidth
+            hb_offset = random.randrange(self._offset.min_offset, max_offset)
+            self._client.settings.set_offset(hb_offset)
             # resume hb offset monitor
             self._offset.resume_monitoring()
-            self._client.window.sleep_until_next_transition(before = 0.5)
 
-            # no free hb offset or no activity, use max hb offset
-            #TODO consider whether a random hb offset should be used
-            max_offset = self._offset.max_offset - self._offset.bandwidth
-
-            if self._client.settings.get_offset() > max_offset:
-                safe_bandwidth = self._offset.bandwidth_safety_factor * self._offset.bandwidth
-                offset = self._offset.max_offset - safe_bandwidth
-                self._client.settings.set_offset(offset)
-                
             # send heartbeat on next cycle
-            self._client.window.ignore_next_tx_frame()
+            #TODO self._client.window.ignore_next_tx_frame()
             self._client.send_heartbeat()
             
             # wait until the end of the following cycle
             self._client.window.sleep_until_next_transition(within = 1, before = 1)
-            # set timestamp at the end of the cycle
-            self._last_hb_timestamp = time.time()
-            # pause hb offset monitor
+            self._last_outgoing = time.time()
             self._offset.pause_monitoring()
-            # restore main offset
             self._client.settings.set_offset(last_offset)
-            time.sleep(3)
                 
-            if not main_offset_was_paused:
+            if not main_offset_is_paused:
                 self._client.offset.resume_monitoring()
             
