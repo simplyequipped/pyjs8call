@@ -263,22 +263,19 @@ class JS8Call:
         '''Whether there is outgoing activity.
         
         Args:
-            age (int): Maximum age of outgoing activity to consider active, defaults to 0 (disabled)
+            age (int): Maximum age in seconds of outgoing activity to consider active, defaults to 0
 
         Returns:
             bool: True if text in the tx text field, queued outgoing messages, or recent activity, False otherwise
         '''
-        activity_age = time.time() - self.last_outgoing
-        if activity_age < age:
-            return True
-        
+        activity_age = bool(time.time() - self.last_outgoing <= age)
         outgoing_text = bool(self.get_state('tx_text') not in (None, ''))
 
         with self._tx_queue_lock:
             # count of queued outgoing user msgs
-            queued_outgoing = len([msg for msg in self._tx_queue if msg.type in Message.USER_MSG_TYPES])
+            queued_outgoing = bool(len([msg for msg in self._tx_queue if msg.type in Message.USER_MSG_TYPES]))
 
-        return bool(outgoing_text or queued_outgoing > 0)
+        return any((outgoing_text, queued_outgoing, activity_age))
     
     def block_until_inactive(self, age=0):
         '''Block until not outgoing activity.
@@ -621,7 +618,7 @@ class JS8Call:
         elif msg.type == Message.RIG_FREQ:
             self.state['dial'] = msg.dial
             self.state['freq'] = msg.freq
-            self.state['offset'] = msg.offset
+            self.state['offset'] = int(msg.offset)
 
         elif msg.type == Message.RIG_PTT:
             if msg.value == 'on':
@@ -632,7 +629,7 @@ class JS8Call:
         elif msg.type == Message.STATION_STATUS:
             self.state['dial'] = msg.dial
             self.state['freq'] = msg.freq
-            self.state['offset'] = msg.offset
+            self.state['offset'] = int(msg.offset)
             self.state['speed'] = msg.speed
 
         elif msg.type == Message.STATION_CALLSIGN:
