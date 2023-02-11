@@ -44,7 +44,7 @@ import atexit
 import threading
 import subprocess
 from datetime import datetime, timezone
-from math import radians, degrees, sin, cos, asin, acos, atan2, pi
+from math import radians, sin, cos, acos, atan2, pi
 
 import pyjs8call
 from pyjs8call import Message

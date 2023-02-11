@@ -273,7 +273,7 @@ class JS8Call:
 
         with self._tx_queue_lock:
             # count of queued outgoing user msgs
-            queued_outgoing = bool(len([msg for msg in self._tx_queue if msg.type in Message.USER_MSG_TYPES]))
+            queued_outgoing = bool(len([msg for msg in self._tx_queue if msg.type in Message.USER_MSG_TYPES]) > 0)
 
         return any((outgoing_text, queued_outgoing, activity_age))
     
