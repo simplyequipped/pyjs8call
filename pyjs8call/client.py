@@ -250,6 +250,19 @@ class Client:
         self.js8call.block_until_inactive(age = age)
         self.restart()
         
+    def activity(self, age=0):
+        '''Whether there is outgoing activity.
+
+        This is a convenience function that calls *pyjs8call.js8call.activity()*.
+        
+        Args:
+            age (int): Maximum age of outgoing activity to consider active, defaults to 0 (disabled)
+
+        Returns:
+            bool: True if text in the tx text field, queued outgoing messages, or recent activity, False otherwise
+        '''
+        return self.js8call.activity(age)
+
     def _rx(self):
         '''Rx thread function.'''
         while self.online:
