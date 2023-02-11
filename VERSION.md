@@ -12,12 +12,12 @@
 - Rename pyjc8call.client function *get_tx_window_duration* to *get_window_duration*
 - pyjs8call.client function *set_station_callsign* no longer restarts JS8Call automatically
 - Improve pyjs8call.client function *hearing* by including heartbeat acknowledgements
+- Add pyjs8call.client functions *reset_when_inactive*, *activity*, and *grid_distance*
 - Change the log message format to use the pyjs8call.message function *dump*
 - Change pyjs8call.windowmonitor function *next_transition_seconds* arguments to *cycles* and *default*
 - Change pyjs8call.windowmonitor function *next_transition_timestamp* arguments to *cycles* and *default*
 - Add pyjs8call.windowmonitor function *sleep_until_next_transition*
-- Add pyjs8call.client function *reset_when_inactive*
-- Add pyjs8call.client function *activity*
+- Set *distance* and *bearing* attributes in pyjs8call.message objects when *grid* attribute is set
 - Implement offset QSY to the heartbeat sub-band while sending heartbeat messages via pyjs8call.hbnetwork
 - pyjs8call.windowmonitor now continues to use incoming messages after receiving a tx frame
 - Minor bug fixes
