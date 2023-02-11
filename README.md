@@ -202,6 +202,17 @@ msg = js8call.send_directed_message('KT7RUN', 'Thanks for the great content')
 js8call.outgoing.monitor(msg)
 ```
 
+Using heartbeat networking:
+```
+import pyjs8call
+
+js8call = pyjs8call.Client()
+js8call.start()
+
+# use default 10 minute interval
+js8call.heartbeat.enable_networking()
+```
+
 Set config file settings:
 ```
 import pyjs8call
@@ -212,6 +223,29 @@ js8call.settings.enable_heartbeat_acknowledgements()
 js8call.settings.enable_reporting()
 js8call.settings.set_speed('normal')
 js8call.start()
+```
+
+Utilize grid distance and bearing:
+```
+import pyjs8call
+
+js8call = pyjs8call.Client()
+js8call.start()
+
+# use built-in spot distance filters
+regional_stations = [spot.origin for spot in js8call.spots.filter(distance = 500)]
+
+# access message attributes directly
+# this requires the message to contain grid square data
+last_heartbeat = js8call.spots.filter(destination='@HB')[-1]
+distance = last_heartbeat.distance
+bearing = last_heartbeat.bearing
+
+# manually calculate distance and bearing from local station
+distance, bearing = js8call.grid_distance('FM16')
+
+# manually calculate distance and bearing between grid squares
+distance, bearing = js8call.grid_distance('FM16fq', 'EM19ub')
 ```
 
 &nbsp;
