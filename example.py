@@ -53,7 +53,8 @@ def show_inbox():
 def set_freq():
     global js8call
     new_freq = input('\n\tEnter new dial frequency in Hz: ')
-    freq = js8call.set_freq(new_freq)
+    freq = js8call.settings.set_freq(new_freq)
+    offset = js8call.settings.get_offset()
     print('\nNew dial frequency: ' + str(freq / 1000000).format('0.000') + ' MHz (' + str(offset) + ' Hz)\n')
 
 # function for printing the menu and handling selections
