@@ -1,4 +1,8 @@
-A Python package that interfaces with the JS8Call API.
+[![pypi version](https://img.shields.io/pypi/v/pyjs8call?color=blue&label=pypi%20version)](https://pypi.org/project/pyjs8call) &nbsp;&nbsp;&nbsp;
+[![pypi downloads](https://img.shields.io/pypi/dw/pyjs8call?color=blue&label=pypi%20downloads)](https://pypi.org/project/pyjs8call) &nbsp;&nbsp;&nbsp;
+[![github license](https://img.shields.io/github/license/simplyequipped/pyjs8call?color=blue)](https://github.com/simplyequipped/pyjs8call/blob/main/LICENSE)
+
+A Python package for interfacing with the JS8Call API.
 
 &nbsp;
 
