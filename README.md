@@ -16,8 +16,9 @@ See a basic example in the *example.py* file at the top level of the repo.
 
 ### Installation
 
-1. Install JS8Call. For example, on Raspberry Pi OS:
+1. Install applications
     
+    Install JS8Call on Raspberry Pi OS:
     ```
     wget http://files.js8call.com/2.2.0/js8call_2.2.0_armhf.deb
     sudo dpkg -i js8call_2.2.0_armhf.deb
@@ -25,7 +26,12 @@ See a basic example in the *example.py* file at the top level of the repo.
     
     See the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
 
-2. Install pyjs8call using pip3 (or pip if python3 is the default on your system):
+    Install xvfb if running headless (not supported on Windows). On Debian systems:
+    ```
+    sudo apt install xvfb
+    ```
+
+2. Install pyjs8call using pip3 (or pip if python3 is the default on your system)
     
     ```
     pip3 install pyjs8call
