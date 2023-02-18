@@ -23,9 +23,6 @@
 '''Manage start and stop of the JS8Call application.
 
 This module is initialized by pyjs8call.client via pyjs8call.js8call.
-
-To run JS8Call headless on Linux xvfb must be installed. On Debian systems try:
-`sudo apt install xvfb`
 '''
 
 __docformat__ = 'google'
@@ -35,6 +32,7 @@ import time
 import threading
 import signal
 import shutil
+import subprocess
 
 import psutil
 
@@ -70,53 +68,126 @@ class AppMonitor:
 
         Raises:
             RuntimeError: JS8Call is not installed
-            RuntimeError: Cannot run headless on Windows, xvfb-run is not supported
-            RuntimeError: Application run headless on Linux and xvfb is not installed
+            RuntimeError: Cannot run headless on Windows, xvfb is not supported
+            RuntimeError: Attempting to run application headless and xvfb not installed
             RuntimeError: JS8Call application failed to start
         '''
+        if self.is_running():
+            return
+
+        if headless:
+            self._start_xvfb()
+        else:
+            self._start_js8call()
+
+        time.sleep(1)
+
+    def is_running(self):
+        '''Whether the JS8Call application is running.
+
+        Returns:
+            bool: True if the application is running, False otherwise
+        '''
+        if self._js8call_proc is None:
+            return False
+
+        return self._js8call_proc.is_running()
+
+    def stop(self):
+        '''Stop the JS8Call application.
+
+        On Unix systems SIGTERM is sent to the process first. If the processs is still running SIGKILL is sent.
+
+        On Windows systems only SIGKILL is sent.
+        '''
+        if not self.is_running():
+            return
+
+        self._js8call_proc.terminate()
+
+        try:
+            self._js8call_proc.wait(timeout = 2)
+        except psutil.TimeoutExpired:
+            self._js8call_proc.kill()
+
+        # remove zombie process when running headless
+        if self._xvfb_proc is not None:
+            try:
+                self._xvfb_proc.wait(timeout = 2)
+            except psutil.TimeoutExpired:
+                pass
+
+    def _start_xvfb(self):
+        '''Start JS8Call application headless via xvfb.'''
+        xvfb_exec_path = shutil.which('xvfb-run')
+        js8call_exec_path = shutil.which('js8call')
+
+        if psutil.WINDOWS:
+            raise RuntimeError('Cannot run headless on Windows, xvfb is not supported')
+        if xvfb_exec_path is None:
+            raise RuntimeError('Cannot run headless without xvfb installed, on Debian systems try: sudo apt install xvfb')
+        if js8call_exec_path is None:
+            raise RuntimeError('JS8Call application not installed')
+
+        # check if js8call already running via xvfb
+        self._find_running_xvfb_process()
+
+        # proc not set if not already running
+        if self._xvfb_proc is None:
+            self._xvfb_proc = psutil.Popen([xvfb_exec_path, '-a', js8call_exec_path], stderr = subprocess.DEVNULL)
+        
+        # wait until socket connected or timeout
+        if self._socket_connected():
+            # find js8call child process under xvfb
+            for child in self._xvfb_proc.children():
+                if child.name().lower() == 'js8call':
+                    self._js8call_proc = child
+
+            # start js8call monitoring thread
+            thread = threading.Thread(target=self._monitor)
+            thread.daemon = True
+            thread.start()
+        else:
+            raise RuntimeError('JS8Call application failed to start')
+            
+        self.headless = True
+
+    def _start_js8call(self):
+        '''Start JS8Call application.'''
         js8call_exec_path = shutil.which('js8call')
 
         if js8call_exec_path is None:
             raise RuntimeError('JS8Call application not installed')
 
-        if headless:
-            if psutil.WINDOWS:
-                raise RuntimeError('Cannot run headless on Windows, xvfb-run is not supported')
-            elif shutil.which('xvfb-run') is None:
-                raise RuntimeError('Cannot run headless since xvfb-run is not installed, on Debian systems try: sudo apt install xvfb')
-            
-            self._find_running_xvfb_process()
+        # check if js8call already running
+        self._find_running_js8call_process()
 
-            if self._xvfb_proc is None:
-                self._xvfb_proc = psutil.Popen(['xvfb-run', '-a', js8call_exec_path], stderr=signal.DEVNULL)
+        # proc not set if not already running
+        if self._js8call_proc is None:
+            self._js8call_proc = psutil.Popen([js8call_exec_path], stderr = subprocess.DEVNULL)
 
-                for child in self._xvfb_proc:
-                    if child.name().lower() = 'js8call'
-                        self._js8call_proc = child
-
-
-        
+        # wait until socket connected or timeout
+        if self._socket_connected():
+            # start js8call monitoring thread
+            thread = threading.Thread(target=self._monitor)
+            thread.daemon = True
+            thread.start()
         else:
-        # get process if application already running
-        if self.is_running():
-            self._process = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() == 'js8call'][-1]  
-        # start process if application not running
-        else:
-            self._process = psutil.Popen(cmd, stderr=signal.DEVNULL)
+            raise RuntimeError('JS8Call application failed to start')
 
-        # wait for connection to application via socket
-        timeout = time.time() + 60
+    def _socket_connected(self, timeout=60):
+        '''Wait for JS8Call socket connection after starting application.'''
+        if self._parent.connected:
+            return True
+
+        timeout += time.time()
 
         while True:
-            # don't call parent.connect() if already connected
-            if self._parent.connected:
-                break
-
             try:
-                # this will error if unable to connect to the application
+                # error if unable to connect
                 self._parent.connect()
-                # no errors, must be connected
-                break
+                # no errors, connected
+                return True
             except ConnectionRefusedError:
                 pass
 
@@ -125,15 +196,7 @@ class AppMonitor:
 
             time.sleep(0.1)
 
-        if self.is_running():
-            thread = threading.Thread(target=self._monitor)
-            thread.daemon = True
-            thread.start()
-        else:
-            raise RuntimeError('JS8Call application failed to start')
-
-        self.headless = headless
-
+        return False
 
     def _find_running_xvfb_process(self):
         '''Find running xvfb process and child JS8Call process.'''
@@ -155,34 +218,6 @@ class AppMonitor:
         if len(js8call_proc) > 0:
             self._js8call_proc = js8call_proc[-1]
 
-    def is_running(self):
-        '''Whether the JS8Call application is running.
-
-        Returns:
-            bool: True if the application is running, False otherwise
-        '''
-        if self._process is None:
-            return False
-
-        return self._process.is_running()
-
-    def stop(self):
-        '''Stop the JS8Call application.
-
-        On Unix systems SIGTERM is sent to the process first. If the processs is still running SIGKILL is sent.
-
-        On Windows systems only SIGKILL is sent.
-        '''
-        if not self.is_running():
-            return
-
-        self._process.terminate()
-
-        try:
-            self._process.wait(timeout = 2)
-        except psutil.TimeoutExpired:
-            self._process.kill()
-
     def _monitor(self):
         '''Application monitoring thread.'''
         while self._parent.online:
@@ -190,5 +225,5 @@ class AppMonitor:
                 # restart the whole system and reconnect
                 self._parent._client.restart()
 
-            time.sleep(2)
+            time.sleep(1)
 
