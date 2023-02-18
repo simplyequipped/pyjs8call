@@ -41,27 +41,25 @@ from pyjs8call import Message
 class JS8Call:
     '''Low-level JS8Call TCP socket and local state management.
 
-    Receives (constructs) and transmits pyjs8call.message objects, and generally manages the local state representation of the JS8Call application.
+    Receives and transmits pyjs8call.message objects, and generally manages the local state representation of the JS8Call application.
 
-    Initializes pyjs8call.appmonitor as well as rx, tx, logging, and application heartbeat threads.
+    Initializes pyjs8call.appmonitor as well as rx, tx, logging, ping threads.
 
     Attributes:
         app (pyjs8call.appmonitor): Application monitor object
         connected (bool): Whether the JS8Call TCP socket is connected
-        spots (list): List of spot messages (see pyjs8call.spotmonitor to utilize spots)
         max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
         last_incoming (float): Timestamp of last incoming user message, defaults to 0 (zero)
         last_outgoing (float): Timestamp of last outgoing user message, defaults to 0 (zero)
     '''
 
-    def __init__(self, client, host='127.0.0.1', port=2442, headless=False):
+    def __init__(self, client, host='127.0.0.1', port=2442):
         '''Initialize JS8Call TCP socket and local state.
 
         Args:
             client (pyjs8call.client): Parent client object
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
             port (int): JS8Call TCP port setting, defaults to 2442
-            headless (bool): Run JS8Call headless using xvfb (linux only), defaults to False
 
         Returns:
             pyjs8call.js8call: Constructed js8call object
@@ -117,10 +115,17 @@ class JS8Call:
             'selected_call' : None,
         }
 
-        self.online = True
+        self.app = pyjs8call.AppMonitor(self)
 
-        # start the application monitor
-        self.app = pyjs8call.AppMonitor(self, client)
+    def start(self, headless=False):
+        '''Start the JS8Call application.
+
+        Used internally by pyjs8call.client.Client.start().
+
+        Args:
+            headless (bool): Run JS8Call headless using xvfb (Linux only), defaults to False
+        '''
+        self.online = True
         self.app.start(headless=headless)
         
         tx_thread = threading.Thread(target=self._tx)
@@ -232,8 +237,8 @@ class JS8Call:
     def stop(self):
         '''Stop threads and JS8Call application.'''
         self.online = False
-        self.app.stop()
         self._socket.close()
+        self.app.stop()
 
     def enable_debugging(self, debug_all=False):
         '''Print incoming and outgoing messages to console.
@@ -484,8 +489,11 @@ class JS8Call:
                         # make sure the next queued msg doesn't get sent before the tx text state updates
                         if msg.type == Message.TX_SEND_MESSAGE:
                             force_tx_text = True
-                    except BrokenPipeError:
-                        # may happen when restarting
+
+                    except (BrokenPipeError, ValueError, OSError):
+                        # BrokenPipeError may happen when restarting due to closed socket
+                        # ValueError may happen when restarting, tx_queue.remove fails (possibly due to PEP 475)
+                        # OSError may happen when stopping during msg processing, socket.sendall fails
                         pass
 
                     if not self.online:
@@ -516,12 +524,14 @@ class JS8Call:
                 data += self._socket.recv(65535)
             except (socket.timeout, OSError):
                 # if rx from socket fails continue trying
+                continue
+            except OSError:
                 # OSError occurs while app is restarting
+                self.connected = False
                 continue
 
             try: 
                 data_str = data.decode('utf-8')
-            #TODO test specific exception type
             except UnicodeDecodeError:
                 # if decode fails, stop processing
                 continue
