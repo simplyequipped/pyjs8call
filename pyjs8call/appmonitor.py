@@ -33,8 +33,7 @@ __docformat__ = 'google'
 
 import time
 import threading
-import subprocess
-import platform
+import signal
 import shutil
 
 import psutil
@@ -45,7 +44,6 @@ class AppMonitor:
 
     Attributes:
         headless (bool): Whether JS8Call is running headless using xvfb (see *start()*)
-        running (bool): Whether the JS8Call application is running
         restart (bool): Whether to restart the JS8Call application if it stops, defaults to True
     '''
 
@@ -57,21 +55,12 @@ class AppMonitor:
 
         Returns:
             pyjs8call.appmonitor.AppMonitor: Constructed application monitor object
-
-        Raises:
-            ProcessLookupError: JS8Call is not installed
         '''
-        self._exec_path = None
-        self._process = None
-        self.headless = False
-        self.running = False
-        self.restart = True
         self._parent = parent
-        self._thread = None
-        self._exec_path = shutil.which('js8call')
-
-        if self._exec_path is None:
-            raise ProcessLookupError('JS8Call application not installed')
+        self._xvfb_proc = None
+        self._js8call_proc = None
+        self.headless = False
+        self.restart = True
 
     def start(self, headless=False):
         ''' Start JS8Call application.
@@ -80,34 +69,53 @@ class AppMonitor:
             headless (bool): Run JS8Call headless using xvfb (Linux only, requires xvfb to be installed), defaults to False
 
         Raises:
+            RuntimeError: JS8Call is not installed
             RuntimeError: Cannot run headless on Windows, xvfb-run is not supported
-            ProcessLookupError: Application run headless and xvfb is not installed
+            RuntimeError: Application run headless on Linux and xvfb is not installed
             RuntimeError: JS8Call application failed to start
         '''
-        self.headless = headless
-        cmd = [self._exec_path]
+        js8call_exec_path = shutil.which('js8call')
 
-        if self.headless:
-            if platform.system().lower() == 'windows':
+        if js8call_exec_path is None:
+            raise RuntimeError('JS8Call application not installed')
+
+        if headless:
+            if psutil.WINDOWS:
                 raise RuntimeError('Cannot run headless on Windows, xvfb-run is not supported')
             elif shutil.which('xvfb-run') is None:
-                raise ProcessLookupError('Cannot run headless since xvfb-run is not installed, on Debian systems try: sudo apt install xvfb') from e
-                
-            cmd.insert(0, 'xvfb-run')
-            cmd.insert(1, '-a')
+                raise RuntimeError('Cannot run headless since xvfb-run is not installed, on Debian systems try: sudo apt install xvfb')
+            
+            self._find_running_xvfb_process()
 
-        if not self.is_running():
-            self._process = subprocess.Popen(cmd, stderr=subprocess.DEVNULL)
+            if self._xvfb_proc is None:
+                self._xvfb_proc = psutil.Popen(['xvfb-run', '-a', js8call_exec_path], stderr=signal.DEVNULL)
+
+                for child in self._xvfb_proc:
+                    if child.name().lower() = 'js8call'
+                        self._js8call_proc = child
+
+
+        
+        else:
+        # get process if application already running
+        if self.is_running():
+            self._process = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() == 'js8call'][-1]  
+        # start process if application not running
+        else:
+            self._process = psutil.Popen(cmd, stderr=signal.DEVNULL)
 
         # wait for connection to application via socket
         timeout = time.time() + 60
 
         while True:
+            # don't call parent.connect() if already connected
+            if self._parent.connected:
+                break
+
             try:
                 # this will error if unable to connect to the application
                 self._parent.connect()
                 # no errors, must be connected
-                self.running = True
                 break
             except ConnectionRefusedError:
                 pass
@@ -117,85 +125,63 @@ class AppMonitor:
 
             time.sleep(0.1)
 
-        # start the application monitoring thread
-        if self.running and self._thread is None:
-            self._thread = threading.Thread(target=self._monitor)
-            self._thread.daemon = True
-            self._thread.start()
-
-        elif not self.running:
+        if self.is_running():
+            thread = threading.Thread(target=self._monitor)
+            thread.daemon = True
+            thread.start()
+        else:
             raise RuntimeError('JS8Call application failed to start')
+
+        self.headless = headless
+
+
+    def _find_running_xvfb_process(self):
+        '''Find running xvfb process and child JS8Call process.'''
+        xvfb_proc = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() == 'xvfb-run']
+
+        # check xvfb child processes for js8call process
+        for proc in xvfb_proc:
+            for child in proc.children:
+                if child.name().lower() == 'js8call':
+                    # js8call found
+                    self._xvfb_proc = proc
+                    self._js8call_proc = child
+                    return
+
+    def _find_running_js8call_process(self):
+        '''Find running JS8Call process.'''
+        js8call_proc = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() == 'js8call']
+
+        if len(js8call_proc) > 0:
+            self._js8call_proc = js8call_proc[-1]
 
     def is_running(self):
         '''Whether the JS8Call application is running.
 
-        If JS8Call was started before pyjs8call then *pgrep js8call* is used.
-
-        If JS8Call was started by pyjs8call (via subprocess) then *subprocess.poll()* is used.
-
         Returns:
             bool: True if the application is running, False otherwise
         '''
-        # handle process started externally
         if self._process is None:
-            procs = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() == 'js8call']
-            
-            for proc in procs:
-                if proc.is_running():
-                    return True
-
             return False
 
-        # handle process started by self
-        else:
-            # returns None when running
-            code = self._process.poll()
-
-            # must handle None as well as return code 0, both evaluate to False
-            if code is None:
-                running = True
-            else:
-                running = False
-
-        self.running = running
-        return running
+        return self._process.is_running()
 
     def stop(self):
         '''Stop the JS8Call application.
 
-        If JS8Call was started before pyjs8call it cannot be stopped by pyjs8call.
+        On Unix systems SIGTERM is sent to the process first. If the processs is still running SIGKILL is sent.
 
-        If JS8Call was started by pyjs8call the following steps are taken in order:
-            - *subprocess.terminate()* followed by *subprocess.wait(timeout = 2)*
-            - *subprocess.kill()*
-            - *pgrep js8call* followed by *killall -9 js8call* if running
-
-        Returns:
-            The return code of the terminated/killed subprocess or None if no return code was given.
+        On Windows systems only SIGKILL is sent.
         '''
-        if self._process is None:
-            return None
+        if not self.is_running():
+            return
 
-        code = None
         self._process.terminate()
 
         try:
-            code = self._process.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            pass
-
-        if code is None:
+            self._process.wait(timeout = 2)
+        except psutil.TimeoutExpired:
             self._process.kill()
-
-        try:
-            # errors due to non-zero return code if no running instances
-            subprocess.check_output(['pgrep', 'js8call'], stderr = subprocess.DEVNULL)
-            # if no error then the process is running, force kill process
-            subprocess.run(['killall', '-9', 'js8call'], check = True, stderr = subprocess.DEVNULL)
-        except subprocess.CalledProcessError:
-            pass
-
-        return code
 
     def _monitor(self):
         '''Application monitoring thread.'''
@@ -203,5 +189,6 @@ class AppMonitor:
             if not self.is_running() and self.restart:
                 # restart the whole system and reconnect
                 self._parent._client.restart()
+
             time.sleep(2)
 
