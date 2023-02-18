@@ -42,7 +42,6 @@ __docformat__ = 'google'
 import time
 import atexit
 import threading
-import subprocess
 from datetime import datetime, timezone
 from math import radians, sin, cos, acos, atan2, pi
 
@@ -71,10 +70,9 @@ class Client:
         online (bool): Whether the JS8Call application and pyjs8call interface are online
         host (str): IP address matching JS8Call *TCP Server Hostname* setting
         port (int): Port number matching JS8Call *TCP Server Port* setting
-        headless (bool): Run JS8Call headless via xvfb (linux only)
     '''
 
-    def __init__(self, host='127.0.0.1', port=2442, headless=False, config_path=None):
+    def __init__(self, host='127.0.0.1', port=2442, config_path=None):
         '''Initialize JS8Call API client.
 
         Registers the Client.stop function with the atexit module.
@@ -87,24 +85,13 @@ class Client:
         Args:
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
             port (int): JS8Call TCP port setting, defaults to 2442
-            headless (bool): Run JS8Call headless via xvfb (linux only), defaults to False
             config_path (str): Non-standard JS8Call.ini configuration file path, defaults to None
 
         Returns:
             pyjs8call.client: Constructed client object
-
-        Raises:
-            ProcessLookupError: JS8Call application is not installed
-            RuntimeError: JS8Call config file section does not exist (likely because JS8Call has not been run after installing)
         '''
-        try:
-            subprocess.check_output(['which', 'js8call'])
-        except subprocess.CalledProcessError as e:
-            raise ProcessLookupError('JS8Call application not installed') from e
-
         self.host = host
         self.port = port
-        self.headless = headless
         self.clean_directed_text = True
         self.monitor_outgoing = True
         self.online = False
@@ -129,16 +116,7 @@ class Client:
         # stop application and client at exit
         atexit.register(self.stop)
         
-        try:
-            self.settings.enable_autoreply_startup()
-            self.settings.disable_autoreply_confirmation()
-            self.settings.enable_transmit()
-        except RuntimeError as e:
-            raise RuntimeError('Try launching JS8Call, configuring audio and CAT interfaces as needed, '
-                               'and then exiting the application normally. When the application '
-                               'exits normally the first time it will initialize the config file.') from e
-
-    def start(self, debugging=False, logging=False):
+    def start(self, headless=False, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
 
         Initializes sub-module objects:
@@ -151,24 +129,37 @@ class Client:
         - Heartbeat networking (see pyjs8call.hbnetwork)
         - Inbox master (see pyjs8call.inboxmonitor)
 
-        Spot, window, offset, and outgoing monitors are started automatically.
-
         Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
 
+        If logging is enabled the log file will be stored in the current user's *HOME* directory.
+
         Args:
+            headless (bool): Run JS8Call headless via xvfb (Linux only)
             debugging (bool): Print message data to the console, defaults to False
             logging (bool): Print message data to ~/pyjs8call.log, defaults to False
-        '''
-        # enable JS8Call TCP connection
-        self.config.set('Configuration', 'TCPEnabled', 'true')
-        self.config.set('Configuration', 'TCPServer', self.host)
-        self.config.set('Configuration', 'TCPServerPort', str(self.port))
-        self.config.set('Configuration', 'AcceptTCPRequests', 'true')
-        # support pyjs8call.timemonitor features
-        self.config.add_group('@TIME')
-        self.config.write()
 
-        self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
+        Raises:
+            RuntimeError: JS8Call config file section does not exist (likely because JS8Call has not been run and configured after installation)
+        '''
+        try:
+            self.settings.enable_autoreply_startup()
+            self.settings.disable_autoreply_confirmation()
+            self.settings.enable_transmit()
+            # enable JS8Call TCP connection
+            self.config.set('Configuration', 'TCPEnabled', 'true')
+            self.config.set('Configuration', 'TCPServer', self.host)
+            self.config.set('Configuration', 'TCPServerPort', str(self.port))
+            self.config.set('Configuration', 'AcceptTCPRequests', 'true')
+            # support pyjs8call.timemonitor features
+            self.config.add_group('@TIME')
+            self.config.write()
+        except RuntimeError as e:
+            raise RuntimeError('Try launching JS8Call, configuring audio and CAT interfaces as needed, '
+                               'and then exiting the application normally. When the application '
+                               'exits normally the first time it will initialize the config file.') from e
+
+        self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
+        self.js8call.start(headless = headless)
         self.online = True
 
         if debugging:
@@ -214,13 +205,15 @@ class Client:
         self.config.write()
         # save settings
         settings = self.js8call.restart_settings()
+        headless = self.js8call.app.headless
 
         # stop
         self.stop()
         time.sleep(0.25)
 
         # start
-        self.js8call = pyjs8call.JS8Call(self, self.host, self.port, headless=self.headless)
+        self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
+        self.js8call.start(headless = headless)
         self.online = True
 
         rx_thread = threading.Thread(target=self._rx)
@@ -1274,7 +1267,7 @@ class Settings:
         # map integer to text
         speeds = {4:'slow', 0:'normal', 1:'fast', 2:'turbo', 8:'ultra'}
 
-        if int(submode) in speeds:
+        if submode is not None and int(submode) in speeds:
             return speeds[int(submode)]
         else:
             raise ValueError('Invalid submode \'' + str(submode) + '\'')
