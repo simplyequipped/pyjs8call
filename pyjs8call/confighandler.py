@@ -46,6 +46,7 @@ __docformat__ = 'google'
 
 
 import os
+import psutil
 import configparser
 
 # Note: Callsign (Configuration > MyCall) required to contain at least one number and have a max length of 9 characters
@@ -53,10 +54,21 @@ import configparser
 class ConfigHandler:
     '''JS8Call.ini configuration file handler.
 
+    Config file locations are copied from *QStandardPaths::ConfigLocation* for each major platform.
+
+    Default config file locations:
+
+    | Platform | Config Path |
+    | -------- | -------- |
+    | Windows | C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call\\JS8Call.ini |
+    | Mac OS | $HOME/Library/Preferences/JS8Call.ini |
+    | Unix | $HOME/.config/JS8Call.ini |
+
     Attributes:
-        path (str): File path to the JS8Call config file, defaults to *~/.config/JS8Call.ini*
+        path (str): File path to the JS8Call config file
         config (configparser.ConfigParser): Config parser object containing config file data
     '''
+
     def __init__(self, config_path=None):
         '''Initialize JS8Call config handler.
 
@@ -66,10 +78,14 @@ class ConfigHandler:
         Raises:
             FileNotFoundError: Config file not found at specified path
         '''
-        if config_path is None:
-            self.path = os.path.join(os.path.expanduser('~'), '.config/JS8Call.ini')
-        else:
+        if config_path is not None:
             self.path = config_path
+        elif psutil.WINDOWS:
+            self.path = os.path.expandvars('C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call\\JS8Call.ini')
+        elif psutil.MACOS:
+            self.path = os.path.join(os.path.expanduser('~'), 'Library/Preferences/JS8Call.ini')
+        else:
+            self.path = os.path.join(os.path.expanduser('~'), '.config/JS8Call.ini')
 
         if not os.path.exists(self.path):
             raise FileNotFoundError('JS8Call config file not found at ' + str(self.path))
