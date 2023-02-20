@@ -86,9 +86,11 @@ class AppMonitor:
         '''Whether the JS8Call application is running.
 
         Returns:
-            bool: True if the application is running, False otherwise
+            bool: True if the JS8Call application is running, False otherwise
         '''
         if self._js8call_proc is None:
+            return False
+        elif self._js8call_proc.status() == psutil.STATUS_ZOMBIE:
             return False
 
         return self._js8call_proc.is_running()
@@ -118,7 +120,13 @@ class AppMonitor:
                 pass
 
     def _start_xvfb(self):
-        '''Start JS8Call application headless via xvfb.'''
+        '''Start JS8Call application headless via xvfb.
+        
+        Raises:
+            RuntimeError: Cannot run headless on Windows, xvfb is not supported
+            RuntimeError: Attempting to run application headless and xvfb not installed
+            RuntimeError: JS8Call application not installed
+        '''
         xvfb_exec_path = shutil.which('xvfb-run')
         js8call_exec_path = shutil.which('js8call')
 
@@ -153,7 +161,12 @@ class AppMonitor:
         self.headless = True
 
     def _start_js8call(self):
-        '''Start JS8Call application.'''
+        '''Start JS8Call application.
+        
+        Raises:
+            RuntimeError: JS8Call application not installed
+            RuntimeError: JS8Call application failed to start
+        '''
         js8call_exec_path = shutil.which('js8call')
 
         if js8call_exec_path is None:
@@ -176,7 +189,14 @@ class AppMonitor:
             raise RuntimeError('JS8Call application failed to start')
 
     def _socket_connected(self, timeout=60):
-        '''Wait for JS8Call socket connection after starting application.'''
+        '''Wait for JS8Call socket connection after starting application.
+        
+        Args:
+            timeout (int): Number of seconds to wait for socket to connect, defaults to 60
+            
+        Returns:
+            bool: True if socket connected, False otherwise
+        '''
         if self._parent.connected:
             return True
 
@@ -200,10 +220,13 @@ class AppMonitor:
 
     def _find_running_xvfb_process(self):
         '''Find running xvfb process and child JS8Call process.'''
-        xvfb_proc = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() == 'xvfb-run']
+        xvfb_procs = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() == 'xvfb-run']
 
         # check xvfb child processes for js8call process
-        for proc in xvfb_proc:
+        for proc in xvfb_procs:
+            if proc.status() == psutil.STATUS_ZOMBIE:
+                continue
+                
             for child in proc.children:
                 if child.name().lower() == 'js8call':
                     # js8call found
@@ -213,10 +236,14 @@ class AppMonitor:
 
     def _find_running_js8call_process(self):
         '''Find running JS8Call process.'''
-        js8call_proc = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() == 'js8call']
-
-        if len(js8call_proc) > 0:
-            self._js8call_proc = js8call_proc[-1]
+        js8call_procs = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() == 'js8call']
+        
+        for proc in js8call_procs:
+            if proc.status() == psutil.STATUS_ZOMBIE:
+                continue
+                
+            self._js8call_proc = proc
+            return
 
     def _monitor(self):
         '''Application monitoring thread.'''
@@ -226,4 +253,3 @@ class AppMonitor:
                 self._parent._client.restart()
 
             time.sleep(1)
-
