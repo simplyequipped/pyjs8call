@@ -1,5 +1,12 @@
 ### Versions
 
+**0.2.0**
+
+- Add *psutil* package requirement
+- Add cross-platform support for Linux, MacOS, and Windows (tested on Ubuntu 20.04 LTS, RaspberryPi OS 11 (bullseye), and Windows 10)
+- Improve error handling during start/stop/restart
+- Minor documentation improvements
+
 **0.1.2**
 
 - Rename pyjs8call.txmonitor to pyjs8call.outgoingmonitor
