@@ -88,12 +88,16 @@ class AppMonitor:
         Returns:
             bool: True if the JS8Call application is running, False otherwise
         '''
-        if self._js8call_proc is None:
-            return False
-        elif self._js8call_proc.status() == psutil.STATUS_ZOMBIE:
-            return False
+        try:
+            if self._js8call_proc is None:
+                return False
+            elif self._js8call_proc.status() == psutil.STATUS_ZOMBIE:
+                return False
 
-        return self._js8call_proc.is_running()
+            return self._js8call_proc.is_running()
+
+        except psutil.NoSuchProcess:
+            return False
 
     def stop(self):
         '''Stop the JS8Call application.
@@ -227,7 +231,7 @@ class AppMonitor:
             if proc.status() == psutil.STATUS_ZOMBIE:
                 continue
                 
-            for child in proc.children:
+            for child in proc.children():
                 if child.name().lower() == 'js8call':
                     # js8call found
                     self._xvfb_proc = proc
