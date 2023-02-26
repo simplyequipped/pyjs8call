@@ -207,7 +207,11 @@ class WindowMonitor:
 
         if next_transition is None:
             if default is None:
-                delay = self._client.settings.get_window_duration() / 2
+                try:
+                    # errors immediately after start when application does not respond with speed setting fast enough
+                    delay = self._client.settings.get_window_duration() / 2
+                except ValueError:
+                    delay = 5
             else:
                 delay = default
 
