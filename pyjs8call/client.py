@@ -232,7 +232,7 @@ class Client:
         See *pyjs8call.js8call.activity()* for more details.
         
         Args:
-            age (int): Maximum age of outgoing activity to consider active, defaults to 0
+            age (int): Maximum age in seconds of outgoing activity to consider active, defaults to 0
         '''
         thread = threading.Thread(target=self._restart_when_inactive, args=(age,))
         thread.daemon = True

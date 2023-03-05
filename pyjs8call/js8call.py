@@ -288,7 +288,7 @@ class JS8Call:
         See *activity()* for more details.
         
         Args:
-            age (int): Maximum age of outgoing activity to consider active, defaults to 0
+            age (int): Maximum age in seconds of outgoing activity to consider active, defaults to 0
         '''
         while self.activity(age = age):
             time.sleep(0.1)
