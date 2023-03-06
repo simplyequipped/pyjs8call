@@ -82,6 +82,30 @@ class AppMonitor:
 
         time.sleep(1)
 
+    def start_time(self):
+        '''Get JS8Call process creation timestamp.
+
+        Returns:
+            float: Timestamp of JS8Call process creation, or 0 (zero) if process is None
+        '''
+        if self._js8call_proc is None:
+            return 0
+
+        return self._js8call_proc.create_time()
+
+    def run_time(self):
+        '''Get JS8Call process run time.
+
+        Returns:
+            float: JS8Call process run time in seconds
+        '''
+        start_time = self.start_time()
+
+        if start_time == 0:
+            return 0
+        else:
+            return time.time() - start_time
+
     def is_running(self):
         '''Whether the JS8Call application is running.
 
