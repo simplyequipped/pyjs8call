@@ -31,6 +31,7 @@ __docformat__ = 'google'
 from pyjs8call.offsetmonitor import OffsetMonitor
 from pyjs8call.confighandler import ConfigHandler
 from pyjs8call.hbnetwork import HeartbeatNetworking
+from pyjs8call.idlemonitor import IdleMonitor
 from pyjs8call.spotmonitor import SpotMonitor
 from pyjs8call.appmonitor import AppMonitor
 from pyjs8call.message import Message

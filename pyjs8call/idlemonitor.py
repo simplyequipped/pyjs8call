@@ -23,11 +23,14 @@
 '''Restart JS8Call periodically to avoid idle timeout.'''
 
 
+__docformat__ = 'google'
+
+
 import time
 import threading
 
 class IdleMonitor:
-    ''''''
+    '''Restart JS8Call periodially to avoid idle timeout'''
     def __init__(self, client):
         '''Initialize idle timeout monitor object.
 
@@ -35,12 +38,12 @@ class IdleMonitor:
             client (pyjs8call.client): Parent client object
 
         Returns:
-            pyjs8call.hbnetwork: Constructed idle monitor object
+            pyjs8call.idlemonitor: Constructed idle monitor object
         '''
         self._client = client
         self._enabled = False
 
-    def enable(self):
+    def enable_monitoring(self):
         '''Enable idle timeout monitoring.'''
         if self._enabled:
             return
@@ -51,7 +54,10 @@ class IdleMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable(self):
+    def enabled(self):
+        return self._enabled
+
+    def disable_monitoring(self):
         '''Disable idle timeout monitoring.'''
         self._enabled = False
 
@@ -59,6 +65,9 @@ class IdleMonitor:
         '''Idle timeout monitor thread.'''
         timeout = self._client.get_idle_timeout() * 0.9
         start_time = self._client.js8call.app.start_time()
+        
+        #TODO
+        print('proc start time via idle monitor: ' + str(time.time() - start_time))
 
         while self._enabled:
             time.sleep(1)
@@ -66,7 +75,6 @@ class IdleMonitor:
             if start_time + timeout > time.time():
                 window_duration = self._client.settings.get_window_duration()
                 self._client.restart_when_inactive(age = window_duration * 2)
-
-                #TODO wait for restart and reconnect
-                while()
+                self.disable_monitoring()
+                return
 
