@@ -43,7 +43,7 @@ See a basic example in the *example.py* file at the top level of the repo.
 
 ### Modules
 
-Some setup (i.e. setting callback functions) is required to used certain module features. Most modules are initialized automatically by pyjs8call.client.
+Some setup (i.e. setting callback functions) is required to use certain module features. Most modules are initialized automatically by pyjs8call.client.
 
 **Client** (pyjs8call.client)
 
