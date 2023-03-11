@@ -1448,7 +1448,7 @@ class Settings:
         callsign = callsign.upper()
 
         if len(callsign) <= 9 and any(char.isdigit() for char in callsign):
-            return self.config.set('Configuration', 'MyCall', callsign)
+            return self._client.config.set('Configuration', 'MyCall', callsign)
         else:
             raise ValueError('callsign must be <= 9 characters in length and contain at least 1 number')
 
@@ -1458,10 +1458,12 @@ class Settings:
         Returns:
             int: Idle timeout in minutes
         '''
-        return self.config.get('Configuration', 'TxIdleWatchdog', value_type=int)
+        return self._client.config.get('Configuration', 'TxIdleWatchdog', value_type=int)
 
     def set_idle_timeout(self, timeout):
         '''Set JS8Call idle timeout.
+
+        The JS8Call idle timeout must be between 5 and 1440 minutes.
 
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
 
@@ -1472,12 +1474,12 @@ class Settings:
             int: Current idle timeout in minutes
 
         Raises:
-            ValueError: Idle timeout must be between 0 and 1440 minutes
+            ValueError: Idle timeout must be between 5 and 1440 minutes
         '''
-        if 0 > timeout > 1440:
-            raise ValueError('Idle timeout must be between 0 and 1440 minutes')
+        if timeout < 5 or timeout > 1440:
+            raise ValueError('Idle timeout must be between 5 and 1440 minutes')
 
-        self.config.set('Configuration', 'TxIdleWatchdog', timeout)
+        self._client.config.set('Configuration', 'TxIdleWatchdog', timeout)
 
         return self.get_idle_timeout()
 
