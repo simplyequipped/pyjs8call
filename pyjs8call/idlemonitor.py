@@ -63,18 +63,14 @@ class IdleMonitor:
 
     def _monitor(self):
         '''Idle timeout monitor thread.'''
-        timeout = self._client.get_idle_timeout() * 0.9
+        timeout = self._client.settings.get_idle_timeout() * 60 * 0.9
         start_time = self._client.js8call.app.start_time()
         
-        #TODO
-        print('proc start time via idle monitor: ' + str(time.time() - start_time))
-
         while self._enabled:
             time.sleep(1)
 
-            if start_time + timeout > time.time():
+            if start_time + timeout < time.time():
                 window_duration = self._client.settings.get_window_duration()
                 self._client.restart_when_inactive(age = window_duration * 2)
-                self.disable_monitoring()
                 return
 
