@@ -14,6 +14,23 @@ See a basic example in the *example.py* file at the top level of the repo.
 
 &nbsp;  
 
+### Multi Platform Support
+
+All major functionality is supported on all major platforms as of version 0.2.0. Running the JS8Call application headless is only supported on Linux operating systems due to the *xvfb* requirement.
+
+| Platform                    | Process&nbsp;Management | Headless&nbsp;Application |
+| :---                        | :---:                   | :---:                     |
+| Ubuntu&nbsp;20.04&nbsp;LTS  | Supported               | Supported                 |
+| Raspberry&nbsp;Pi&nbsp;OS\* | Supported               | Supported                 |
+| Manjaro&nbsp;ARM\*\*        | Supported               | Not Supported             |
+| Windows&nbsp;11             | Supported               | Not Supported             |
+| Mac&nbsp;OS                 | Supported               | Not Supported             |
+
+\*  Tested on Raspberry Pi 3B+<br>
+\** Tested on Pine64 PineBook Pro
+
+&nbsp;
+
 ### Installation
 
 1. Install applications
