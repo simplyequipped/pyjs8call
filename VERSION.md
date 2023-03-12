@@ -3,8 +3,9 @@
 **0.2.0**
 
 - Add *psutil* package requirement
-- Add cross-platform support for Linux, MacOS, and Windows (tested on Ubuntu 20.04 LTS, RaspberryPi OS 11 (bullseye), and Windows 10)
+- Add cross-platform support for Linux, Windows, and MacOS
 - Improve error handling during start/stop/restart
+- Minor bug fixes
 - Minor documentation improvements
 
 **0.1.2**
