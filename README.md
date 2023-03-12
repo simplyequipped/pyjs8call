@@ -43,6 +43,8 @@ All major functionality is supported on all major platforms as of version 0.2.0.
     
     See the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
 
+    **NOTE:** When installing JS8Call on Windows be sure to selection the option to add JS8Call to PATH during the installation process. If this step is skipped *pyjs8call* will not be able to locate the JS8Call executable.
+
     Install xvfb if running headless (not supported on Windows). On Debian systems:
     ```
     sudo apt install xvfb
