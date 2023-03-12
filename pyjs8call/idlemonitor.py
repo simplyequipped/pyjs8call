@@ -20,7 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Restart JS8Call periodically to avoid idle timeout.'''
+'''Restart JS8Call periodically to avoid idle timeout.
+
+Make sure you understand your local laws regarding unattended stations before enabling this feature.
+'''
 
 
 __docformat__ = 'google'

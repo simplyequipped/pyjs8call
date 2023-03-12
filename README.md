@@ -14,20 +14,20 @@ See a basic example in the *example.py* file at the top level of the repo.
 
 &nbsp;  
 
-### Multi Platform Support
+### Cross Platform Support
 
-All major functionality is supported on all major platforms as of version 0.2.0. Running the JS8Call application headless is only supported on Linux operating systems due to the *xvfb* requirement.
+All major functionality is supported on all major platforms as of version 0.2.0. Running the JS8Call application headless is only supported on Linux operating systems due to the *xvfb* requirement. *xvfb* does not function correctly on Manjaro even though it can be installed.
 
-| Platform                    | Process&nbsp;Management | Headless&nbsp;Application |
-| :---                        | :---:                   | :---:                     |
-| Ubuntu&nbsp;20.04&nbsp;LTS  | Supported               | Supported                 |
-| Raspberry&nbsp;Pi&nbsp;OS\* | Supported               | Supported                 |
-| Manjaro&nbsp;ARM\*\*        | Supported               | Not Supported             |
-| Windows&nbsp;11             | Supported               | Not Supported             |
-| Mac&nbsp;OS                 | Supported               | Not Supported             |
+| Platform                          | Process&nbsp;Management | Headless&nbsp;Application |
+| :---                              | :---:                   | :---:                     |
+| Ubuntu&nbsp;20.04&nbsp;LTS        | Supported               | Supported                 |
+| Raspberry&nbsp;Pi&nbsp;OS&nbsp;\* | Supported               | Supported                 |
+| Manjaro&nbsp;ARM&nbsp;\*\*        | Supported               | Not Supported             |
+| Windows&nbsp;11                   | Supported               | Not Supported             |
+| Mac&nbsp;OS                       | Supported               | Not Supported             |
 
-\*  Tested on Raspberry Pi 3B+<br>
-\** Tested on Pine64 PineBook Pro
+\*&nbsp;&nbsp;&nbsp;Tested on Raspberry Pi 3B+ and 4B running Debian version 11 (bullseye)<br>
+\**&nbsp;Tested on Pine64 PineBook Pro
 
 &nbsp;
 
@@ -55,6 +55,8 @@ All major functionality is supported on all major platforms as of version 0.2.0.
     ```
     pip3 install pyjs8call
     ```
+
+    This will also install *psutil* for cross platform process management.
 
 3. Launch JS8Call to configure audio and CAT interface settings. Launching the application and exiting normally will initilize the configuration file.
 
@@ -109,6 +111,10 @@ Time master functionality is also implemented which sends outgoing messages on a
 **Inbox Monitor** (pyjs8call.inboxmonitor)
 
 Monitors the local inbox. Notification of new messages is handled via callback function.
+
+**Idle Monitor** (pyjs8call.idlemonitor)
+
+Monitors the JS8Call application process run time and restarts the application perodically (when there is no outgoing activity) to avoid the JS8Call idle timeout.
 
 &nbsp;  
 
