@@ -287,8 +287,7 @@ distance, bearing = js8call.grid_distance('FM16fq', 'EM19ub')
 
 ### Acknowledgements
 
-Inspired by [js8net](https://github.com/jfrancis42/js8net) by N0GQ.
-
+Inspired by [js8net](https://github.com/jfrancis42/js8net) by N0GQ<br>
 [JS8Call](http://js8call.com) by KN4CRD
 
 &nbsp;
