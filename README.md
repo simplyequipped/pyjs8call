@@ -43,7 +43,7 @@ All major functionality is supported on all major platforms as of version 0.2.0.
 
     **NOTE:** When installing JS8Call on Windows be sure to selection the option to add JS8Call to PATH during the installation process. If this step is skipped *pyjs8call* will not be able to locate the JS8Call executable.
 
-    **NOTE:** When installing JS8Call on MacOS be sure to read the readme file included in the dmg image regarding the fix for the JS8Call shared memory error, as well as add the following directory to the PATH variable: /Applications/js8call.app/Contents/MacOS
+    **NOTE:** When installing JS8Call on MacOS be sure to read the readme file included in the dmg image regarding the fix for the JS8Call shared memory error, as well as add the following directory to the PATH variable to allow *pyjs8call* to locate the JS8Call executable: /Applications/js8call.app/Contents/MacOS
 
     Install xvfb if running headless (not supported on Windows or MacOS). On Debian systems:
     ```
