@@ -63,8 +63,11 @@ def run_internal_headless(js8call):
     try:
         js8call.start(headless = True)
     except RuntimeError as e:
-        if psutil.WINDOWS and 'windows' in str(e).lower():
-            print('\t' + str(e))
+        if psutil.WINDOWS:
+            print('\txvfb not supported on Windows, skipping test')
+            return
+        if psutil.MACOS:
+            print('\txvfb not supported on MacOS, skipping test')
             return
         else:
             raise e
@@ -93,7 +96,10 @@ def run_external(js8call, external_start_delay):
 
 def run_external_headless(js8call, external_start_delay):
     if psutil.WINDOWS:
-        print('\tCannot run headless on Windows, xvfb is not supported')
+        print('\txvfb not supported on Windows, skipping test')
+        return
+    if psutil.MACOS:
+        print('\txvfb not supported on MacOS, skipping test')
         return
 
     xvfb_exec_path = shutil.which('xvfb-run')
