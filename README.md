@@ -19,7 +19,7 @@ See a basic example in the *example.py* file at the top level of the repo.
 All major functionality is supported on all major platforms as of version 0.2.0. Running the JS8Call application headless is only supported on Linux operating systems due to the *xvfb* requirement. *xvfb* does not function correctly on Manjaro even though it can be installed.
 
 | OS&nbsp;Platform                          | Hardware&nbsp;Platform                              | Process&nbsp;Management | Headless&nbsp;Application |
-| :---                                      | :---:                                               | :---:                   | :---:                     |
+| :---                                      | :---                                                | :---                    | :---                     |
 | Ubuntu&nbsp;20.04&nbsp;LTS                | Custom&nbsp;desktop&nbsp;PC                         | Supported               | Supported                 |
 | Raspberry&nbsp;Pi&nbsp;OS&nbsp;(Bullseye) | Raspberry&nbsp;Pi&nbsp;3B+&nbsp;and&nbsp;4B         | Supported               | Supported                 |
 | Manjaro&nbsp;ARM                          | Pine64&nbsp;PineBook&nbsp;Pro                       | Supported               | Not&nbsp;Supported        |
