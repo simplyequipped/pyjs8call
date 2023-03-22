@@ -14,7 +14,7 @@ See a basic example in the *example.py* file at the top level of the repo.
 
 &nbsp;  
 
-### Cross Platform Support
+### Cross-Platform Support
 
 All major functionality is supported on all major platforms as of version 0.2.0. Running the JS8Call application headless is only supported on Linux operating systems due to the *xvfb* requirement. *xvfb* does not function correctly on Manjaro (at least on the PineBook Pro) even though it can be installed.
 
@@ -34,17 +34,23 @@ All major functionality is supported on all major platforms as of version 0.2.0.
 
 1. Install applications
     
-    Install JS8Call on Raspberry Pi OS:
+    Install JS8Call. On Raspberry Pi OS:
     ```
     wget http://files.js8call.com/2.2.0/js8call_2.2.0_armhf.deb
     sudo dpkg -i js8call_2.2.0_armhf.deb
     ```
     
     See the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
+    
+    &nbsp;
 
-    **NOTE:** When installing JS8Call on Windows be sure to selection the option to add JS8Call to PATH during the installation process, which will allow *pyjs8call* to locate the JS8Call executable.
+    **NOTE:** When installing JS8Call on Windows be sure to select the option to add JS8Call to the PATH variable during the installation process. This will allow *pyjs8call* to locate the JS8Call executable.
 
-    **NOTE:** When installing JS8Call on MacOS be sure to read the readme file included in the dmg image regarding the fix for the JS8Call shared memory error. The following directory must also be added to the PATH variable to allow *pyjs8call* to locate the JS8Call executable: /Applications/js8call.app/Contents/MacOS
+    **NOTE:** When installing JS8Call on MacOS be sure to read the readme file included in the dmg image for information on the fix for the JS8Call shared memory error. The following directory must also be added to the PATH variable to allow *pyjs8call* to locate the JS8Call executable: /Applications/js8call.app/Contents/MacOS
+    
+    **NOTE:** When using a QRPLabs QDX tranceiver on Linux consider masking the ModemManager service to prevent CAT control dropouts. See [this post from QRPLabs](https://groups.io/g/QRPLabs/topic/87048220#74634) for more information.
+    
+    &nbsp;
 
     Install xvfb if running headless (not supported on Windows or MacOS). On Debian systems:
     ```
@@ -59,7 +65,7 @@ All major functionality is supported on all major platforms as of version 0.2.0.
 
     This will also install *psutil* for cross platform process management.
 
-3. Launch JS8Call to configure audio and CAT interface settings. Launching the application and exiting normally will initilize the configuration file.
+3. Launch JS8Call to configure audio and CAT interface settings as needed. Launching the application and exiting normally will also initilize the configuration file, which is required by *pyjs8call*.
 
 &nbsp;
 
