@@ -16,7 +16,7 @@ See a basic example in the *example.py* file at the top level of the repo.
 
 ### Cross-Platform Support
 
-All major functionality is supported on all major platforms as of version 0.2.0. Running the JS8Call application headless is only supported on Linux operating systems due to the *xvfb* requirement. *xvfb* does not function correctly on Manjaro (at least on the PineBook Pro) even though it can be installed.
+All functionality is supported on all major platforms as of version 0.2.0. Running the JS8Call application headless is only supported on Linux operating systems due to the *xvfb* requirement. *xvfb* does not function correctly on Manjaro (at least on the PineBook Pro) even though it can be installed.
 
 | OS&nbsp;Platform                          | Hardware&nbsp;Platform                              | Process&nbsp;Management | Headless&nbsp;Application |
 | :---                                      | :---                                                | :---                    | :---                      |
@@ -34,15 +34,15 @@ All major functionality is supported on all major platforms as of version 0.2.0.
 
 1. Install applications
     
-    Install JS8Call. On Raspberry Pi OS:
+    a. Install JS8Call
+    
+    See the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
+    
+    On Raspberry Pi OS:
     ```
     wget http://files.js8call.com/2.2.0/js8call_2.2.0_armhf.deb
     sudo dpkg -i js8call_2.2.0_armhf.deb
     ```
-    
-    See the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
-    
-    &nbsp;
 
     **NOTE:** When installing JS8Call on Windows be sure to select the option to add JS8Call to the PATH variable during the installation process. This will allow *pyjs8call* to locate the JS8Call executable.
 
@@ -52,12 +52,14 @@ All major functionality is supported on all major platforms as of version 0.2.0.
     
     &nbsp;
 
-    Install xvfb if running headless (not supported on Windows or MacOS). On Debian systems:
+    b. Install xvfb if running headless (not supported on Windows or MacOS)
+    
+    On Debian systems:
     ```
     sudo apt install xvfb
     ```
 
-2. Install pyjs8call using pip3 (or pip if python3 is the default on your system)
+2. Install pyjs8call using pip3 (or pip, if python3 is the default on your system)
     
     ```
     pip3 install pyjs8call
