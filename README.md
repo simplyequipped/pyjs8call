@@ -20,8 +20,9 @@ All major functionality is supported on all major platforms as of version 0.2.0.
 
 | OS&nbsp;Platform                          | Hardware&nbsp;Platform                              | Process&nbsp;Management | Headless&nbsp;Application |
 | :---                                      | :---                                                | :---                    | :---                      |
-| Ubuntu&nbsp;20.04&nbsp;LTS                | Custom&nbsp;desktop&nbsp;PC                         | Supported               | Supported                 |
-| Raspberry&nbsp;Pi&nbsp;OS&nbsp;(Bullseye) | Raspberry&nbsp;Pi&nbsp;3B+&nbsp;and&nbsp;4B         | Supported               | Supported                 |
+| Ubuntu&nbsp;20.04&nbsp;LTS                | AMD&nbsp;Ryzen&nbsp;5 &nbsp;(Zen 3)                 | Supported               | Supported                 |
+| Raspberry&nbsp;Pi&nbsp;OS&nbsp;Buster     | Raspberry&nbsp;Pi&nbsp;3B+                          | Supported               | Supported                 |
+| Raspberry&nbsp;Pi&nbsp;OS&nbsp;Bullseye   | Raspberry&nbsp;Pi&nbsp;4B                           | Supported               | Supported                 |
 | Manjaro&nbsp;ARM                          | Pine64&nbsp;PineBook&nbsp;Pro                       | Supported               | Not&nbsp;Supported        |
 | Windows&nbsp;10                           | MS&nbsp;Surface&nbsp;Pro&nbsp;X&nbsp;(SQ2&nbsp;ARM) | Supported               | Not&nbsp;Supported        |
 | Windows&nbsp;11                           | MS&nbsp;Surface&nbsp;Pro&nbsp;9&nbsp;(i5&nbsp;x86)  | Supported               | Not&nbsp;Supported        |
@@ -114,7 +115,7 @@ Monitors the local inbox. Notification of new messages is handled via callback f
 
 **Idle Monitor** (pyjs8call.idlemonitor)
 
-Monitors the JS8Call application process run time and restarts the application perodically (when there is no outgoing activity) to avoid the JS8Call idle timeout.
+Monitors the JS8Call application process run time and restarts the application perodically (when there is no outgoing activity) to avoid the JS8Call idle timeout. This is useful when running the JS8Call application headless.
 
 &nbsp;  
 
