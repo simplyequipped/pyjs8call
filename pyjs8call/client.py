@@ -286,13 +286,19 @@ class Client:
         '''
         return self.js8call.connected
 
-    def identities(self):
+    def identities(self, hb = True):
         '''Get identities associated with local stations.
         
+        Args:
+            hb (bool): Whether to include the @HB group in identity list, defaults to True
         Returns:
             list: Configured callsign and custom groups
         '''
         ids = self.config.get_groups()
+        
+        if hb and '@HB' not in ids:
+            ids.append('@HB')
+            
         ids.append(self.settings.get_station_callsign())
         return ids
     
