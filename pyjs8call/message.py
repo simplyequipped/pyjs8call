@@ -334,16 +334,6 @@ class Message:
         self.attributes = []
         self.raw = None
 
-        self.set('id', secrets.token_urlsafe(16))
-        self.set('type', Message.TX_SEND_MESSAGE)
-        self.set('destination', destination)
-        self.set('cmd', cmd)
-        self.set('value', value)
-        self.set('time', datetime.now(timezone.utc).timestamp())
-        self.set('timestamp', time.time())
-        self.set('params', {})
-        self.set('status', Message.STATUS_CREATED)
-        
         # initialize common msg fields
         common = [
             'freq',
@@ -369,6 +359,16 @@ class Message:
 
         for attribute in common:
             self.set(attribute, None)
+        
+        self.set('id', secrets.token_urlsafe(16))
+        self.set('type', Message.TX_SEND_MESSAGE)
+        self.set('destination', destination)
+        self.set('cmd', cmd)
+        self.set('value', value)
+        self.set('time', datetime.now(timezone.utc).timestamp())
+        self.set('timestamp', time.time())
+        self.set('params', {})
+        self.set('status', Message.STATUS_CREATED)
 
     def set(self, attribute, value):
         '''Set message attribute value.
