@@ -397,6 +397,7 @@ class JS8Call:
         self._recent_spots = [spot for spot in self._recent_spots if spot.age() < 10]
 
         if msg not in self._recent_spots:
+            msg.status = Message.STATUS_RECEIVED
             self._recent_spots.append(msg)
             self._spots.append(msg)
 
