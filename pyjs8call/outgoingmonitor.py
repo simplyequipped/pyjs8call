@@ -118,6 +118,9 @@ class OutgoingMonitor:
     def _monitor(self):
         '''Tx monitor thread.'''
         while self._enabled:
+            while not self._client.connected():
+                time.sleep(1)
+
             time.sleep(0.5)
             # other modules rely on tx text updates from JS8Call
             tx_text = self._client.get_tx_text()

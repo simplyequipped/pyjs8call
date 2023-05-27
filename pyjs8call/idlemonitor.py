@@ -70,6 +70,9 @@ class IdleMonitor:
         start_time = self._client.js8call.app.start_time()
         
         while self._enabled:
+            while not self._client.connected():
+                time.sleep(1)
+
             time.sleep(1)
 
             if start_time + timeout < time.time():

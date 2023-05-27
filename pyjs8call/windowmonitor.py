@@ -228,6 +228,9 @@ class WindowMonitor:
     def _monitor(self):
         '''Window monitor thread.'''
         while self._enabled:
+            while not self._client.connected():
+                time.sleep(1)
+
             with self._timestamp_lock:
                 if self._next_window_timestamp != 0 and self._next_window_timestamp < time.time():
                     # window transiton notification via callback function
