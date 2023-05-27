@@ -216,11 +216,11 @@ class AppMonitor:
         else:
             raise RuntimeError('JS8Call application failed to start')
 
-    def _socket_connected(self, timeout=60):
+    def _socket_connected(self, timeout=120):
         '''Wait for JS8Call socket connection after starting application.
         
         Args:
-            timeout (int): Number of seconds to wait for socket to connect, defaults to 60
+            timeout (int): Number of seconds to wait for socket to connect, defaults to 120
             
         Returns:
             bool: True if socket connected, False otherwise
