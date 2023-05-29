@@ -96,7 +96,7 @@ class Client:
         self.clean_directed_text = True
         self.monitor_outgoing = True
         self.online = False
-        self._restarting = False
+        self.restarting = False
 
         self.js8call = None
         self.spots = None
@@ -185,7 +185,7 @@ class Client:
         self.time_master = pyjs8call.TimeMaster(self)
         self.heartbeat = pyjs8call.HeartbeatNetworking(self)
         self.inbox = pyjs8call.InboxMonitor(self)
-        self.idle = pyjs8call.IdleMonitor(self)
+        #self.idle = pyjs8call.IdleMonitor(self)
         
         self.window.enable_monitoring()
         self.spots.enable_monitoring()
@@ -195,7 +195,6 @@ class Client:
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
         self.online = False
-        self.idle.disable_monitoring()
         
         try:
             return self.js8call.stop()
@@ -207,20 +206,40 @@ class Client:
 
         pyjs8call.js8call settings are preserved.
         '''
-        self._restarting = True
+        self.restarting = True
+
+        # pause module loops to prevent errors
+        modules = [
+            self.outgoing,
+            self.offset,
+            self.inbox,
+            self.heartbeat,
+            self.drift,
+            self.time_master,
+            self.spots
+        ]
+
+        paused_modules = []
+
+        if self.module.enabled() and not self.module.paused():
+            self.module.pause()
+            paused_modules.append(module)
+
         # write any pending config file changes, convience
         self.config.write()
+        # reeset window monitoring
+        self.window.reset()
         # save settings
-        settings = self.js8call.restart_settings()
         headless = self.js8call.app.headless
-        idle_monitoring_enabled = self.idle.enabled()
+        settings = self.js8call.restart_settings()
 
         # stop
         self.stop()
-        time.sleep(0.25)
 
         # start
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
+        # restore settings
+        self.js8call.reinitialize(settings)
         self.js8call.start(headless = headless)
         self.online = True
 
@@ -229,13 +248,11 @@ class Client:
         rx_thread.start()
         time.sleep(0.5)
 
-        # restore settings
-        self.js8call.reinitialize(settings)
-        # re-enable idle timeout monitoring
-        if idle_monitoring_enabled:
-            self.idle.enable_monitoring()
+        # resume paused module loops
+        for module in paused_modules:
+            module.resume()
 
-        self._restarting = False
+        self.restarting = False
 
     def restart_when_inactive(self, age=0):
         '''Restart the JS8Call application once there is no outgoing activity.
@@ -1301,8 +1318,6 @@ class Settings:
         - turbo
         - ultra
 
-        The local state speed setting will always be returned while the JS8Call application is restarting (i.e. unavailable), even if *update* is *True*. This prevents errors due to internal checks for speed setting changes.
-
         Args:
             update (bool): Update speed if True or use local state if False, defaults to False
 
@@ -1310,10 +1325,6 @@ class Settings:
             str: JS8call modem speed setting
         '''
         speed = self._client.js8call.get_state('speed')
-
-        # skip updating if restarting JS8Call application
-        if speed is not None and update and self._restarting:
-            return self.submode_to_speed(speed)
 
         if update or speed is None:
             msg = Message()
