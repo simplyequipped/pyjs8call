@@ -66,6 +66,12 @@ class OffsetMonitor:
         self._enabled = False
         self._paused = False
 
+    def enabled(self):
+        return self._enabled
+
+    def paused(self):
+        return self._paused
+
     def enable_monitoring(self):
         '''Enable offset monitoring.'''
         if self._enabled:
@@ -88,9 +94,6 @@ class OffsetMonitor:
     def resume_monitoring(self):
         '''Resume offset monitoring.'''
         self._paused = False
-
-    def paused(self):
-        return self._paused
 
     def _min_signal_freq(self, offset, bandwidth):
         '''Get lower edge of signal.

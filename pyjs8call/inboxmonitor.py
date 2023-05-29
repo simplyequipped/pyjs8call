@@ -289,6 +289,12 @@ class InboxMonitor:
         conn.commit()
         conn.close()
         
+    def enabled(self):
+        return self._enabled
+
+    def paused(self):
+        return self._paused
+
     def enable_monitoring(self, query=True, destination='@ALLCALL', interval=60):
         '''Enable inbox monitoring.
 

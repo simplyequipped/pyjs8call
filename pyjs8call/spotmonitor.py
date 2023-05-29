@@ -53,9 +53,16 @@ class SpotMonitor:
         '''
         self._client = client
         self._enabled = False
+        self._paused = False
         self._station_watch_list = []
         self._group_watch_list = []
         self._spots_lock = threading.Lock()
+
+    def enabled(self):
+        return self._enabled
+
+    def paused(self):
+        return self._paused
 
     def enable_monitoring(self):
         '''Enable spot monitoring.'''
@@ -71,6 +78,12 @@ class SpotMonitor:
     def disable_monitoring(self):
         '''Disable spot monitoring.'''
         self._enabled = False
+
+    def pause(self):
+        self._paused = True
+
+    def resume(self):
+        self._paused = False
 
     def all(self):
         '''Get all stored spot messages.'''
@@ -221,6 +234,9 @@ class SpotMonitor:
 
         while self._enabled:
             self._client.window.sleep_until_next_transition()
+
+            if self._paused:
+                continue
 
             # get new spots since last update
             time_since_last_update = time.time() - last_spot_update_timestamp

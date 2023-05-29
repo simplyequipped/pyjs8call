@@ -359,6 +359,12 @@ class DriftMonitor:
         '''
         return self.sync_to_group('@TIME', threshold = threshold, age = age)
 
+    def enabled(self):
+        return self._enabled
+
+    def paused(self):
+        return self._paused
+
     def enable_auto_sync(self, station=None, group='@TIME', interval=60, threshold=0.5, age=15):
         '''Enable automatic time drift monitoring.
         
@@ -446,6 +452,13 @@ class TimeMaster:
         '''
         self._client = client
         self._enabled = False
+        self._paused = False
+
+    def enabled(self):
+        return self._enabled
+
+    def paused(self):
+        return self._paused
 
     def enable(self, destination='@TIME', message='SYNC', interval=10):
         '''Enable automatic time master messaging.
@@ -471,6 +484,12 @@ class TimeMaster:
     def disable(self):
         '''Disable time master messaging.'''
         self._enabled = False
+
+    def pause(self):
+        self._paused = True
+
+    def resume(self):
+        self._paused = False
         
     def _monitor(self, destination, message, interval):
         '''Time master message transmit thread.
@@ -481,9 +500,11 @@ class TimeMaster:
         last_outgoing_timestamp = 0
         
         while self._enabled:
+            while self._paused:
+                time.sleep(1)
+
             if last_outgoing_timestamp + interval < time.time():
                 text = destination + ' ' + message
-                    
                 self._client.send_message(text.strip())
                 last_outgoing_timestamp = time.time()
 

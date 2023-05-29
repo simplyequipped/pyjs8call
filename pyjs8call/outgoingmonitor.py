@@ -71,10 +71,17 @@ class OutgoingMonitor:
         '''
         self._client = client
         self._enabled = False
+        self._paused = False
         self._msg_queue = []
         self._msg_queue_lock = threading.Lock()
         # initialize msg max age to 30 tx cycles in fast mode (10 sec cycles)
         self._msg_max_age = 10 * 30 # 5 minutes
+
+    def enabled(self):
+        return self._enabled
+
+    def paused(self):
+        return self._paused
 
     def enable_monitoring(self):
         if self._enabled:
@@ -88,6 +95,12 @@ class OutgoingMonitor:
 
     def disable_monitoring(self):
         self._enabled = False
+
+    def pause(self):
+        self._paused = True
+
+    def resume(self):
+        self._paused = False
 
     def _callback(self, msg):
         '''Handle callback for monitored message status change.
@@ -118,10 +131,11 @@ class OutgoingMonitor:
     def _monitor(self):
         '''Tx monitor thread.'''
         while self._enabled:
-            while not self._client.connected():
-                time.sleep(1)
-
             time.sleep(0.5)
+
+            if self._paused:
+                continue
+
             # other modules rely on tx text updates from JS8Call
             tx_text = self._client.get_tx_text()
 

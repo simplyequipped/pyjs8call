@@ -56,6 +56,12 @@ class HeartbeatNetworking:
         self._last_outgoing = 0
         self._offset = None
 
+    def enabled(self):
+        return self._enabled
+
+    def paused(self):
+        return self._paused
+
     def enable_networking(self, interval=10):
         '''Enable heartbeat networking.
 

@@ -66,6 +66,9 @@ class WindowMonitor:
         self._timestamp_lock = threading.Lock()
         self._ignore_next_tx_frame = False
 
+    def enabled(self):
+        return self._enabled
+
     def enable_monitoring(self):
         '''Enable rx/tx window monitoring.'''
         if self._enabled:
@@ -86,6 +89,11 @@ class WindowMonitor:
         self._enabled = False
         self._client.callback.remove_incoming(self.process_rx_msg)
         self._client.callback.remove_incoming(self.process_tx_frame)
+
+    def reset(self):
+        self._next_window_timestamp = 0
+        self._last_tx_frame_timestamp = 0
+        self._last_rx_msg_timestamp = 0
 
     def _callback(self):
         '''Window transition callback function handling.
@@ -228,9 +236,6 @@ class WindowMonitor:
     def _monitor(self):
         '''Window monitor thread.'''
         while self._enabled:
-            while not self._client.connected():
-                time.sleep(1)
-
             with self._timestamp_lock:
                 if self._next_window_timestamp != 0 and self._next_window_timestamp < time.time():
                     # window transiton notification via callback function
