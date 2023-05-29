@@ -226,12 +226,17 @@ class JS8Call:
         - band_activity
         - selected_call
 
+        This function is blocking while the JS8Call application is restarting (see *Client.restart*).
+
         Args:
             state (str): State value to get
 
         Returns:
             Returned type varies depending on the specified state value.
         '''
+        while self._client.restarting:
+            time.sleep(0.1)
+
         while self.watching(state):
             time.sleep(0.1)
 
