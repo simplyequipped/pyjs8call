@@ -96,6 +96,7 @@ class Client:
         self.clean_directed_text = True
         self.monitor_outgoing = True
         self.online = False
+        self._restarting = False
 
         self.js8call = None
         self.spots = None
@@ -206,6 +207,7 @@ class Client:
 
         pyjs8call.js8call settings are preserved.
         '''
+        self._restarting = True
         # write any pending config file changes, convience
         self.config.write()
         # save settings
@@ -232,6 +234,8 @@ class Client:
         # re-enable idle timeout monitoring
         if idle_monitoring_enabled:
             self.idle.enable_monitoring()
+
+        self._restarting = False
 
     def restart_when_inactive(self, age=0):
         '''Restart the JS8Call application once there is no outgoing activity.
@@ -1297,6 +1301,8 @@ class Settings:
         - turbo
         - ultra
 
+        The local state speed setting will always be returned while the JS8Call application is restarting (i.e. unavailable), even if *update* is *True*. This prevents errors due to internal checks for speed setting changes.
+
         Args:
             update (bool): Update speed if True or use local state if False, defaults to False
 
@@ -1304,6 +1310,10 @@ class Settings:
             str: JS8call modem speed setting
         '''
         speed = self._client.js8call.get_state('speed')
+
+        # skip updating if restarting JS8Call application
+        if speed is not None and update and self._restarting:
+            return self.submode_to_speed(speed)
 
         if update or speed is None:
             msg = Message()
