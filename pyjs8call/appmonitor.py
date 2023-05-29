@@ -173,8 +173,8 @@ class AppMonitor:
         if self._xvfb_proc is None:
             self._xvfb_proc = psutil.Popen([xvfb_exec_path, '-a', js8call_exec_path], stderr = subprocess.DEVNULL)
         
-        # wait until application connected or timeout
-        if self._app_connected():
+        # wait until socket connected or timeout
+        if self._socket_connected():
             # find js8call child process under xvfb
             for child in self._xvfb_proc.children():
                 if child.name().lower() == 'js8call':
@@ -208,8 +208,8 @@ class AppMonitor:
         if self._js8call_proc is None:
             self._js8call_proc = psutil.Popen([js8call_exec_path], stderr = subprocess.DEVNULL)
 
-        # wait until application connected or timeout
-        if self._app_connected():
+        # wait until socket connected or timeout
+        if self._socket_connected():
             # start js8call monitoring thread
             thread = threading.Thread(target=self._monitor)
             thread.daemon = True
@@ -217,37 +217,27 @@ class AppMonitor:
         else:
             raise RuntimeError('JS8Call application failed to start')
 
-    def _app_connected(self, timeout=120):
-        '''Wait for JS8Call socket connection and response after starting application.
+    def _socket_connected(self, timeout=120):
+        '''Wait for JS8Call socket connection after starting application.
         
         Args:
             timeout (int): Number of seconds to wait for connection, defaults to 120
             
         Returns:
-            bool: True if application connected, False otherwise
+            bool: True if socket connected, False otherwise
         '''
         if self._parent.connected:
             return True
 
-        socket_connected = False
         timeout += time.time()
 
         while True:
             try:
-                if not socket_connected:
-                    # connection refused error if unable to connect
-                    self._parent.connect()
-                
+                # connection refused error if unable to connect
+                self._parent.connect()
                 # no errors, socket connected
-                socket_connected = True
-                
-                # value error if application still opening (i.e. raspberry pi)
-                self._parent._client.settings.get_speed()
-
-                # no errors, the application is connected
                 return True
-
-            except (ConnectionRefusedError, ValueError):
+            except ConnectionRefusedError:
                 pass
 
             if time.time() > timeout:
