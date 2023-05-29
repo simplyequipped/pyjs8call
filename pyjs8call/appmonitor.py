@@ -247,7 +247,7 @@ class AppMonitor:
                 # no errors, the application is connected
                 return True
 
-            except ConnectionRefusedError, ValueError:
+            except (ConnectionRefusedError, ValueError):
                 pass
 
             if time.time() > timeout:
