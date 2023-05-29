@@ -1469,21 +1469,25 @@ class Settings:
     def set_idle_timeout(self, timeout):
         '''Set JS8Call idle timeout.
 
-        The JS8Call idle timeout must be between 5 and 1440 minutes.
+        If the JS8Call idle timeout is less than 5 minutes, JS8Call will force it to 5 minutes on the next application start or exit.
+
+        The maximum idle timeout is 1440 minutes (24 hours).
+
+        Disable the idle timeout by setting it to 0 (zero).
 
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
 
         Args:
-            timeout (int): Timeout to set in minutes
+            timeout (int): Idle timeout in minutes
 
         Returns:
             int: Current idle timeout in minutes
 
         Raises:
-            ValueError: Idle timeout must be between 5 and 1440 minutes
+            ValueError: Idle timeout must be between 0 and 1440 minutes
         '''
-        if timeout < 5 or timeout > 1440:
-            raise ValueError('Idle timeout must be between 5 and 1440 minutes')
+        if timeout < 0 or timeout > 1440:
+            raise ValueError('Idle timeout must be between 0 and 1440 minutes')
 
         self._client.config.set('Configuration', 'TxIdleWatchdog', timeout)
 
