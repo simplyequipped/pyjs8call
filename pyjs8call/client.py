@@ -118,7 +118,7 @@ class Client:
         # stop application and client at exit
         atexit.register(self.stop)
         
-    def start(self, headless=False, debugging=False, logging=False, delay=0):
+    def start(self, headless=False, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
 
         Initializes sub-module objects:
@@ -136,13 +136,10 @@ class Client:
 
         If logging is enabled the log file will be stored in the current user's *HOME* directory.
 
-        Use *delay* to allow more time for the application to finish starting after the process starts and the socket connects. This may be necessary on slower single board computers such as Raspberry Pi.
-
         Args:
             headless (bool): Run JS8Call headless via xvfb (Linux only)
             debugging (bool): Print message data to the console, defaults to False
             logging (bool): Print message data to ~/pyjs8call.log, defaults to False
-            delay (bool): Number of seconds to delay after JS8Call app start, defaults to 0
 
         Raises:
             RuntimeError: JS8Call config file section does not exist (likely because JS8Call has not been run and configured after installation)
@@ -166,7 +163,6 @@ class Client:
 
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
         self.js8call.start(headless = headless)
-        time.sleep(delay)
         self.online = True
 
         if debugging:
