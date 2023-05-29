@@ -220,9 +220,6 @@ class SpotMonitor:
         last_spot_update_timestamp = 0
 
         while self._enabled:
-            while not self._client.connected():
-                time.sleep(1)
-
             self._client.window.sleep_until_next_transition()
 
             # get new spots since last update

@@ -100,9 +100,6 @@ class HeartbeatNetworking:
         self._last_outgoing = time.time()
 
         while self._enabled:
-            while not self._client.connected():
-                time.sleep(1)
-
             time.sleep(1)
 
             # outgoing activity, reset interval timer

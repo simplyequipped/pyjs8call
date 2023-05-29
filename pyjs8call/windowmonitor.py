@@ -241,3 +241,4 @@ class WindowMonitor:
                     self._next_window_timestamp += window_duration
 
             time.sleep(0.01)
+

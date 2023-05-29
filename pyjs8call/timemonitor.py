@@ -408,8 +408,6 @@ class DriftMonitor:
         last_sync_timestamp = 0
         
         while self._enabled:
-            while not self._client.connected():
-                time.sleep(1)
             time.sleep(1)
 
             if last_sync_timestamp + interval < time.time():

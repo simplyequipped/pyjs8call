@@ -363,9 +363,6 @@ class InboxMonitor:
         last_tx_timestamp = 0
 
         while self._enabled:
-            while not self._client.connected():
-                time.sleep(1)
-
             window_duration = self._client.settings.get_window_duration()
             response_delay = window_duration * 30
 
@@ -405,3 +402,4 @@ class InboxMonitor:
 
             # delay until next window transition
             self._client.window.sleep_until_next_transition(within = 0.5)
+
