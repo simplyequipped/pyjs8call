@@ -1,5 +1,17 @@
 ### Versions
 
+**0.2.1**
+- Fix *pyjs8call.Message.text* being overwritten during object initialization
+- Set spotted message *status* to *Message.STATUS_RECEIVED*
+- Change the maximum time to wait for a socket connection during JS8Call application start to 120 seconds
+- Change minimum limit for *pyjs8call.Client.settings.set_idle_timeout* to zero (idle timeout disabled)
+- Remove idle monitor module
+- Improve JS8Call application start process by waiting for socket response (supports slower SBCs)
+- Improve restarting process by reinitializing local state as soon as possible
+- Improve restarting process by delaying local state update requests (avoids errors)
+- Improve restarting process by pausing internal module operations (avoids errors)
+- Add *enabled*, *paused*, *pause*, and *resume* functions to all internal modules
+
 **0.2.0**
 
 - Add *psutil* package requirement
