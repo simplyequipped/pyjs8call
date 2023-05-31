@@ -58,7 +58,7 @@ class Client:
         window (pyjs8call.windowmonitor): Monitors the JS8Call transmit window
         offset (pyjs8call.offsetmonitor): Manages JS8Call offset frequency
         outgoing (pyjs8call.outgoingmonitor): Monitors JS8Call outgoing message text
-        drift (pyjs8call.timemonitor): Monitors JS8Call time drift
+        drift_sync (pyjs8call.timemonitor): Monitors JS8Call time drift
         time_master (pyjs8call.timemonitor): Manages time master outgoing messages
         inbox (pyjs8call.inboxmonitor): Monitors JS8Call inbox messages
         config (pyjs8call.confighandler): Manages JS8Call configuration file
@@ -102,7 +102,7 @@ class Client:
         self.window = None
         self.offset = None
         self.outgoing = None
-        self.drift = None
+        self.drift_sync = None
         self.time_master = None
         self.inbox = None
         self.heartbeat = None
@@ -178,15 +178,15 @@ class Client:
         self.spots = pyjs8call.SpotMonitor(self)
         self.offset = pyjs8call.OffsetMonitor(self)
         self.outgoing = pyjs8call.OutgoingMonitor(self)
-        self.drift = pyjs8call.DriftMonitor(self)
+        self.drift_sync = pyjs8call.DriftMonitor(self)
         self.time_master = pyjs8call.TimeMaster(self)
         self.heartbeat = pyjs8call.HeartbeatNetworking(self)
         self.inbox = pyjs8call.InboxMonitor(self)
         
-        self.window.enable_monitoring()
-        self.spots.enable_monitoring()
-        self.offset.enable_monitoring()
-        self.outgoing.enable_monitoring()
+        self.window.enable()
+        self.spots.enable()
+        self.offset.enable()
+        self.outgoing.enable()
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
@@ -210,16 +210,17 @@ class Client:
             self.offset,
             self.inbox,
             self.heartbeat,
-            self.drift,
+            self.drift_sync,
             self.time_master,
             self.spots
         ]
 
         paused_modules = []
 
-        if self.module.enabled() and not self.module.paused():
-            self.module.pause()
-            paused_modules.append(module)
+        for module in modules:
+            if module.enabled() and not module.paused():
+                module.pause()
+                paused_modules.append(module)
 
         # write any pending config file changes, convience
         self.config.write()
