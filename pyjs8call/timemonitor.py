@@ -365,7 +365,7 @@ class DriftMonitor:
     def paused(self):
         return self._paused
 
-    def enable_auto_sync(self, station=None, group='@TIME', interval=60, threshold=0.5, age=15):
+    def enable(self, station=None, group='@TIME', interval=60, threshold=0.5, age=15):
         '''Enable automatic time drift monitoring.
         
         Uses *sync_to_group()* if *group* is specified (default).
@@ -390,15 +390,15 @@ class DriftMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable_auto_sync(self):
+    def disable(self):
         '''Disable automatic time drift monitoring.'''
         self._enabled = False
 
-    def pause_auto_sync(self):
+    def pause(self):
         '''Pause automatic time drift monitoring.'''
         self._paused = True
         
-    def resume_auto_sync(self):
+    def resume(self):
         '''Resume automatic time drift monitoring.'''
         self._paused = False
         

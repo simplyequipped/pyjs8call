@@ -68,6 +68,45 @@ class InboxMonitor:
         self._rx_queue = []
         self._rx_queue_lock = threading.Lock()
 
+    def enabled(self):
+        return self._enabled
+
+    def paused(self):
+        return self._paused
+
+    def enable(self, query=True, destination='@ALLCALL', interval=60):
+        '''Enable inbox monitoring.
+
+        If *query* is True a message query will be sent to *destination* every *interval* minutes. Incoming directed messages are responded to whether *query* is True or not. See *process_incoming()* for more information on incoming directed message handling.
+
+        Args:
+            query (bool): Transmit message queries periodically if True, defaults to True
+            destination (str): Outgoing message query destination, defaults to '@ALLCALL'
+            interval (int): Minutes between message queries, defaults to 60
+        '''
+        if self._enabled:
+            return
+
+        self._enabled = True
+        self._client.callback.register_incoming(self.process_incoming, message_type = Message.RX_DIRECTED)
+
+        thread = threading.Thread(target=self._monitor, args=(query, destination, interval))
+        thread.daemon = True
+        thread.start()
+
+    def disable(self):
+        '''Disable inbox monitoring.'''
+        self._enabled = False
+        self._client.callback.remove_incoming(self.process_incoming)
+
+    def pause(self):
+        '''Pause inbox monitoring.'''
+        self._paused = True
+
+    def resume(self):
+        '''Resume inbox monitoring.'''
+        self._paused = False
+
     def message(self, msg_id):
         '''Get specified inbox message.
         
@@ -289,45 +328,6 @@ class InboxMonitor:
         conn.commit()
         conn.close()
         
-    def enabled(self):
-        return self._enabled
-
-    def paused(self):
-        return self._paused
-
-    def enable_monitoring(self, query=True, destination='@ALLCALL', interval=60):
-        '''Enable inbox monitoring.
-
-        If *query* is True a message query will be sent to *destination* every *interval* minutes. Incoming directed messages are responded to whether *query* is True or not. See *process_incoming()* for more information on incoming directed message handling.
-
-        Args:
-            query (bool): Transmit message queries periodically if True, defaults to True
-            destination (str): Outgoing message query destination, defaults to '@ALLCALL'
-            interval (int): Minutes between message queries, defaults to 60
-        '''
-        if self._enabled:
-            return
-
-        self._enabled = True
-        self._client.callback.register_incoming(self.process_incoming, message_type = Message.RX_DIRECTED)
-
-        thread = threading.Thread(target=self._monitor, args=(query, destination, interval))
-        thread.daemon = True
-        thread.start()
-
-    def disable_monitoring(self):
-        '''Disable inbox monitoring.'''
-        self._enabled = False
-        self._client.callback.remove_incoming(self.process_incoming)
-
-    def pause_monitoring(self):
-        '''Pause inbox monitoring.'''
-        self._paused = True
-
-    def resume_monitoring(self):
-        '''Resume inbox monitoring.'''
-        self._paused = False
-
     def process_incoming(self, msg):
         '''Process incoming directed messages.
 

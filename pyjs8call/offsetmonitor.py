@@ -72,7 +72,7 @@ class OffsetMonitor:
     def paused(self):
         return self._paused
 
-    def enable_monitoring(self):
+    def enable(self):
         '''Enable offset monitoring.'''
         if self._enabled:
             return
@@ -83,15 +83,15 @@ class OffsetMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable_monitoring(self):
+    def disable(self):
         '''Disable offset monitoring.'''
         self._enabled = False
 
-    def pause_monitoring(self):
+    def pause(self):
         '''Pause offset monitoring.'''
         self._paused = True
 
-    def resume_monitoring(self):
+    def resume(self):
         '''Resume offset monitoring.'''
         self._paused = False
 

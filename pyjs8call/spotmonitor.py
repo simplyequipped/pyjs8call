@@ -64,7 +64,7 @@ class SpotMonitor:
     def paused(self):
         return self._paused
 
-    def enable_monitoring(self):
+    def enable(self):
         '''Enable spot monitoring.'''
         if self._enabled:
             return
@@ -75,7 +75,7 @@ class SpotMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable_monitoring(self):
+    def disable(self):
         '''Disable spot monitoring.'''
         self._enabled = False
 

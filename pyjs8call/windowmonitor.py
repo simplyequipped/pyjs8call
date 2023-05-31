@@ -69,7 +69,7 @@ class WindowMonitor:
     def enabled(self):
         return self._enabled
 
-    def enable_monitoring(self):
+    def enable(self):
         '''Enable rx/tx window monitoring.'''
         if self._enabled:
             return
@@ -84,8 +84,11 @@ class WindowMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable_monitoring(self):
-        '''Disable rx/tx window monitoring.'''
+    def disable(self):
+        '''Disable rx/tx window monitoring.
+
+        **Caution**: Many internal modules depend on the window monitor to function. Only disable this module if you understand what you are doing.
+        '''
         self._enabled = False
         self._client.callback.remove_incoming(self.process_rx_msg)
         self._client.callback.remove_incoming(self.process_tx_frame)

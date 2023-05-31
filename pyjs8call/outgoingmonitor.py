@@ -83,7 +83,7 @@ class OutgoingMonitor:
     def paused(self):
         return self._paused
 
-    def enable_monitoring(self):
+    def enable(self):
         if self._enabled:
             return
 
@@ -93,7 +93,7 @@ class OutgoingMonitor:
         thread.daemon = True
         thread.start()
 
-    def disable_monitoring(self):
+    def disable(self):
         self._enabled = False
 
     def pause(self):
