@@ -1508,9 +1508,59 @@ class Settings:
             raise ValueError('Idle timeout must be between 0 and 1440 minutes')
 
         self._client.config.set('Configuration', 'TxIdleWatchdog', timeout)
-
         return self.get_idle_timeout()
 
+    def get_distance_units_miles(self):
+        '''Get JS8Call distance unit setting.
+        
+        Returns:
+            bool: True if distance units are set to miles, False if km
+        '''
+        return bool(self._client.config.get('Configuration', 'Miles', value_type=int))
+        
+    def set_distance_units_miles(self, units_miles):
+        '''Set JS8Call distance unit setting.
+        
+        Args:
+            units_miles (bool): Set units to miles if True, set to km if False
+            
+        Returns:
+            bool: True if distance units are set to miles, False if km
+        '''
+        self._client.config.set('Configuration', 'Miles', int(units_miles))
+        return self.get_distance_units_miles()
+        
+    def get_distance_units(self):
+        '''Get JS8Call distance units.
+        
+        Returns:
+            str: Configured distance units: 'miles' or 'km'
+        '''
+        units_miles = self.get_distance_units_miles()
+        
+        if units_miles:
+            return 'miles'
+        else:
+            return 'km'
+        
+    def set_distance_units(self, units):
+        ''' Set JS8Call distance units.
+        
+        Args:
+            units (str): Distance units: 'mi', 'miles', 'km', or 'kilometers'
+            
+        Returns:
+            str: Configured distance units: 'miles' or 'km'
+        '''
+        if units.lower() in ['mi', 'miles']:
+            self.set_distance_units_miles(True)
+            return self.get_distance_units()
+        elif units.lower() in ['km', 'kilometers']:
+            self.set_distance_units_miles(False)
+            return self.get_distance_units()
+        else:
+            raise ValueError('Distance units must be: mi, miles, km, or kilometers')
+    
     def get_station_grid(self, update=False):
         '''Get JS8Call grid square.
 
