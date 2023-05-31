@@ -63,7 +63,6 @@ class Client:
         inbox (pyjs8call.inboxmonitor): Monitors JS8Call inbox messages
         config (pyjs8call.confighandler): Manages JS8Call configuration file
         heartbeat (pyjs8call.hbnetwork): Manages heartbeat outgoing messages
-        idle (pyjs8call.idlemonitor): Monitors the JS8Call idle timeout
         callback (pyjs8call.client.Callbacks): Callback function reference object
         settings (pyjs8call.client.Settings): Configuration setting function reference object
         clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages, defaults to True
@@ -107,7 +106,6 @@ class Client:
         self.time_master = None
         self.inbox = None
         self.heartbeat = None
-        self.idle = None
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
@@ -131,7 +129,6 @@ class Client:
         - Time master (see pyjs8call.timemonitor)
         - Heartbeat networking (see pyjs8call.hbnetwork)
         - Inbox master (see pyjs8call.inboxmonitor)
-        - Idle monitor (see pyjs8call.idlemonitor)
 
         Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
 
@@ -185,7 +182,6 @@ class Client:
         self.time_master = pyjs8call.TimeMaster(self)
         self.heartbeat = pyjs8call.HeartbeatNetworking(self)
         self.inbox = pyjs8call.InboxMonitor(self)
-        #self.idle = pyjs8call.IdleMonitor(self)
         
         self.window.enable_monitoring()
         self.spots.enable_monitoring()
