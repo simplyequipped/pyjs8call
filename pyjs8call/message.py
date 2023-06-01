@@ -177,8 +177,9 @@ class Message:
         type (str): Message type (see static types), defaults to TX_SEND_MESSAGE
         destination (str): Destination callsign
         value (str): Message contents
-        time (str): UTC timestamp (see datetime.now(timezone.utc).timestamp)
-        timestamp (str): Local timestamp (see time.time)
+        time (float): UTC timestamp (see *datetime.now(timezone.utc).timestamp*)
+        timestamp (float): Local timestamp (see *time.time*)
+        tdrift (float): Time drift specified by JS8call, defaults to None
         params (dict): Message parameters used by certain JS8Call API messages
         attributes (list): Attributes for internal use (see *Message.set*)
         status (str): Message status (see static statuses), defaults to STATUS_CREATED
@@ -339,6 +340,7 @@ class Message:
             'freq',
             'dial',
             'offset',
+            'tdrift',
             'call',
             'grid',
             'snr',
