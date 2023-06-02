@@ -1025,6 +1025,21 @@ class Client:
                     heard_by[callsign].append(key)
 
         return heard_by
+
+#    def discover_path(self, destination, age=60):
+#        '''
+#        '''
+#        age *= 60
+#        callsign = self.settings.get_station_callsign()
+#        heard_by = self.heard_by(age = age)
+#
+#        if destination in heard_by:
+#            if callsign in heard_by[destination]:
+#                return destination
+#
+#            else:
+#                '>'.join()
+            
         
     def grid_distance(self, grid_a, grid_b=None, miles=True):
         '''Calculate great circle distance and bearing between grid squares.
