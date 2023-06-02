@@ -72,7 +72,7 @@ class JS8Call:
         self._tx_queue = []
         self._tx_queue_lock = threading.Lock()
         self._socket = None
-        self._socket_ping_delay = 60 * 5 # seconds
+        self._socket_ping_delay = 60 # seconds
         self._debug = False
         self._debug_all = False
         self._log = False
@@ -87,7 +87,9 @@ class JS8Call:
             Message.TX_FRAME,           # start of outgoing message, not useful
             Message.INBOX_MESSAGES,     # inbox monitor every window transition
             Message.INBOX_GET_MESSAGES, # inbox monitor every window transition
-            Message.STATION_STATUS      # too frequent
+            Message.STATION_STATUS,     # too frequent
+            Message.RIG_GET_FREQ,       # offset monitor every window transition
+            Message.RIG_FREQ            # offset monitor every window transition
         ]
         self._watching = None
         self._watch_timeout = 3 # seconds
@@ -97,6 +99,7 @@ class JS8Call:
         self.connected = False
         self.last_incoming = 0
         self.last_outgoing = 0
+        self._last_incoming_api_msg = 0
 
         self.state = {
             'ptt' : False,
@@ -450,11 +453,11 @@ class JS8Call:
     def _ping(self):
         '''JS8Call application ping thread.
 
-        If no messages have been received from the JS8Call in the last 5 minutes, a request is issued to the application to make sure it is still connected and functioning as expected.
+        If no messages have been received from the JS8Call in the last minute, a request is issued to the application to make sure it is still connected and functioning as expected.
         '''
         while self.online:
-            # if no recent rx, check the connection by making a request
-            timeout = self.last_incoming + self._socket_ping_delay
+            # if no recent api msgs, check the connection by making a request
+            timeout = self._last_incoming_api_msg + self._socket_ping_delay
 
             if time.time() > timeout:
                 self.connected = False
@@ -543,7 +546,7 @@ class JS8Call:
 
             try:
                 data += self._socket.recv(65535)
-            except (socket.timeout, OSError):
+            except socket.timeout:
                 # if rx from socket fails continue trying
                 continue
             except OSError:
@@ -587,6 +590,8 @@ class JS8Call:
 
                 if msg.type in Message.USER_MSG_TYPES:
                     self.last_incoming = time.time()
+
+                self._last_incoming_api_msg = time.time()
                 
                 # print msg in debug mode
                 if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
