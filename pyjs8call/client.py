@@ -1291,10 +1291,30 @@ class Settings:
         '''
         self._client.config.set('Configuration', 'TransmitOFF', 'true')
 
+    def get_profile(self):
+        '''Get active JS8call configuration profile via config file.
+
+        This is a convenience function. See pyjs8call.confighandler for other configuration related functions.
+
+        Returns:
+            str: Name of the active configuration profile
+        '''
+        return self._client.config.get_active_profile()
+
+    def get_profile_list(self):
+        '''Get list of JS8Call configuration profiles via config file.
+
+        This is a convenience function. See pyjs8call.confighandler for other configuration related functions.
+
+        Returns:
+            list: List of configuration profile names
+        '''
+        return self._client.config.get_profile_list()
+
     def set_profile(self, profile):
         '''Set active JS8Call configuration profile via config file.
         
-        This is a convenience function. See pyjs8call.confighandler for other configuration profile related functions.
+        This is a convenience function. See pyjs8call.confighandler for other configuration related functions.
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
 
