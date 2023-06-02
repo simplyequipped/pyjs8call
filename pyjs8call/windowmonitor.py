@@ -66,6 +66,11 @@ class WindowMonitor:
         self._timestamp_lock = threading.Lock()
 
     def enabled(self):
+        '''Get enabled status.
+
+        Returns:
+            bool: True if enabled, False if disabled
+        '''
         return self._enabled
 
     def enable(self):
@@ -93,6 +98,10 @@ class WindowMonitor:
         self._client.callback.remove_incoming(self.process_rig_ptt)
 
     def reset(self):
+        '''Reset rx/tx window monitoring timestamps.
+
+        This function is used internally during restart.
+        '''
         self._next_window_timestamp = 0
         self._last_rig_ptt_timestamp = 0
         self._last_rx_msg_timestamp = 0

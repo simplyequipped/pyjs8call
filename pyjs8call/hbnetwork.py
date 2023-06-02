@@ -57,9 +57,19 @@ class HeartbeatNetworking:
         self._offset = None
 
     def enabled(self):
+        '''Get enabled status.
+
+        Returns:
+            bool: True if enabled, False if disabled
+        '''
         return self._enabled
 
     def paused(self):
+        '''Get paused status.
+
+        Returns:
+            bool: True if paused, False if running
+        '''
         return self._paused
 
     def enable(self, interval=10):

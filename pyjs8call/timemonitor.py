@@ -76,6 +76,59 @@ class DriftMonitor:
         self._search_activity = []
         self._drift = self._client.config.get('MainWindow', 'TimeDrift', value_type=int)
 
+    def enabled(self):
+        '''Get enabled status.
+
+        Returns:
+            bool: True if enabled, False if disabled
+        '''
+        return self._enabled
+
+    def paused(self):
+        '''Get paused status.
+
+        Returns:
+            bool: True if paused, False if running
+        '''
+        return self._paused
+
+    def enable(self, station=None, group='@TIME', interval=60, threshold=0.5, age=15):
+        '''Enable automatic time drift monitoring.
+        
+        Uses *sync_to_group()* if *group* is specified (default).
+        
+        Uses *sync_to_station()* if *station* is specified.
+        
+        Uses *sync_to_activity()* if *group* and *station* are both None.
+        
+        Args:
+            station (str): Station callsign to sync time drift to, defaults to None
+            group (str): Group designator to sync time drift to, defaults to '@TIME'
+            interval (int): Number of minutes between sync attempts, defaults to 60
+            threshold (float): Time drift in seconds to exceed before syncing, defaults to 0.5
+            age (int): Maximum age of activity in minutes, defaults to 15
+        '''
+        if self._enabled:
+            return
+        
+        self._enabled = True
+        
+        thread = threading.Thread(target=self._monitor, args=(station, group, interval, threshold, age))
+        thread.daemon = True
+        thread.start()
+
+    def disable(self):
+        '''Disable automatic time drift monitoring.'''
+        self._enabled = False
+
+    def pause(self):
+        '''Pause automatic time drift monitoring.'''
+        self._paused = True
+        
+    def resume(self):
+        '''Resume automatic time drift monitoring.'''
+        self._paused = False
+        
     def get_drift(self):
         '''Get current time drift.
 
@@ -359,49 +412,6 @@ class DriftMonitor:
         '''
         return self.sync_to_group('@TIME', threshold = threshold, age = age)
 
-    def enabled(self):
-        return self._enabled
-
-    def paused(self):
-        return self._paused
-
-    def enable(self, station=None, group='@TIME', interval=60, threshold=0.5, age=15):
-        '''Enable automatic time drift monitoring.
-        
-        Uses *sync_to_group()* if *group* is specified (default).
-        
-        Uses *sync_to_station()* if *station* is specified.
-        
-        Uses *sync_to_activity()* if *group* and *station* are both None.
-        
-        Args:
-            station (str): Station callsign to sync time drift to, defaults to None
-            group (str): Group designator to sync time drift to, defaults to '@TIME'
-            interval (int): Number of minutes between sync attempts, defaults to 60
-            threshold (float): Time drift in seconds to exceed before syncing, defaults to 0.5
-            age (int): Maximum age of activity in minutes, defaults to 15
-        '''
-        if self._enabled:
-            return
-        
-        self._enabled = True
-        
-        thread = threading.Thread(target=self._monitor, args=(station, group, interval, threshold, age))
-        thread.daemon = True
-        thread.start()
-
-    def disable(self):
-        '''Disable automatic time drift monitoring.'''
-        self._enabled = False
-
-    def pause(self):
-        '''Pause automatic time drift monitoring.'''
-        self._paused = True
-        
-    def resume(self):
-        '''Resume automatic time drift monitoring.'''
-        self._paused = False
-        
     def _restart_client(self):
         '''Restart client when there is no activity.'''
         self._client.js8call.block_until_inactive()
@@ -455,9 +465,19 @@ class TimeMaster:
         self._paused = False
 
     def enabled(self):
+        '''Get enabled status.
+
+        Returns:
+            bool: True if enabled, False if disabled
+        '''
         return self._enabled
 
     def paused(self):
+        '''Get paused status.
+        
+        Returns:
+            bool: True if paused, False if running
+        '''
         return self._paused
 
     def enable(self, destination='@TIME', message='SYNC', interval=10):
@@ -486,9 +506,11 @@ class TimeMaster:
         self._enabled = False
 
     def pause(self):
+        '''Pause time master.'''
         self._paused = True
 
     def resume(self):
+        '''Resume time master.'''
         self._paused = False
         
     def _monitor(self, destination, message, interval):

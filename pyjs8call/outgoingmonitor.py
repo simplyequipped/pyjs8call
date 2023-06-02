@@ -78,12 +78,23 @@ class OutgoingMonitor:
         self._msg_max_age = 10 * 30 # 5 minutes
 
     def enabled(self):
+        '''Get enabled status.
+
+        Returns:
+            bool: True if enabled, False if disabled
+        '''
         return self._enabled
 
     def paused(self):
+        '''Get paused status.
+
+        Returns:
+            bool: True if paused, False if running
+        '''
         return self._paused
 
     def enable(self):
+        '''Enable outgoing message monitoring.'''
         if self._enabled:
             return
 
@@ -94,12 +105,15 @@ class OutgoingMonitor:
         thread.start()
 
     def disable(self):
+        '''Disable outgoing message monitoring.'''
         self._enabled = False
 
     def pause(self):
+        '''Pause outgoing message monitoring.'''
         self._paused = True
 
     def resume(self):
+        '''Resume outgoing message monitoring.'''
         self._paused = False
 
     def _callback(self, msg):

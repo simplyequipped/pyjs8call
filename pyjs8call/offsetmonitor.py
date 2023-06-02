@@ -67,9 +67,19 @@ class OffsetMonitor:
         self._paused = False
 
     def enabled(self):
+        '''Get enabled status.
+        
+        Returns:
+            bool: True if enabled, False if disabled
+        '''
         return self._enabled
 
     def paused(self):
+        '''Get paused status.
+        
+        Returns:
+            bool: True if paused, False if running
+        '''
         return self._paused
 
     def enable(self):
