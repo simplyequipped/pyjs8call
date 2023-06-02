@@ -500,10 +500,7 @@ class TimeMaster:
         last_outgoing_timestamp = 0
         
         while self._enabled:
-            while self._paused:
-                time.sleep(1)
-
-            if last_outgoing_timestamp + interval < time.time():
+            if last_outgoing_timestamp + interval < time.time() and not self._paused:
                 text = destination + ' ' + message
                 self._client.send_message(text.strip())
                 last_outgoing_timestamp = time.time()
