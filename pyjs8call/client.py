@@ -1516,7 +1516,7 @@ class Settings:
         Returns:
             bool: True if distance units are set to miles, False if km
         '''
-        return bool(self._client.config.get('Configuration', 'Miles', value_type=int))
+        return self._client.config.get('Configuration', 'Miles', value_type=bool)
         
     def set_distance_units_miles(self, units_miles):
         '''Set JS8Call distance unit setting.
@@ -1527,7 +1527,7 @@ class Settings:
         Returns:
             bool: True if distance units are set to miles, False if km
         '''
-        self._client.config.set('Configuration', 'Miles', int(units_miles))
+        self._client.config.set('Configuration', 'Miles', str(units_miles).lower())
         return self.get_distance_units_miles()
         
     def get_distance_units(self):
@@ -1536,9 +1536,7 @@ class Settings:
         Returns:
             str: Configured distance units: 'miles' or 'km'
         '''
-        units_miles = self.get_distance_units_miles()
-        
-        if units_miles:
+        if self.get_distance_units_miles():
             return 'miles'
         else:
             return 'km'
