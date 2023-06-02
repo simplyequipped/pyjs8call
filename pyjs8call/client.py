@@ -956,7 +956,7 @@ class Client:
         return rx_messages
     
     def hearing(self, age=60):
-        '''Get information on which stations other stations are hearing.
+        '''Which stations other stations are hearing.
 
         Args:
             age (int): Maximum message age in minutes, defaults to 60
@@ -1003,13 +1003,28 @@ class Client:
 
         return hearing
 
-#TODO
-#    def heard_by(self, age=60):
-#        '''Get information on which stations are heard other stations.
-#        
-#        '''
-#        callsign = self.settings.get_station_callsign()
-#        heard = {}
+    def heard_by(self, age=60):
+        '''Which stations are heard by other stations.
+
+        *heard_by* is the inverse of *hearing*.
+
+        Args:
+            age (int): Maximum message age in minutes, defaults to 60
+
+        Returns:
+            dict: Example format *{'station': ['station', ...], ...}*
+        '''
+        age *= 60
+        heard_by = {}
+
+        for key, value in self.hearing().items():
+            for callsign in value:
+                if callsign not in heard_by:
+                    heard_by[callsign] = [key]
+                elif key not in heard_by[callsign]:
+                    heard_by[callsign].append(key)
+
+        return heard_by
         
     def grid_distance(self, grid_a, grid_b=None, miles=True):
         '''Calculate great circle distance and bearing between grid squares.
