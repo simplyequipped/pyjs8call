@@ -60,11 +60,10 @@ class WindowMonitor:
         '''
         self._client = client
         self._enabled = False
-        self._last_tx_frame_timestamp = 0
+        self._last_rig_ptt_timestamp = 0
         self._last_rx_msg_timestamp = 0
         self._next_window_timestamp = 0
         self._timestamp_lock = threading.Lock()
-        self._ignore_next_tx_frame = False
 
     def enabled(self):
         return self._enabled
@@ -76,7 +75,7 @@ class WindowMonitor:
 
         self._enabled = True
         
-        self._client.callback.register_incoming(self.process_tx_frame, message_type = Message.TX_FRAME)
+        self._client.callback.register_incoming(self.process_rig_ptt, message_type = Message.RIG_PTT)
         self._client.callback.register_incoming(self.process_rx_msg, message_type = Message.RX_DIRECTED)
         self._client.callback.register_incoming(self.process_rx_msg, message_type = Message.RX_ACTIVITY)
 
@@ -91,11 +90,11 @@ class WindowMonitor:
         '''
         self._enabled = False
         self._client.callback.remove_incoming(self.process_rx_msg)
-        self._client.callback.remove_incoming(self.process_tx_frame)
+        self._client.callback.remove_incoming(self.process_rig_ptt)
 
     def reset(self):
         self._next_window_timestamp = 0
-        self._last_tx_frame_timestamp = 0
+        self._last_rig_ptt_timestamp = 0
         self._last_rx_msg_timestamp = 0
 
     def _callback(self):
@@ -108,31 +107,24 @@ class WindowMonitor:
             thread.daemon = True
             thread.start()
 
-    def ignore_next_tx_frame(self):
-        '''Ignore the next tx frame.
-
-        Used to ignore outgoing messages that may cause cumulative tx frame offset errors when there are no other outgoing messages (ex. pyjs8call heartbeat networking messages).
-        '''
-        self._ignore_next_tx_frame = True
-
-    def process_tx_frame(self, msg):
-        '''Process tx frame message.
+    def process_rig_ptt(self, msg):
+        '''Process rig ptt message.
 
         This function is for internal use only.
 
-        Use the timestamp of a tx frame API message to mark the beginning of a rx/tx window transition.
+        Use the timestamp of a PTT API message to mark the rx/tx window transition.
 
         Args:
-            msg (pyjs8call.message): Tx frame message object
+            msg (pyjs8call.message): Rig PTT message object
         '''
-        if self._ignore_next_tx_frame:
-            self._ignore_next_tx_frame = False
+        # ignore ptt off messages
+        if not msg.ptt:
             return
 
         window_duration = self._client.settings.get_window_duration()
 
         with self._timestamp_lock:
-            self._last_tx_frame_timestamp = msg.timestamp
+            self._last_rig_ptt_timestamp = msg.timestamp
             self._next_window_timestamp = msg.timestamp + window_duration
 
     def process_rx_msg(self, msg):
