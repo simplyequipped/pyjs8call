@@ -281,6 +281,7 @@ class OffsetMonitor:
         # calculate distance from the current offset to each unused section
         distance = []
 
+        # keep track of unused_spectrum position after distance sort
         i = 0
         for lower_limit, upper_limit in unused_spectrum:
             if upper_limit < self.offset:
@@ -294,8 +295,12 @@ class OffsetMonitor:
 
         # sort by distance from current offset
         distance.sort(key = lambda dist: dist[1])
-        # index of nearest unused section
-        nearest = distance[0][0]
+
+        try:
+            # index of nearest unused section
+            nearest = distance[0][0]
+        except IndexError:
+            return None
 
         # use nearest unused section
         lower_limit = unused_spectrum[nearest][0]
