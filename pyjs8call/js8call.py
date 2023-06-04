@@ -477,22 +477,25 @@ class JS8Call:
         If debugging or logging is enabled then each message sent over the TCP socket is printed to the console or to file respectively. By default not all messages are printed or logged (see pyjs8call.js8call.JS8Call._debug_log_type_blacklist). Frequently sent and received messages used internal to pyjs8call are not printed or logged.
         '''
         tx_text = False
-        force_tx_text = False
+        active_tx_state = False
 
         while self.online:
             # TxMonitor updates tx_text every second
             # do not attempt to update while value is being watched (i.e. updated)
-            if not self.watching('tx_text') and self.state['tx_text'] is not None:
-                if len(self.state['tx_text'].strip()) > 0:
+            if (
+                not self.watching('tx_text') and
+                self.state['tx_text'] is not None and
+                len(self.state['tx_text'].strip()) > 0
+            ):
                     tx_text = True
-                    force_tx_text = False
+                    active_tx_state = False
                 else:
                     tx_text = False
 
             with self._tx_queue_lock:
                 for msg in self._tx_queue.copy():
                     # hold off on sending messages while there is something being sent (text in the tx text field)
-                    if msg.type == Message.TX_SEND_MESSAGE and (tx_text or force_tx_text):
+                    if msg.type == Message.TX_SEND_MESSAGE and (tx_text or active_tx_state):
                         continue
 
                     packed = msg.pack()
@@ -512,7 +515,7 @@ class JS8Call:
                         
                         # make sure the next queued msg doesn't get sent before the tx text state updates
                         if msg.type == Message.TX_SEND_MESSAGE:
-                            force_tx_text = True
+                            active_tx_state = True
 
                     except (BrokenPipeError, ValueError, OSError):
                         # BrokenPipeError may happen when restarting due to closed socket
