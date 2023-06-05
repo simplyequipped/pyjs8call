@@ -63,6 +63,7 @@ class Client:
         inbox (pyjs8call.inboxmonitor): Monitors JS8Call inbox messages
         config (pyjs8call.confighandler): Manages JS8Call configuration file
         heartbeat (pyjs8call.hbnetwork): Manages heartbeat outgoing messages
+        schedule (pyjs8call.schedulemonitor): Monitors and activates schedule entries
         callback (pyjs8call.client.Callbacks): Callback function reference object
         settings (pyjs8call.client.Settings): Configuration setting function reference object
         clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages, defaults to True
@@ -106,6 +107,7 @@ class Client:
         self.time_master = None
         self.inbox = None
         self.heartbeat = None
+        self.schedule = None
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
@@ -128,7 +130,8 @@ class Client:
         - Time drift monitor (see pyjs8call.timemonitor)
         - Time master (see pyjs8call.timemonitor)
         - Heartbeat networking (see pyjs8call.hbnetwork)
-        - Inbox master (see pyjs8call.inboxmonitor)
+        - Inbox monitor (see pyjs8call.inboxmonitor)
+        - Schedule monitor (see pyjs8call.schedulemonitor)
 
         Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
 
@@ -182,11 +185,13 @@ class Client:
         self.time_master = pyjs8call.TimeMaster(self)
         self.heartbeat = pyjs8call.HeartbeatNetworking(self)
         self.inbox = pyjs8call.InboxMonitor(self)
+        self.schedule = pyjs8call.ScheduleMonitor(self)
         
         self.window.enable()
         self.spots.enable()
         self.offset.enable()
         self.outgoing.enable()
+        self.schedule.enable()
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
@@ -212,7 +217,8 @@ class Client:
             self.heartbeat,
             self.drift_sync,
             self.time_master,
-            self.spots
+            self.spots,
+            self.schedule
         ]
 
         paused_modules = []
@@ -1751,7 +1757,9 @@ class Callbacks:
         spots (func): New spots callback funtion, defaults to None
         station_spot (func): Watched station spot callback function, defaults to None
         group_spot (func): Watched group spot callback function, defaults to None
-        window (func): Transmit window transition callback function, defaults to None
+        window (func): rx/tx window transition callback function, defaults to None
+        inbox (func): New inbox message callback function, defaults to None
+        schedule (func): Schedule entry activation callback function, defaults to None
 
     *incoming* structure: *{type: [callback, ...], ...}*
     - *type* is an incoming  message type (see pyjs8call.message for information on message types)
@@ -1775,6 +1783,10 @@ class Callbacks:
     *inbox* callback signature: *func(msgs)* where *msgs* is a list of *dict* message items
     - See *client.get_inbox_messages()* for message item *dict* key details
     - Called by pyjs8call.inboxmonitor
+
+    *schedule* callback signature: *func(sch)* where *sch* is a pyjs8call.schedule.Schedule object
+    - See *pyjs8call.schedule.Schedule* for object property details
+    - Called by pyjs8call.schedulemonitor
     '''
 
     def __init__(self):
@@ -1789,6 +1801,7 @@ class Callbacks:
         self.group_spot = None
         self.window = None
         self.inbox = None
+        self.schedule = None
         self.incoming = {
             Message.RX_DIRECTED: [],
         }
