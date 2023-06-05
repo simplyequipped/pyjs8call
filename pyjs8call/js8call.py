@@ -617,8 +617,6 @@ class JS8Call:
 
         Automatic cleaning of directed message text is handled if enabled (see pyjs8call.client).
 
-        Tx frame messages are passed to pyjs8call.windowmonitor.
-
         Args:
             msg (pyjs8call.message): Message to process
         '''
@@ -634,7 +632,10 @@ class JS8Call:
             except ValueError:
                 pass
 
+        # set active profile for spot filtering
+        msg.set('profile', self._client.get_active_profile())
 
+        
         ### command handling ###
 
         if msg.cmd in Message.COMMANDS:
@@ -701,11 +702,9 @@ class JS8Call:
             self.state['band_activity'] = msg.band_activity
 
         elif msg.type == Message.RX_ACTIVITY:
-            # utilized by activity monitor via callback
             pass
 
         elif msg.type == Message.TX_FRAME:
-            # utilized by tx monitor via callback
             pass
 
         self.append_to_rx_queue(msg)
