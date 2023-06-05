@@ -121,9 +121,9 @@ Time master functionality is also implemented which sends outgoing messages on a
 
 Monitors the local inbox. Notification of new messages is handled via callback function.
 
-**Idle Monitor** (pyjs8call.idlemonitor)
+**Schedule Monitor** (pyjs8call.schedulemonitor)
 
-Monitors the JS8Call application process run time and restarts the application perodically (when there is no outgoing activity) to avoid the JS8Call idle timeout. This is useful when running the JS8Call application headless.
+Monitors configured schedule entries and applies the necessary setting changes at the scheduled time. Settings that can be changed on a schedule include frequency, modem speed, and configuration profile.
 
 &nbsp;  
 
@@ -255,6 +255,23 @@ js8call.start()
 
 # use default 10 minute interval
 js8call.heartbeat.enable_networking()
+```
+
+Using the schedule monitor:
+```
+import pyjs8call
+
+js8call = pyjs8call.Client()
+js8call.start()
+
+# return to the current configuration later
+js8call.schedule.add('10:00')
+# change configuration profile and set frequency and modem speed
+js8call.schedule.add('8:00', 7078000, 'normal', 'QDX')
+# change frequency only
+js8call.schedule.add('9:00', 7074000)
+# remove schedule entry
+js8call.schedule.remove('9:00')
 ```
 
 Set config file settings:
