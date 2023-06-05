@@ -423,7 +423,6 @@ class JS8Call:
         self._recent_spots = [spot for spot in self._recent_spots if spot.age() < 10]
 
         if msg not in self._recent_spots:
-            msg.status = Message.STATUS_RECEIVED
             self._recent_spots.append(msg)
             self._spots.append(msg)
 
@@ -598,6 +597,7 @@ class JS8Call:
                 if msg.type in Message.USER_MSG_TYPES:
                     self.last_incoming = time.time()
 
+                msg.status = Message.STATUS_RECEIVED
                 self._last_incoming_api_msg = time.time()
                 
                 # print msg in debug mode
