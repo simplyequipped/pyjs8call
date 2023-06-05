@@ -205,6 +205,7 @@ class Message:
         call_activity (list): JS8Call call activity items, defaults to None
         distance (int): Distance from JS8Call grid square to message grid square, defaults to None
         bearing (int): Bearing from JS8Call grid square to message grid square, defaults to None
+        profile (str): Active configuration profile when message was received, defaults to None
 
     *text* is also used to store 'cleaned' incoming message text, see *pyjs8call.client.clean_rx_message_text()*.
     '''
@@ -359,7 +360,8 @@ class Message:
             'band_activity',
             'call_activity',
             'distance',
-            'bearing'
+            'bearing',
+            'profile'
         ]
 
         for attribute in common:
