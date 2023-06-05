@@ -336,6 +336,7 @@ class JS8Call:
             msg (pyjs8call.message): Message object to be transmitted
         '''
         msg.status = Message.STATUS_QUEUED
+        msg.set('profile', self._client.settings.get_profile())
 
         with self._tx_queue_lock:
             self._tx_queue.append(msg)
@@ -511,6 +512,7 @@ class JS8Call:
                     try:
                         self._socket.sendall(packed)
                         self._tx_queue.remove(msg)
+                        self._spot(msg)
                     
                         if msg.type in Message.USER_MSG_TYPES:
                             self.last_outgoing = time.time()
@@ -633,7 +635,7 @@ class JS8Call:
                 pass
 
         # set active profile for spot filtering
-        msg.set('profile', self._client.get_active_profile())
+        msg.set('profile', self._client.settings.get_profile())
 
         
         ### command handling ###
