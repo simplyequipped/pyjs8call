@@ -102,7 +102,7 @@ class SpotMonitor:
         with self._spots_lock:
             return self._client.js8call.get_spots()
 
-    def filter(self, origin=None, destination=None, distance=0, age=0, count=0):
+    def filter(self, origin=None, destination=None, distance=0, age=0, count=0, profile=None):
         '''Get filtered spot messages.
 
         Spots are *pyjs8call.message* objects. Specified *origin* and *destination* strings are converted to uppercase.
@@ -115,6 +115,7 @@ class SpotMonitor:
             distance (int): Maximum message grid square distance, defaults to 0 (zero)
             age (int): Maximum message age in seconds, defaults to 0 (zero)
             count (int): Number of most recent spot messages to return, defaults to 0 (zero)
+            profile (str): Configuration profile at the time spot was sent or received, defaults to None
 
         Returns:
             list: Spot messages matching specified filter criteria
@@ -126,7 +127,8 @@ class SpotMonitor:
                     (age == 0 or spot.age() <= age) and
                     (distance == 0 or (spot.distance is not None and spot.distance <= distance)) and
                     (origin is None or origin.upper() == spot.origin) and 
-                    (destination is None or destination.upper() == spot.destination)
+                    (destination is None or destination.upper() == spot.destination) and
+                    (profile is None or profile == spot.profile)
                 ):
                     spots.append(spot)
 
