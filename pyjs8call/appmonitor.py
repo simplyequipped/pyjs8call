@@ -42,6 +42,7 @@ class AppMonitor:
 
     Attributes:
         headless (bool): Whether JS8Call is running headless using xvfb (see *start()*)
+        args (list): Sequence of command line arguments to be passed to JS8Call, defaults to empty list
         restart (bool): Whether to restart the JS8Call application if it stops, defaults to True
     '''
 
@@ -58,13 +59,17 @@ class AppMonitor:
         self._xvfb_proc = None
         self._js8call_proc = None
         self.headless = False
+        self.args = []
         self.restart = True
 
-    def start(self, headless=False):
+    def start(self, headless=False, args=[]):
         ''' Start JS8Call application.
+
+        See the subprocess.Popen *args* parameter documentation for information on how to break command line arguments into a sequence. The *js8call* command does not need to be included, only additional arguments. For example, passing `['--rig-name', 'FT857']` as the *args* parameter results in `js8call --rig-name FT857` being called to start the JS8Call application. Note that *args* only applies if JS8Call is started by pyjs8call.
 
         Args:
             headless (bool): Run JS8Call headless using xvfb (Linux only, requires xvfb to be installed), defaults to False
+            args (list): Sequence of command line arguments to be passed to JS8Call, defaults to empty list
 
         Raises:
             RuntimeError: JS8Call is not installed
@@ -74,6 +79,8 @@ class AppMonitor:
         '''
         if self.is_running():
             return
+
+        self.args = args
 
         if headless:
             self._start_xvfb()
@@ -171,7 +178,10 @@ class AppMonitor:
 
         # proc not set if not already running
         if self._xvfb_proc is None:
-            self._xvfb_proc = psutil.Popen([xvfb_exec_path, '-a', js8call_exec_path], stderr = subprocess.DEVNULL)
+            exec_path = [xvfb_exec_path, '-a', js8call_exec_path]
+            exec_path.extend(self.args)
+
+            self._xvfb_proc = psutil.Popen(exec_path, stderr = subprocess.DEVNULL)
         
         # wait until socket connected or timeout
         if self._socket_connected():
@@ -206,7 +216,10 @@ class AppMonitor:
 
         # proc not set if not already running
         if self._js8call_proc is None:
-            self._js8call_proc = psutil.Popen([js8call_exec_path], stderr = subprocess.DEVNULL)
+            exec_path = [js8call_exec_path]
+            exec_path.extend(self.args)
+
+            self._js8call_proc = psutil.Popen(exec_path, stderr = subprocess.DEVNULL)
 
         # wait until socket connected or timeout
         if self._socket_connected():

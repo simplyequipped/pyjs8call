@@ -120,20 +120,22 @@ class JS8Call:
 
         self.app = pyjs8call.AppMonitor(self)
 
-    def start(self, headless=False):
+    def start(self, headless=False, args = []):
         '''Start the JS8Call application.
 
         This function is blocking until the JS8Call application responds to a network command which ensures that the application is operational before continuing. This handles slower computers such as Raspberry Pi.
 
-        Used internally by pyjs8call.client.Client.start().
+        Used internally by client.start().
 
         Args:
             headless (bool): Run JS8Call headless using xvfb (Linux only), defaults to False
+            args (list): Command line arguments (see appmonitor.start), defaults to empty list
+
         Raises:
             RuntimeError: JS8Call application failed to start
         '''
         self.online = True
-        self.app.start(headless=headless)
+        self.app.start(headless=headless, args = args)
 
         tx_thread = threading.Thread(target=self._tx)
         tx_thread.daemon = True

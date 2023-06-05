@@ -119,7 +119,7 @@ class Client:
         # stop application and client at exit
         atexit.register(self.stop)
         
-    def start(self, headless=False, debugging=False, logging=False):
+    def start(self, headless=False, args=[], debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
 
         Initializes sub-module objects:
@@ -139,6 +139,7 @@ class Client:
 
         Args:
             headless (bool): Run JS8Call headless via xvfb (Linux only)
+            args (list): Command line arguments (see appmonitor.start()), defaults to empty list
             debugging (bool): Print message data to the console, defaults to False
             logging (bool): Print message data to ~/pyjs8call.log, defaults to False
 
@@ -163,7 +164,7 @@ class Client:
                                'exits normally the first time it will initialize the config file.') from e
 
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
-        self.js8call.start(headless = headless)
+        self.js8call.start(headless = headless, args = args)
         self.online = True
 
         if debugging:
@@ -234,6 +235,7 @@ class Client:
         self.window.reset()
         # save settings
         headless = self.js8call.app.headless
+        args = self.js8call.app.args
         settings = self.js8call.restart_settings()
 
         # stop
@@ -243,7 +245,7 @@ class Client:
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
         # restore settings
         self.js8call.reinitialize(settings)
-        self.js8call.start(headless = headless)
+        self.js8call.start(headless = headless, args = args)
         self.online = True
 
         rx_thread = threading.Thread(target=self._rx)
