@@ -22,15 +22,17 @@
 
 '''Monitor and activate schedule entries.
 
-The JS8Call application is restarted when necessary to implement configuration file changes associated with profile name or modem speed. A restart only occurs after a period of rx/tx inactivity.
+The JS8Call application is restarted when necessary to implement configuration file changes associated with profile name or modem speed. A restart only occurs after a period of inactivity.
+
+**Hint**: To return to the current configuration at a later time, set the "return" schedule first using the current settings. Example: `schedule.add('16:00')`
 
 Set *client.callback.schedule* to receive schedule change activity.
 
 Examples:
     ```
-    js8call.schedule.add('Default', '18:30') # use current freq and speed
-    js8call.schedule.add('Field Ops', '8:00', 7078000, 'normal')
-    js8call.schedule.remove('Default', '18:30')
+    js8call.schedule.add('18:30') # use current freq, speed, and profile
+    js8call.schedule.add('8:00', 7078000, 'normal', 'Field Ops')
+    js8call.schedule.remove('18:30')
     ```
 '''
 
