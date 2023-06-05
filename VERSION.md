@@ -15,7 +15,10 @@
 - Add *hb* argument to *pyjs8call.Client.identities*
 - Add additional *pyjs8call.Client.settings* configuration profile functions
 - Add *pyjs8call.Client.settings* distance units functions
-- Add *pyjs8call.message* default attribute *tdrift*
+- Add *pyjs8call.message* default attributes *tdrift* and *profile*
+- Set incoming and outgoing message *profile* attribute to the active configuration profile
+- Add *profile* argument to the *pyjs8call.spotmonitor.filter* function
+- Spot outgoing messages in addition to incoming messages
 - Change message type used by *pyjs8call.windowmonitor* from *TX_FRAME* to *RIG_PTT*
 - Improve JS8Call "ping" (application connectivity check) handling
 - Add *pyjs8call.Client.heard_by* function
