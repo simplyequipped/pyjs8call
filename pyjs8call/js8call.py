@@ -511,7 +511,6 @@ class JS8Call:
                     try:
                         self._socket.sendall(packed)
                         self._tx_queue.remove(msg)
-                        self._spot(msg)
                     
                         if msg.type in Message.USER_MSG_TYPES:
                             self.last_outgoing = time.time()
