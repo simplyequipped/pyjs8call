@@ -221,7 +221,7 @@ js8call.callback.inbox = new_inbox_msg
 js8call.start()
 
 # enable local inbox monitoring and periodic remote inbox message query
-js8call.inbox.enable_monitoring()
+js8call.inbox.enable()
 ```
 
 Using the outgoing message monitor:
@@ -254,7 +254,7 @@ js8call = pyjs8call.Client()
 js8call.start()
 
 # use default 10 minute interval
-js8call.heartbeat.enable_networking()
+js8call.heartbeat.enable()
 ```
 
 Using the schedule monitor:
