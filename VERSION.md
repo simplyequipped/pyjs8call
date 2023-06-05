@@ -22,6 +22,8 @@
 - Improve *pyjs8call.Client.hearing* command response handling
 - Add support for JS8Call command line arguments
 - Improve restart handling
+- Minor bug fixes
+- Minor documentation improvements
 
 **0.2.0**
 
