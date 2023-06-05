@@ -379,6 +379,12 @@ class InboxMonitor:
         last_tx_timestamp = 0
 
         while self._enabled:
+            # delay until next window transition
+            self._client.window.sleep_until_next_transition(within = 0.5)
+            
+            if self._paused:
+                continue
+            
             window_duration = self._client.settings.get_window_duration()
             response_delay = window_duration * 30
 
@@ -402,7 +408,8 @@ class InboxMonitor:
                     self._rx_queue.insert(0, msg)
 
             elif not rx_processing and query and (last_query_timestamp + query_interval) < time.time():
-                if not self._paused:
+                # ensure no last second state change before transmitting
+                if not self._paused and self._enabled:
                     self._client.query_messages(destination)
                     last_query_timestamp = time.time()
 
@@ -415,7 +422,3 @@ class InboxMonitor:
 
                 if len(new_msgs) > 0:
                     self._callback(new_msgs)
-
-            # delay until next window transition
-            self._client.window.sleep_until_next_transition(within = 0.5)
-
