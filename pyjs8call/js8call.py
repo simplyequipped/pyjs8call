@@ -487,10 +487,10 @@ class JS8Call:
                 self.state['tx_text'] is not None and
                 len(self.state['tx_text'].strip()) > 0
             ):
-                    tx_text = True
-                    active_tx_state = False
-                else:
-                    tx_text = False
+                tx_text = True
+                active_tx_state = False
+            else:
+                tx_text = False
 
             with self._tx_queue_lock:
                 for msg in self._tx_queue.copy():
