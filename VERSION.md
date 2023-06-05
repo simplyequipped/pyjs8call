@@ -2,15 +2,26 @@
 
 **0.2.1**
 - Fix *pyjs8call.Message.text* being overwritten during object initialization
+- Fix intermittent *NoneType* error in *pyjs8call.js8call* transmit function
+- Fix *IndexError* in *pyjs8call.offsetmonitor* when no unused spectrum is found
 - Set spotted message *status* to *Message.STATUS_RECEIVED*
 - Change the maximum time to wait for a socket connection during JS8Call application start to 120 seconds
-- Change minimum limit for *pyjs8call.Client.settings.set_idle_timeout* to zero (idle timeout disabled)
 - Improve JS8Call application start process by waiting for socket response (supports slower SBCs)
-- Improve restarting process by reinitializing local state as soon as possible
-- Improve restarting process by pausing internal module operations (avoids errors)
+- Change minimum limit for *pyjs8call.Client.settings.set_idle_timeout* to zero (idle timeout disabled)
+- Remove idle monitor module (not needed, set timeout to zero to disable)
 - Add *enabled*, *paused*, *pause*, and *resume* functions to all internal modules
-- Rename module *enable* and *disable* functions as needed for consistency 
-- Remove idle monitor module
+- Rename module *enable* and *disable* functions as needed for consistency
+- Rename *pyjs8call.Client.drift* to *pyjs8call.Client.drift_sync*
+- Add *hb* argument to *pyjs8call.Client.identities*
+- Add additional *pyjs8call.Client.settings* configuration profile functions
+- Add *pyjs8call.Client.settings* distance units functions
+- Add *pyjs8call.message* default attribute *tdrift*
+- Change message type used by *pyjs8call.windowmonitor* from *TX_FRAME* to *RIG_PTT*
+- Improve JS8Call "ping" (application connectivity check) handling
+- Add *pyjs8call.Client.heard_by* function
+- Improve *pyjs8call.Client.hearing* command response handling
+- Add support for JS8Call command line arguments
+- Improve restart handling
 
 **0.2.0**
 
