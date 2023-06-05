@@ -22,6 +22,8 @@
 
 '''Monitor and activate schedule entries.
 
+The schedule is a daily schedule. The run state of each entry is reset at midnight.
+
 The JS8Call application is restarted when necessary to implement configuration file changes associated with profile name or modem speed. A restart only occurs after a period of inactivity.
 
 **Hint**: To return to the current configuration at a later time, set the "return" schedule first using the current settings. Example: `schedule.add('16:00')`
