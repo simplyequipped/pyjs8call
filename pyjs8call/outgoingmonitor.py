@@ -105,7 +105,10 @@ class OutgoingMonitor:
         thread.start()
 
     def disable(self):
-        '''Disable outgoing message monitoring.'''
+        '''Disable outgoing message monitoring.
+        
+        **Caution**: Internal processes rely on the transmit text field state updates performed by this module.
+        '''
         self._enabled = False
 
     def pause(self):
