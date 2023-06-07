@@ -119,7 +119,7 @@ class Client:
         # stop application and client at exit
         atexit.register(self.stop)
         
-    def start(self, headless=False, args=[], debugging=False, logging=False):
+    def start(self, headless=False, args=None, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
 
         Initializes sub-module objects:
@@ -139,13 +139,16 @@ class Client:
 
         Args:
             headless (bool): Run JS8Call headless via xvfb (Linux only)
-            args (list): Command line arguments (see appmonitor.start()), defaults to empty list
+            args (list): Command line arguments (see appmonitor.start()), defaults to None
             debugging (bool): Print message data to the console, defaults to False
             logging (bool): Print message data to ~/pyjs8call.log, defaults to False
 
         Raises:
             RuntimeError: JS8Call config file section does not exist (likely because JS8Call has not been run and configured after installation)
         '''
+        if args is None:
+            args = []
+        
         try:
             self.settings.enable_autoreply_startup()
             self.settings.disable_autoreply_confirmation()
