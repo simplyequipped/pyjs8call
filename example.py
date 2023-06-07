@@ -81,7 +81,7 @@ def show_menu():
         js8call.stop()
         exit()
 
-
+# run JS8Call headless
 if '--headless' in sys.argv:
     headless = True
 else:
