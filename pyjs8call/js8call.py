@@ -120,7 +120,7 @@ class JS8Call:
 
         self.app = pyjs8call.AppMonitor(self)
 
-    def start(self, headless=False, args = []):
+    def start(self, headless=False, args = None):
         '''Start the JS8Call application.
 
         This function is blocking until the JS8Call application responds to a network command which ensures that the application is operational before continuing. This handles slower computers such as Raspberry Pi.
@@ -134,6 +134,9 @@ class JS8Call:
         Raises:
             RuntimeError: JS8Call application failed to start
         '''
+        if args is None:
+            args = []
+        
         self.online = True
         self.app.start(headless=headless, args = args)
 
