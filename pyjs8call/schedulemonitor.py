@@ -73,15 +73,12 @@ class Schedule:
 
     def __eq__(self, schedule):
         '''Equality test.'''
-        if (
+        return bool(
             self.profile == schedule.profile and
             self.start == schedule.start and
             self.freq == schedule.freq and
             self.speed == schedule.speed
-        ):
-            return True
-        else:
-            return False
+        )
 
 
 class ScheduleMonitor:
@@ -254,7 +251,6 @@ class ScheduleMonitor:
             if last_time > now:
                 reset_run = True
 
-            active_profile = self._client.settings.get_profile()
             profile_list = self._client.settings.get_profile_list()
 
             with self._schedule_lock:
