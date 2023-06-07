@@ -30,7 +30,6 @@ __docformat__ = 'google'
 
 import time
 import threading
-import signal
 import shutil
 import subprocess
 
@@ -62,14 +61,14 @@ class AppMonitor:
         self.args = []
         self.restart = True
 
-    def start(self, headless=False, args=[]):
+    def start(self, headless=False, args=None):
         ''' Start JS8Call application.
 
         See the subprocess.Popen *args* parameter documentation for information on how to break command line arguments into a sequence. The *js8call* command does not need to be included, only additional arguments. For example, passing `['--rig-name', 'FT857']` as the *args* parameter results in `js8call --rig-name FT857` being called to start the JS8Call application. Note that *args* only applies if JS8Call is started by pyjs8call.
 
         Args:
             headless (bool): Run JS8Call headless using xvfb (Linux only, requires xvfb to be installed), defaults to False
-            args (list): Sequence of command line arguments to be passed to JS8Call, defaults to empty list
+            args (list): Sequence of command line arguments to be passed to JS8Call, defaults to None
 
         Raises:
             RuntimeError: JS8Call is not installed
@@ -80,7 +79,10 @@ class AppMonitor:
         if self.is_running():
             return
 
-        self.args = args
+        if args is None:
+            self.args = []
+        else:
+            self.args = args
 
         if headless:
             self._start_xvfb()
