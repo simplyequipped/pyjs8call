@@ -169,6 +169,24 @@ max_age = 15 * 60 # convert minutes to seconds
 js8call.spots.filter(age = max_age)
 ```
 
+Run multiple JS8Call instances:
+```
+import pyjs8call
+
+# Option A: use the standard network port and no rig name for the primary instance
+js8call = pyjs8call.Client()
+js8call.start()
+
+# Option B: specify a network port and rig name for the primary instance
+#js8call_ft857 = pyjs8call.Client(port=2443)
+#js8call_ft857.start(args=['--rig-name', 'FT857'])
+
+# specify a different network port for the secondary instance
+js8call_qdx = pyjs8call.Client(port=2444)
+# specify the rig name as a command line argument
+js8call_qdx.start(args=['--rig-name', 'QDX'])
+```
+
 Using the spot monitor:
 ```
 import pyjs8call
@@ -261,7 +279,13 @@ Using the schedule monitor:
 ```
 import pyjs8call
 
+# callback function for schedule entry activation
+def schedule_activation(schedule_entry):
+    print('Activating ' + repr(schedule_entry))
+
 js8call = pyjs8call.Client()
+# set schedule activation callback
+js8call.callbacks.schedule = schedule_activation
 js8call.start()
 
 # return to the current configuration later
@@ -272,6 +296,10 @@ js8call.schedule.add('8:00', 7078000, 'normal', 'QDX')
 js8call.schedule.add('9:00', 7074000)
 # remove schedule entry
 js8call.schedule.remove('9:00')
+
+# print formatted information for each schedule entry
+for entry in js8call.schedule.get_schedule():
+    print(str(entry))
 ```
 
 Set config file settings:
