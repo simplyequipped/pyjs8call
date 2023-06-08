@@ -119,7 +119,7 @@ class ScheduleEntry:
             'speed': self.speed,
             'profile': self.profile,
             'active': self.active,
-            'state': 'active' if self.active else 'inactive'
+            'state': 'active' if self.active else 'inactive',
             'run': self.run
         }
     
