@@ -39,10 +39,14 @@ import psutil
 class AppMonitor:
     '''JS8Call application monitor.
 
+    If the JS8Call application is closed and *restart* is *False*, pyjs8call will exit. If *restart* is *True* pyjs8call will continue to run and JS8Call will be restarted.
+
+
+
     Attributes:
         headless (bool): Whether JS8Call is running headless using xvfb (see *start()*)
         args (list): Sequence of command line arguments to be passed to JS8Call, defaults to empty list
-        restart (bool): Whether to restart the JS8Call application if it stops, defaults to True
+        restart (bool): Whether to restart the JS8Call application if it stops, defaults to False
     '''
 
     def __init__(self, parent):
@@ -59,7 +63,7 @@ class AppMonitor:
         self._js8call_proc = None
         self.headless = False
         self.args = []
-        self.restart = True
+        self.restart = False
 
     def start(self, headless=False, args=None):
         ''' Start JS8Call application.
@@ -175,8 +179,9 @@ class AppMonitor:
         if js8call_exec_path is None:
             raise RuntimeError('JS8Call application not installed')
 
-        # check if js8call already running via xvfb
-        self._find_running_xvfb_process()
+        if self.args == []:
+            # check if js8call already running via xvfb
+            self._find_running_xvfb_process()
 
         # proc not set if not already running
         if self._xvfb_proc is None:
@@ -213,8 +218,9 @@ class AppMonitor:
         if js8call_exec_path is None:
             raise RuntimeError('JS8Call application not installed')
 
-        # check if js8call already running
-        self._find_running_js8call_process()
+        if self.args == []:
+            # check if js8call already running
+            self._find_running_js8call_process()
 
         # proc not set if not already running
         if self._js8call_proc is None:
@@ -292,8 +298,12 @@ class AppMonitor:
     def _monitor(self):
         '''Application monitoring thread.'''
         while self._parent.online:
-            if not self.is_running() and self.restart:
-                # restart the whole system and reconnect
-                self._parent._client.restart()
+            if not self.is_running() and not self._parent._client.restarting:
+                if self.restart:
+                    # restart the whole system and reconnect
+                    self._parent._client.restart()
+                
+                else:
+                    psutil.Process().terminate()
 
             time.sleep(1)
