@@ -78,33 +78,62 @@ class ConfigHandler:
         Raises:
             FileNotFoundError: Config file not found at specified path
         '''
-        if config_path is not None:
-            self.path = config_path
-        elif psutil.WINDOWS:
-            self.path = os.path.expandvars('C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call\\JS8Call.ini')
-        elif psutil.MACOS:
-            self.path = os.path.join(os.path.expanduser('~'), 'Library/Preferences/JS8Call.ini')
-        else:
-            self.path = os.path.join(os.path.expanduser('~'), '.config/JS8Call.ini')
+        self.file = 'JS8Call.ini'
+        self.rig = None
 
-        if not os.path.exists(self.path):
-            raise FileNotFoundError('JS8Call config file not found at ' + str(self.path))
+        if config_path is not None:
+            self.path, self.file = os.path.split(config_path)
+        elif psutil.WINDOWS:
+            self.path = os.path.expandvars('C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call')
+        elif psutil.MACOS:
+            self.path = os.path.join(os.path.expanduser('~'), 'Library/Preferences')
+        else:
+            self.path = os.path.join(os.path.expanduser('~'), '.config')
+        
+        self.config_path = os.path.join(self.path, self.file)
+        self._main_config_path = os.path.join(self.path, self.file)
+
+        if not os.path.exists(self.config_path):
+            raise FileNotFoundError('JS8Call config file not found at ' + str(self.config_path))
 
         self.config = configparser.ConfigParser(interpolation = None)
         self.config.optionxform = lambda option: option
-        self.config.read(self.path)
+        self.config.read(self.config_path)
+
+    def load_rig_config(self, rig_name):
+        '''Load rig-specific config file.
+
+        This function is used internally by pyjs8call.Client.start().
+
+        Args:
+            rig_name (str): Rig name being passed to JS8Call at application launch
+        '''
+        self.rig = rig_name.strip()
+        file_parts = self.file.split('.')
+        self.file = file_parts[0] + ' - ' + self.rig + '.' + file_parts[1]
+        self.config_path = os.path.join(self.path, self.file)
+
+        if not os.path.exists(self.config_path):
+            with open(self.config_path, 'w') as fd:
+                # write main config object to the rig config file
+                self.config.write(fd, space_around_delimiters = False)
+
+        # replace main config object with rig config
+        self.config = configparser.ConfigParser(interpolation = None)
+        self.config.optionxform = lambda option: option
+        self.config.read(self.config_path)
 
     def write(self):
         '''Write the config parser object to file.
 
-        A backup of the original JS8Call config file is saved as JS8Call.ini.original in the same directory as the JS8Call.ini file.
+        A backup of the original JS8Call config file is saved as JS8Call.ini.original in the same directory as the JS8Call.ini file. Rig specific config file backups are not saved.
         '''
-        if not os.path.exists(self.path + '.original'):
+        if self.rig is None and not os.path.exists(self.config_path + '.original'):
             # create a backup of the original config file before writing changes
-            with open(self.path + '.original', 'w') as fd:
+            with open(self.config_path + '.original', 'w') as fd:
                 self.config.write(fd, space_around_delimiters = False)
 
-        with open(self.path, 'w') as fd:
+        with open(self.config_path, 'w') as fd:
             # write current config object to the config file
             self.config.write(fd, space_around_delimiters = False)
 

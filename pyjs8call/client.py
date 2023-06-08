@@ -40,6 +40,7 @@ __docformat__ = 'google'
 
 
 import time
+import shutil
 import atexit
 import threading
 from datetime import datetime, timezone
@@ -90,6 +91,9 @@ class Client:
 
         Returns:
             pyjs8call.client: Constructed client object
+
+        Raises:
+            RuntimeError: JS8Call application not installed
         '''
         self.host = host
         self.port = port
@@ -111,6 +115,10 @@ class Client:
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
+
+        # ensure js8call application is installed
+        if shutil.which('js8call') is None:
+            raise RuntimeError('JS8Call application not installed')
 
         self.config = pyjs8call.ConfigHandler(config_path = config_path)
         self.settings = Settings(self)
@@ -137,6 +145,8 @@ class Client:
 
         If logging is enabled the log file will be stored in the current user's *HOME* directory.
 
+        if *args* contains the rig name switch (-r or --rig-name) the rig name is used to instantiate the rig specific config file before launching. Changes to the config object prior to calling *start* are saved to the rig specifc file only, and are not written to the main config file.
+
         Args:
             headless (bool): Run JS8Call headless via xvfb (Linux only)
             args (list): Command line arguments (see appmonitor.start()), defaults to None
@@ -148,7 +158,23 @@ class Client:
         '''
         if args is None:
             args = []
-        
+        else:
+            rig_name = None
+
+            # try to find the rig name switch, and then the following rig name
+            try:
+                rig_name = args[args.index('-r') + 1]
+            except ValueError:
+                pass
+
+            try:
+                rig_name = args[args.index('--rig-name') + 1]
+            except ValueError:
+                pass
+
+            if rig_name is not None:
+                self.config.load_rig_config(rig_name)
+
         try:
             self.settings.enable_autoreply_startup()
             self.settings.disable_autoreply_confirmation()
