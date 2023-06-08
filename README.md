@@ -265,7 +265,7 @@ js8call = pyjs8call.Client()
 js8call.start()
 
 # return to the current configuration later
-js8call.schedule.add('10:00')
+js8call.schedule.add('14:00')
 # change configuration profile and set frequency and modem speed
 js8call.schedule.add('8:00', 7078000, 'normal', 'QDX')
 # change frequency only
