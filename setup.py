@@ -21,5 +21,5 @@ setuptools.setup(
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft :: Windows'
     ],
-    python_requires='>=3.6'
+    python_requires='>=3.6.1'
 )
