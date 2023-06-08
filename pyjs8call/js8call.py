@@ -44,6 +44,13 @@ class JS8Call:
     Receives and transmits pyjs8call.message objects, and generally manages the local state representation of the JS8Call application.
 
     Initializes pyjs8call.appmonitor as well as rx, tx, logging, ping threads.
+    
+    **Caution**: Custom processing of messages is an advanced feature that can break internal message handling if implemented incorrectly. Use this feature only if you understand what you are doing.
+    
+    *process_incoming* is called after internal processing of an incoming message from the JS8Call application, but before adding the message to the incoming message queue. *process_outgoing* is called just before packing a message to send to the JS8Call application.
+    
+    *process_incoming* and *process_outgoing* functions should accept a pyjs8call.Message object, and return a pyjs8call.Message object. Function signature:
+        `func(pyjs8call.Message) -> pyjs8call.Message`
 
     Attributes:
         app (pyjs8call.appmonitor): Application monitor object
@@ -51,6 +58,9 @@ class JS8Call:
         max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
         last_incoming (float): Timestamp of last incoming user message, defaults to 0 (zero)
         last_outgoing (float): Timestamp of last outgoing user message, defaults to 0 (zero)
+        process_incoming (func): Function to call for custom processing of incoming messages, defaults to None
+        process_outgoing (func): Function to call for custom processing of outgoing messages, defaults to None
+        process_types (list): Message types for custom processing, defaults to *pyjs8call.Message.USER_MSG_TYPES*
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442):
@@ -100,6 +110,9 @@ class JS8Call:
         self.last_incoming = 0
         self.last_outgoing = 0
         self._last_incoming_api_msg = 0
+        self.process_incoming = None
+        self.process_outgoing = None
+        self.process_types = Message.USER_MSG_TYPES
 
         self.state = {
             'ptt' : False,
@@ -502,7 +515,11 @@ class JS8Call:
                     # hold off on sending messages while there is something being sent (text in the tx text field)
                     if msg.type == Message.TX_SEND_MESSAGE and (tx_text or active_tx_state):
                         continue
-
+    
+                    # custom processing of outgoing messages
+                    if self.process_outgoing is not None and msg.type in self.process_types:
+                        msg = self.process_outgoing(msg)
+            
                     packed = msg.pack()
     
                     if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
@@ -638,7 +655,7 @@ class JS8Call:
 
         # set active profile for spot filtering
         msg.set('profile', self._client.settings.get_profile())
-
+        
         
         ### command handling ###
 
@@ -711,4 +728,8 @@ class JS8Call:
         elif msg.type == Message.TX_FRAME:
             pass
 
+        # custom processing of incoming messages
+        if self.process_incoming is not None and msg.type in self.process_types:
+            msg = self.process_incoming(msg)
+            
         self.append_to_rx_queue(msg)
