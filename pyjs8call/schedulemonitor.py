@@ -81,6 +81,39 @@ class Schedule:
             self.freq == schedule.freq and
             self.speed == schedule.speed
         )
+    
+    def dict(self):
+        '''Get dictionary representation of shedule entry.
+        
+        Returns:
+            Dictionary of schedule entry object with the following keys:
+            - start (datetime.time)
+            - time (str): local time in 24-hour format, ex. '18:30'
+            - freq (int): in Hz
+            - speed (str): 'slow', 'normal', 'fast', or 'turbo'
+            - profile (str): configuration profile name
+            - active (bool): True if entry is the active schedule, False otherwise
+            - run (bool): True if entry has been run today, False otherwise
+        '''
+        return {
+            'start': self.start,
+            'time': self.start.strftime('%H:%M:'),
+            'freq': self.freq,
+            'speed': self.speed,
+            'profile': self.profile,
+            'active': self.active,
+            'run': self.run
+        }
+    
+    def __repr__(self):
+        '''Get string representation of schedule entry.'''
+        sch = self.dict()
+        return '<Schedule ' +
+            sch['time'] + 'L : ' +
+            str(sch['freq'] / 1000000) + 'MHz : ' +
+            sch['speed'] + ' : ' +
+            sch['profile'] +
+            '>'
 
 
 class ScheduleMonitor:
