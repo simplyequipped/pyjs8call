@@ -46,12 +46,26 @@ import datetime
 import threading
 
 
-class Schedule:
+class ScheduleEntry:
     '''Schedule entry container object.
 
     Do not use this object to create a schedule entry directly. See ScheduleMonitor.add().
 
     This object is passed to the *client.callback.schedule* callback function when a schedule entry is activated.
+    
+    String (str) format:
+        {time}L | {state: <8} | {freq_mhz: <11} | {speed: <6} | {profile}
+        
+        Examples:
+            '18:30L | inactive | 7.078 MHz   | normal | Default'
+            '10:00L | active   | 14.078 MHz  | fast   | FT857'
+    
+    Representation (repr) format:
+        <ScheduleEntry {time}L : {freq_mhz} : {speed} : {profile}>
+        
+        Examples:
+            '<ScheduleEntry 18:30L : 7.078 MHz : normal : Default>'
+            '<ScheduleEntry 10:00L : 14.078 MHz : fast : FT857>'
     '''
 
     def __init__(self, start, freq, speed, profile):
@@ -64,7 +78,7 @@ class Schedule:
             profile (str): Configuration profile name
 
         Returns:
-            pyjs8call.schedulemonitor.Schedule: Constructed schedule entry
+            pyjs8call.schedulemonitor.ScheduleEntry: Constructed schedule entry
         '''
         self.profile = profile
         self.start = start
@@ -89,31 +103,33 @@ class Schedule:
             Dictionary of schedule entry object with the following keys:
             - start (datetime.time)
             - time (str): local time in 24-hour format, ex. '18:30'
-            - freq (int): in Hz
-            - speed (str): 'slow', 'normal', 'fast', or 'turbo'
-            - profile (str): configuration profile name
+            - freq (int): Frequency in Hz, ex. 7078000
+            - freq_mhz (str): frequency in MHz with 3 decimal places, ex. '7.078 MHz'
+            - speed (str): Modem speed, ('slow', 'normal', 'fast', or 'turbo')
+            - profile (str): configuration profile name, ex. 'Default'
             - active (bool): True if entry is the active schedule, False otherwise
+            - state (str): 'active' if self.active is True, 'inactive' otherwise
             - run (bool): True if entry has been run today, False otherwise
         '''
         return {
             'start': self.start,
             'time': self.start.strftime('%H:%M:'),
             'freq': self.freq,
+            'freq_mhz': '{:.3} MHz'.format(self.freq / 1000000),
             'speed': self.speed,
             'profile': self.profile,
             'active': self.active,
+            'state': 'active' if self.active else 'inactive'
             'run': self.run
         }
     
     def __repr__(self):
-        '''Get string representation of schedule entry.'''
-        sch = self.dict()
-        return '<Schedule ' +
-            sch['time'] + 'L : ' +
-            str(sch['freq'] / 1000000) + 'MHz : ' +
-            sch['speed'] + ' : ' +
-            sch['profile'] +
-            '>'
+        '''Get schedule entry object representation.'''
+        return '<ScheduleEntry {time}L : {freq_mhz} : {speed} : {profile}>'.format(self.dict())
+            
+    def __str__(self):
+        '''Get schedule entry string.'''
+        return '{time}L | {state: <8} | {freq_mhz: <11} | {speed: <6} | {profile}'.format(self.dict())
 
 
 class ScheduleMonitor:
@@ -164,7 +180,7 @@ class ScheduleMonitor:
             freq = self._client.settings.get_freq()
             speed = self._client.settings.get_speed()
 
-            self._active_schedule = Schedule(None, freq, speed, profile)
+            self._active_schedule = ScheduleEntry(None, freq, speed, profile)
 
         thread = threading.Thread(target=self._monitor)
         thread.daemon = True
@@ -202,7 +218,7 @@ class ScheduleMonitor:
         if profile is None:
             profile = self._client.settings.get_profile()
 
-        new_schedule = Schedule(start_time, freq, speed, profile)
+        new_schedule = ScheduleEntry(start_time, freq, speed, profile)
 
         if new_schedule in self._schedule:
             return
