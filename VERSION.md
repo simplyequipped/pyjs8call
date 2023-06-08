@@ -4,7 +4,6 @@
 - Fix *pyjs8call.Message.text* being overwritten during object initialization
 - Fix intermittent *NoneType* error in *pyjs8call.js8call* transmit function
 - Fix *IndexError* in *pyjs8call.offsetmonitor* when no unused spectrum is found
-- Set spotted message *status* to *Message.STATUS_RECEIVED*
 - Change the maximum time to wait for a socket connection during JS8Call application start to 120 seconds
 - Improve JS8Call application start process by waiting for socket response (supports slower SBCs)
 - Change minimum limit for *pyjs8call.Client.settings.set_idle_timeout* to zero (idle timeout disabled)
@@ -16,6 +15,7 @@
 - Add additional *pyjs8call.Client.settings* configuration profile functions
 - Add *pyjs8call.Client.settings* distance units functions
 - Add *pyjs8call.message* default attributes *tdrift* and *profile*
+- Set spotted message *status* to *Message.STATUS_RECEIVED*
 - Set incoming and outgoing message *profile* attribute to the active configuration profile
 - Add *profile* argument to the *pyjs8call.spotmonitor.filter* function
 - Spot outgoing messages in addition to incoming messages
@@ -24,6 +24,8 @@
 - Add *pyjs8call.Client.heard_by* function
 - Improve *pyjs8call.Client.hearing* command response handling
 - Add support for JS8Call command line arguments
+- Add config file handling when rig name command line argument is specified
+- Change default application close action to exit instead of automatic restart
 - Improve restart handling
 - Minor bug fixes
 - Minor documentation improvements
