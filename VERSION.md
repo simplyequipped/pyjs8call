@@ -27,6 +27,7 @@
 - Add config file handling when rig name command line argument is specified
 - Change default application close action to exit instead of automatic restart
 - Improve restart handling
+- Implement custom processing of incoming and outgoing messages
 - Minor bug fixes
 - Minor documentation improvements
 
