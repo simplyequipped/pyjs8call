@@ -49,6 +49,8 @@ import threading
 class Schedule:
     '''Schedule entry container object.
 
+    Do not use this object to create a schedule entry directly. See ScheduleMonitor.add().
+
     This object is passed to the *client.callback.schedule* callback function when a schedule entry is activated.
     '''
 
