@@ -551,9 +551,6 @@ class JS8Call:
             
                     packed = msg.pack()
 
-                    # handle automatic outgoing message monitoring
-                    if self._client.monitor_outgoing:
-                        self._client.outgoing.monitor(msg)
                     
                     if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
                         print('TX: ' + packed.decode('utf-8').strip())
@@ -567,6 +564,10 @@ class JS8Call:
                     
                         if msg.type in Message.USER_MSG_TYPES:
                             self.last_outgoing = time.time()
+
+                            # handle automatic outgoing message monitoring
+                            if self._client.monitor_outgoing:
+                                self._client.outgoing.monitor(msg)
                         
                         # make sure the next queued msg doesn't get sent before the tx text state updates
                         if msg.type == Message.TX_SEND_MESSAGE:
