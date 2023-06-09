@@ -51,11 +51,11 @@ class OutgoingMonitor:
 
     A message changes to STATUS_SENT when the destination and value are no longer seen in the JS8Call tx text field and the status of the message is STATUS_SENDING.
 
-    A message changes to STATUS_FAILED when the message is not sent within 30 tx cycles. Therefore the maximum age of a monitored message depends on the JS8Call modem speed setting:
-    - 3 minutes in turbo mode which has 6 second tx cycles
-    - 5 minutes in fast mode which has 10 second tx cycles
-    - 7.5 minutes in normal mode which has 15 second cycles
-    - 15 minutes in slow mode which has 30 second tx cycles
+    A message changes to STATUS_FAILED when the message is not sent within 600 tx cycles. Therefore the maximum age of a monitored message depends on the JS8Call modem speed setting:
+    - 6 minutes in turbo mode which has 6 second tx cycles
+    - 10 minutes in fast mode which has 10 second tx cycles
+    - 15 minutes in normal mode which has 15 second cycles
+    - 30 minutes in slow mode which has 30 second tx cycles
 
     A message is dropped from the monitoring queue once the status is set to STATUS_SENT or STATUS_FAILED.
     '''
@@ -74,8 +74,8 @@ class OutgoingMonitor:
         self._paused = False
         self._msg_queue = []
         self._msg_queue_lock = threading.Lock()
-        # initialize msg max age to 30 tx cycles in fast mode (10 sec cycles)
-        self._msg_max_age = 10 * 30 # 5 minutes
+        # initialize msg max age to 10 minutes
+        self._msg_max_age = 10 * 60 # 10 minutes
 
     def enabled(self):
         '''Get enabled status.
@@ -184,8 +184,8 @@ class OutgoingMonitor:
             if ':' in tx_text:
                 tx_text = tx_text.split(':')[1].strip(' ' + Message.EOM)
             
-            # update msg max age based on speed setting (30 tx cycles)
-            self._msg_max_age = self._client.settings.get_window_duration() * 30
+            # update msg max age based on speed setting (60 tx cycles)
+            self._msg_max_age = self._client.settings.get_window_duration() * 60
             
             with self._msg_queue_lock:
                 self._process_queue(tx_text)
