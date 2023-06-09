@@ -145,26 +145,6 @@ class OutgoingMonitor:
         with self._msg_queue_lock:
             self._msg_queue.append(msg)
             
-    def drop(self, msg):
-        '''Drop a message from the monitoring queue.
-        
-        *msg* status is set to *Message.STATUS_FAILED* and sent to the *pyjs8call.client.callback.outgoing* callback function.
-        
-        This function is called from pyjs8call.js8call during custom outgoing message processing if an error occurs during processing.
-        
-        Args:
-            msg (pyjs8call.message): Message to drop
-        '''
-        with self._msg_queue_lock:
-            if msg in self._msg_queue:
-                # remove msg from queue
-                self._msg_queue.remove(msg)
-                
-        # set failed status
-        msg.status = Message.STATUS_FAILED
-        # process callback
-        self._callback(msg)
-
     def _monitor(self):
         '''Tx monitor thread.'''
         while self._enabled:
@@ -177,7 +157,7 @@ class OutgoingMonitor:
             tx_text = self._client.get_tx_text()
 
             if tx_text is None:
-                continue
+                tx_text = ''
 
             # drop the first callsign and strip spaces and end-of-message
             # original format: 'callsign: callsign  message'
@@ -194,21 +174,25 @@ class OutgoingMonitor:
         '''Compare queued message to tx text.'''
         for i in range(len(self._msg_queue)):
             msg = self._msg_queue.pop(0)
-            msg_value = msg.dict()['value'].strip()
+
+            if msg.packed_dict is None:
+                msg.pack()
+
+            msg_value = msg.packed_dict['value'].strip()
 
             if msg_value == tx_text and msg.status == Message.STATUS_QUEUED:
                 # msg text was added to js8call tx field, sending
-                msg.status = Message.STATUS_SENDING
+                msg.set('status', Message.STATUS_SENDING)
                 self._callback(msg)
             elif msg_value != tx_text and msg.status == Message.STATUS_SENDING:
                 # msg text was removed from js8call tx field, sent
-                msg.status = Message.STATUS_SENT
+                msg.set('status', Message.STATUS_SENT)
                 self._callback(msg)
                 # msg dropped from queue
                 return None
             elif time.time() > msg.timestamp + self._msg_max_age:
                 # msg too old, sending failed
-                msg.status = Message.STATUS_FAILED
+                msg.set('status', Message.STATUS_FAILED)
                 msg.error = 'Failed to send'
                 self._callback(msg)
                 # msg dropped from queue
