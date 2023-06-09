@@ -185,6 +185,7 @@ class Message:
         attributes (list): Attributes for internal use (see *Message.set*)
         status (str): Message status (see static statuses), defaults to STATUS_CREATED
         raw (str): Raw message string passed to *Message.parse*, defaults to None
+        packed (bytes): Byte string returned from *pack()*, defaults to None
         freq (str): Dial frequency plus offset frequency in Hz, defaults to None
         dial (str): Dial frequency in Hz, defaults to None
         offset (str): Passband offset frequency in Hz, defaults to None
@@ -339,6 +340,8 @@ class Message:
         '''
         self.attributes = []
         self.raw = None
+        self.packed = None
+        self.packed_dict = None
 
         # initialize common msg fields
         common = [
@@ -509,6 +512,8 @@ class Message:
         - timestamp
         - text
         - status
+        - profile
+        - error
 
         Args:
             exclude (list): Attribute names to exclude, defaults to None
@@ -520,13 +525,14 @@ class Message:
             exclude = [] 
 
         #TODO make sure 'text' is not used since it is excluded by default
-        exclude.extend(['id', 'destination', 'cmd', 'time', 'timestamp', 'from', 'origin', 'text', 'status'])
+        exclude.extend(['id', 'destination', 'cmd', 'time', 'timestamp', 'from', 'origin', 'text', 'status', 'profile', 'error'])
 
-        data = self.dict(exclude = exclude)
+        self.packed_dict = self.dict(exclude = exclude)
         # convert dict to json string
-        packed = json.dumps(data) + '\r\n'
-        # return bytes
-        return packed.encode('utf-8')
+        packed = json.dumps(self.packed_dict) + '\r\n'
+        self.packed = packed.encode('utf-8')
+
+        return self.packed
 
     def parse(self, msg_str):
         '''Load message string into message object.
