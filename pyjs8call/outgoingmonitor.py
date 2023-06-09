@@ -144,6 +144,26 @@ class OutgoingMonitor:
 
         with self._msg_queue_lock:
             self._msg_queue.append(msg)
+            
+    def drop(self, msg):
+        '''Drop a message from the monitoring queue.
+        
+        *msg* status is set to *Message.STATUS_FAILED* and sent to the *pyjs8call.client.callback.outgoing* callback function.
+        
+        This function is called from pyjs8call.js8call during custom outgoing message processing if an error occurs during processing.
+        
+        Args:
+            msg (pyjs8call.message): Message to drop
+        '''
+        with self._msg_queue_lock:
+            if msg in self._msg_queue:
+                # remove msg from queue
+                self._msg_queue.remove(msg)
+                
+        # set failed status
+        msg.status = Message.STATUS_FAILED
+        # process callback
+        self._callback(msg)
 
     def _monitor(self):
         '''Tx monitor thread.'''
@@ -189,6 +209,7 @@ class OutgoingMonitor:
             elif time.time() > msg.timestamp + self._msg_max_age:
                 # msg too old, sending failed
                 msg.status = Message.STATUS_FAILED
+                msg.error = 'Failed to send'
                 self._callback(msg)
                 # msg dropped from queue
                 return None
