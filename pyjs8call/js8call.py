@@ -49,6 +49,8 @@ class JS8Call:
     
     **Note**: Any delay in *process_incoming* and *process_outgoing* functions will cause delays in internal incoming and outgoing message processing loops. Custom processing should be kept to a minimum to avoid cumulative delays.
     
+    See *process_types* for message types to be passed to *process_incoming* and *process_outgoing*.
+
     Custom Incoming Message Processing:
     
     The *process_incoming* function is called after internal processing of an incoming message from the JS8Call application, but before adding the message to the incoming message queue.
@@ -56,7 +58,7 @@ class JS8Call:
     *process_incoming* should accept a pyjs8call.message object, and return a pyjs8call.message object. If an error occurs during processing, either:
         - set the *msg.error* string before returning the message, which will cause the message to continue processing and be added to the incoming message queue
         OR
-        - return None, which will cause the message to dropped
+        - return None, which will cause the message to be dropped
     
     *process_incoming* function signatures:
         `func(pyjs8call.Message) -> pyjs8call.Message`
@@ -67,7 +69,7 @@ class JS8Call:
     The *process_outgoing* function is called just before packing a message and sending it to the JS8Call application.
     
     *process_outgoing* should accept a pyjs8call.message object, and return a pyjs8call.message object. If an error occurs during processing:
-        - set the *msg.error* string, which will cause the message to be dropped from the outgoing message queue as well as the outgoing monitor (see pyjs8call.outgoingmonitor.drop())
+        - set the *msg.error* string, which will cause the message to be dropped from the outgoing message queue but still be passed to the *pyjs8call.client.callback.outgoing* callback function with a failed status.
     
     *process_outoing* function signature:
         `func(pyjs8call.message) -> pyjs8call.message`
@@ -542,11 +544,17 @@ class JS8Call:
                         msg = self.process_outgoing(msg)
                         
                         if msg.error is not None:
-                            self._client.outgoing.drop(msg)
+                            msg.set('status', Message.STATUS_FAILED)
+                            self._client.callback.outgoing(msg)
                             self._tx_queue.remove(msg)
+                            continue
             
                     packed = msg.pack()
-    
+
+                    # handle automatic outgoing message monitoring
+                    if self._client.monitor_outgoing:
+                        self._client.outgoing.monitor(msg)
+                    
                     if self._debug and (self._debug_all or (msg.type not in self._debug_log_type_blacklist)):
                         print('TX: ' + packed.decode('utf-8').strip())
     

@@ -432,9 +432,6 @@ class Client:
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(value = message)
 
-        if self.monitor_outgoing:
-            self.outgoing.monitor(msg)
-
         self.js8call.send(msg)
         return msg
 
@@ -454,9 +451,6 @@ class Client:
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(destination, command, message)
-
-        if self.monitor_outgoing:
-            self.outgoing.monitor(msg)
 
         self.js8call.send(msg)
         return msg
@@ -479,9 +473,6 @@ class Client:
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(destination = destination, value = message)
-
-        if self.monitor_outgoing:
-            self.outgoing.monitor(msg)
 
         self.js8call.send(msg)
         return msg
