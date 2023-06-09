@@ -487,9 +487,11 @@ class Message:
                         destination = self.destination
                     
                     if self.cmd is None:
-                        value = destination + ' ' + value
+                        # note: double space!
+                        value = destination + '  ' + value
                     else:
-                        value = destination + self.cmd + ' ' + value
+                        # note: double space!
+                        value = destination + self.cmd + '  ' + value
 
                 value = value.strip()
 
