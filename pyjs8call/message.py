@@ -750,3 +750,6 @@ class Message:
         '''
         return bool(self.timestamp > msg.timestamp)
 
+    def __repr__(self):
+        return '<Message {}>'.format(self.id)
+
