@@ -84,6 +84,12 @@ class Client:
         - disable autoreply confirmation
         - enable transmit
 
+        Initializes the following for access prior to starting:
+        - js8call (pyjs8call.js8call)
+        - config (pyjs8call.confighandler)
+        - settings (pyjs8call.client.settings)
+        - callback (pyjs8call.client.callbacks)
+
         Args:
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
             port (int): JS8Call TCP port setting, defaults to 2442
@@ -122,7 +128,8 @@ class Client:
 
         self.config = pyjs8call.ConfigHandler(config_path = config_path)
         self.settings = Settings(self)
-        self.callback = Callbacks()
+        self.callback = Callbacks
+        self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
 
         # stop application and client at exit
         atexit.register(self.stop)
@@ -192,7 +199,6 @@ class Client:
                                'and then exiting the application normally. When the application '
                                'exits normally the first time it will initialize the config file.') from e
 
-        self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
         self.js8call.start(headless = headless, args = args)
         self.online = True
 
