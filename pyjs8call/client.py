@@ -52,6 +52,37 @@ from pyjs8call import Message
 
 class Client:
     '''JS8Call API client.
+    
+    
+    **Caution**: Custom processing of messages is an advanced feature that can break internal message handling if implemented incorrectly. Use this feature only if you understand what you are doing.
+    **Note**: Any delay in *process_incoming* and *process_outgoing* functions will cause delays in internal incoming and outgoing message processing loops. Custom processing should be kept to a minimum to avoid cumulative delays.
+    
+    Custom Incoming Message Processing:
+    
+    The *process_incoming* function is called after internal processing of an incoming message from the JS8Call application, but before adding the message to the incoming message queue.
+    
+    *process_incoming* should accept a pyjs8call.message object, and return a pyjs8call.message object. If an error occurs during processing, either:
+        - set the *msg.error* string before returning the message, which will cause the message to continue processing and be added to the incoming message queue
+        OR
+        - return None, which will cause the message to be dropped
+    
+    *process_incoming* function signatures:
+        `func(pyjs8call.Message) -> pyjs8call.Message`
+        `func(pyjs8call.Message) -> None`
+
+    Custom Outgoing Message Processing:
+    
+    The *process_outgoing* function is called just after message creation in the following functions:
+        - send_message
+        - send_directed_message
+        - send_directed_command_message
+    
+    *process_outgoing* should accept a pyjs8call.message object, and return a pyjs8call.message object. If an error occurs during processing:
+        - set the *msg.error* string, which will cause the message to be returned with a failed status (the message will not be sent)
+    
+    *process_outoing* function signature:
+        `func(pyjs8call.message) -> pyjs8call.message`
+    
 
     Attributes:
         js8call (pyjs8call.js8call): Manages JS8Call application and TCP socket communication
@@ -72,6 +103,8 @@ class Client:
         online (bool): Whether the JS8Call application and pyjs8call interface are online
         host (str): IP address matching JS8Call *TCP Server Hostname* setting
         port (int): Port number matching JS8Call *TCP Server Port* setting
+        process_incoming (func): Function to call for custom processing of incoming messages, defaults to None
+        process_outgoing (func): Function to call for custom processing of outgoing messages, defaults to None
     '''
 
     def __init__(self, host='127.0.0.1', port=2442, config_path=None):
@@ -103,10 +136,12 @@ class Client:
         '''
         self.host = host
         self.port = port
-        self.clean_directed_text = True
-        self.monitor_outgoing = True
         self.online = False
         self.restarting = False
+        self.process_incoming = None
+        self.process_outgoing = None
+        self.clean_directed_text = True
+        self.monitor_outgoing = True
 
         self.js8call = None
         self.spots = None
@@ -426,8 +461,10 @@ class Client:
         '''Send a raw JS8Call message.
         
         Message format: *MESSAGE*
+        
+        *process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             message (str): Message text to send
@@ -437,6 +474,17 @@ class Client:
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(value = message)
+        
+        # custom processing of outgoing messages
+        if self.process_outgoing is not None:
+            msg = self.process_outgoing(msg)
+
+            if msg.error is not None:
+                msg.set('status', Message.STATUS_FAILED)
+                return msg
+
+        if self.monitor_outgoing:
+            self.outgoing.monitor(msg)
 
         self.js8call.send(msg)
         return msg
@@ -447,8 +495,10 @@ class Client:
         Message format: *DESTINATION**COMMAND* *MESSAGE*
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+        
+        *process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
@@ -457,7 +507,18 @@ class Client:
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(destination, command, message)
+        
+        # custom processing of outgoing messages
+        if self.process_outgoing is not None:
+            msg = self.process_outgoing(msg)
 
+            if msg.error is not None:
+                msg.set('status', Message.STATUS_FAILED)
+                return msg
+
+        if self.monitor_outgoing:
+            self.outgoing.monitor(msg)
+            
         self.js8call.send(msg)
         return msg
     
@@ -467,8 +528,10 @@ class Client:
         Message format: *DESTINATION* *MESSAGE*
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+        
+        *process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
@@ -479,6 +542,17 @@ class Client:
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(destination = destination, value = message)
+        
+        # custom processing of outgoing messages
+        if self.process_outgoing is not None:
+            msg = self.process_outgoing(msg)
+
+            if msg.error is not None:
+                msg.set('status', Message.STATUS_FAILED)
+                return msg
+
+        if self.monitor_outgoing:
+            self.outgoing.monitor(msg)
 
         self.js8call.send(msg)
         return msg
@@ -492,7 +566,7 @@ class Client:
 
         If no grid square is given the configured JS8Call grid square is used.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             grid (str): Grid square (truncated to 4 characters), defaults to None
@@ -518,7 +592,7 @@ class Client:
 
         If no grid square is given the configured JS8Call grid square is used.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             grid (str): Grid square (trucated to 4 characters), defaults to None
@@ -543,7 +617,7 @@ class Client:
         
         Message format: @APRSIS CMD :SMSGATE&nbsp;&nbsp;&nbsp;:@1234567890 *MESSAGE*
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             phone (str): Phone number to send SMS message to
@@ -561,7 +635,7 @@ class Client:
         
         Message format: @APRSIS CMD :EMAIL-2&nbsp;&nbsp;&nbsp;:EMAIL@DOMAIN.COM *MESSAGE*
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             email (str): Email address to send message to
@@ -580,7 +654,7 @@ class Client:
 
         JS8Call configured callsign is used if no callsign is given.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             park (str): Name of park being activated
@@ -644,7 +718,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
@@ -661,8 +735,8 @@ class Client:
         Message format: *REMOTE* MSG TO:*DESTINATION* *MESSAGE*
 
         If *remote* is a list of callsigns they will be joined in the specified order and sent as a relay.
-
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             remote (str, list): Callsign of intermediate station storing the message
@@ -699,7 +773,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -718,7 +792,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to, defaults to '@ALLCALL'
@@ -735,7 +809,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -754,7 +828,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -771,7 +845,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -788,7 +862,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -805,7 +879,7 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
@@ -821,8 +895,8 @@ class Client:
         Message format: *DESTINATION* STATUS?
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
-
-        The constructed message object is passed to pyjs8call.txmonitor internally if *Client.monitor_outgoing* is True (default).
+        
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
