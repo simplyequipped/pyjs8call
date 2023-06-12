@@ -56,7 +56,6 @@ class SpotMonitor:
         self._paused = False
         self._station_watch_list = []
         self._group_watch_list = []
-        self._spots_lock = threading.Lock()
 
     def enabled(self):
         '''Get enabled status.
@@ -99,7 +98,7 @@ class SpotMonitor:
 
     def all(self):
         '''Get all stored spot messages.'''
-        with self._spots_lock:
+        with self._client.js8call._spots_lock:
             return self._client.js8call.get_spots()
 
     def filter(self, origin=None, destination=None, distance=0, age=0, count=0, profile=None):
@@ -121,7 +120,7 @@ class SpotMonitor:
             list: Spot messages matching specified filter criteria
         '''
         spots = []
-        with self._spots_lock:
+        with self._client.js8call._spots_lock:
             for spot in self._client.js8call.get_spots():
                 if (
                     (age == 0 or spot.age() <= age) and
@@ -148,7 +147,7 @@ class SpotMonitor:
             list: Last *count* spot messages received
         '''
         count *= -1
-        with self._spots_lock:
+        with self._client.js8call._spots_lock:
             return self._client.js8call.get_spots()[count:]
 
     def add_station_watch(self, station):

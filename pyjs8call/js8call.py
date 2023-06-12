@@ -129,6 +129,7 @@ class JS8Call:
         self._spots = []
         self.max_spots = 5000
         self._recent_spots = []
+        self._spots_lock = threading.Lock()
         self.connected = False
         self.last_incoming = 0
         self.last_outgoing = 0
@@ -241,63 +242,6 @@ class JS8Call:
 
         return {setting: getattr(self, setting) for setting in settings}
 
-    def get_spots(self):
-        '''Get list of spot messages.
-        
-        Returns:
-            list: All spot message objects
-        '''
-        return self._spots
-
-    def get_state(self, state):
-        '''Get asynchronous state value.
-
-        Waits for state to stop being watched before returning.
-
-        Internal state settings:
-        - ptt
-        - dial 
-        - freq
-        - offset
-        - callsign
-        - speed
-        - grid
-        - info
-        - rx_text
-        - tx_text
-        - inbox 
-        - call_activity
-        - band_activity
-        - selected_call
-
-        Args:
-            state (str): State value to get
-
-        Returns:
-            Returned type varies depending on the specified state value.
-        '''
-        while self.watching(state):
-            time.sleep(0.1)
-
-        return self.state[state]
-
-    def watching(self, state=None):
-        '''Get internal asynchronous setting state.
-
-        See *get_state()* for a list of internal state settings.
-
-        Args:
-            state (str): State to check, defaults to None
-
-        Returns:
-            str: Name of internal setting waiting for async JS8Call response, if *state* is None
-            bool: Whether *state* is waiting for async JS8Call response, if *state* is specified
-        '''
-        if state is None:
-            return self._watching
-        else:
-            return bool(state == self._watching)
-
     def stop(self):
         '''Stop threads and JS8Call application.'''
         self.online = False
@@ -408,6 +352,55 @@ class JS8Call:
             msg.status = Message.STATUS_RECEIVED
             return msg
 
+    def get_state(self, state):
+        '''Get asynchronous state value.
+
+        Waits for state to stop being watched before returning.
+
+        Internal state settings:
+        - ptt
+        - dial 
+        - freq
+        - offset
+        - callsign
+        - speed
+        - grid
+        - info
+        - rx_text
+        - tx_text
+        - inbox 
+        - call_activity
+        - band_activity
+        - selected_call
+
+        Args:
+            state (str): State value to get
+
+        Returns:
+            Returned type varies depending on the specified state value.
+        '''
+        while self.watching(state):
+            time.sleep(0.1)
+
+        return self.state[state]
+
+    def watching(self, state=None):
+        '''Get internal asynchronous setting state.
+
+        See *get_state()* for a list of internal state settings.
+
+        Args:
+            state (str): State to check, defaults to None
+
+        Returns:
+            str: Name of internal setting waiting for async JS8Call response, if *state* is None
+            bool: Whether *state* is waiting for async JS8Call response, if *state* is specified
+        '''
+        if state is None:
+            return self._watching
+        else:
+            return bool(state == self._watching)
+
     def watch(self, item):
         '''Watch local state variable for updating based on a response from the JS8Call application.
 
@@ -446,6 +439,14 @@ class JS8Call:
         self._watching = None
         return self.state[item]
 
+    def get_spots(self):
+        '''Get list of spot messages.
+        
+        Returns:
+            list: All spot message objects
+        '''
+        return self._spots
+
     def _spot(self, msg):
         '''Store a message when a station is heard.
 
@@ -461,13 +462,14 @@ class JS8Call:
         # cull recent spots
         self._recent_spots = [spot for spot in self._recent_spots if spot.age() < 10]
 
-        if msg not in self._recent_spots:
-            self._recent_spots.append(msg)
-            self._spots.append(msg)
-
-        # cull spots
-        if len(self._spots) > self.max_spots:
-            self._spots.pop(0)
+        with self._spots_lock:
+            if msg not in self._recent_spots:
+                self._recent_spots.append(msg)
+                self._spots.append(msg)
+    
+            # cull spots
+            if len(self._spots) > self.max_spots:
+                self._spots.pop(0)
 
     def _log_msg(self, msg):
         '''Add message to log queue.'''
@@ -523,15 +525,21 @@ class JS8Call:
         while self.online:
             # TxMonitor updates tx_text every second
             # do not attempt to update while value is being watched (i.e. updated)
-            if (
-                not self.watching('tx_text') and
-                self.state['tx_text'] is not None and
-                len(self.state['tx_text'].strip()) > 0
-            ):
-                tx_text = True
-                active_tx_state = False
-            else:
-                tx_text = False
+            try:
+                if (
+                    not self.watching('tx_text') and
+                    self.state['tx_text'] is not None and
+                    len(self.state['tx_text'].strip()) > 0
+                ):
+                    tx_text = True
+                    active_tx_state = False
+                else:
+                    tx_text = False
+
+            except AttributeError:
+                # handle tx_text state is None
+                time.sleep(0.1)
+                continue
 
             with self._tx_queue_lock:
                 for msg in self._tx_queue.copy():
