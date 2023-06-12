@@ -45,12 +45,10 @@ class JS8Call:
 
     Initializes pyjs8call.appmonitor as well as rx, tx, logging, application ping threads.
     
-    **Caution**: Custom processing of messages is an advanced feature that can break internal message handling if implemented incorrectly. Use this feature only if you understand what you are doing.
     
+    **Caution**: Custom processing of messages is an advanced feature that can break internal message handling if implemented incorrectly. Use this feature only if you understand what you are doing.
     **Note**: Any delay in *process_incoming* and *process_outgoing* functions will cause delays in internal incoming and outgoing message processing loops. Custom processing should be kept to a minimum to avoid cumulative delays.
     
-    See *process_types* for message types to be passed to *process_incoming* and *process_outgoing*.
-
     Custom Incoming Message Processing:
     
     The *process_incoming* function is called after internal processing of an incoming message from the JS8Call application, but before adding the message to the incoming message queue.
@@ -83,7 +81,6 @@ class JS8Call:
         last_outgoing (float): Timestamp of last outgoing user message, defaults to 0 (zero)
         process_incoming (func): Function to call for custom processing of incoming messages, defaults to None
         process_outgoing (func): Function to call for custom processing of outgoing messages, defaults to None
-        process_types (list): Message types for custom processing, defaults to *pyjs8call.Message.USER_MSG_TYPES*
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442):
@@ -136,7 +133,6 @@ class JS8Call:
         self._last_incoming_api_msg = 0
         self.process_incoming = None
         self.process_outgoing = None
-        self.process_types = Message.USER_MSG_TYPES
 
         self.state = {
             'ptt' : False,
@@ -548,12 +544,15 @@ class JS8Call:
                         continue
     
                     # custom processing of outgoing messages
-                    if self.process_outgoing is not None and msg.type in self.process_types:
+                    if self.process_outgoing is not None and msg.type in Message.USER_MSG_TYPES:
                         msg = self.process_outgoing(msg)
                         
                         if msg.error is not None:
                             msg.set('status', Message.STATUS_FAILED)
-                            self._client.callback.outgoing(msg)
+                            
+                            if self._client.callback.outgoing is not None:
+                                self._client.callback.outgoing(msg)
+                                
                             self._tx_queue.remove(msg)
                             continue
             
@@ -714,6 +713,13 @@ class JS8Call:
             self._spot(msg)
 
         elif msg.type == Message.RX_DIRECTED:
+            # custom processing of incoming messages
+            if self.process_incoming is not None:
+                msg = self.process_incoming(msg)
+
+                if msg is None:
+                    return
+            
             # clean msg text to remove callsigns, etc
             if self._client.clean_directed_text:
                 msg = self._client.clean_rx_message_text(msg)
@@ -769,12 +775,5 @@ class JS8Call:
 
         elif msg.type == Message.TX_FRAME:
             pass
-
-        # custom processing of incoming messages
-        if self.process_incoming is not None and msg.type in self.process_types:
-            msg = self.process_incoming(msg)
-            
-            if msg is None:
-                return
             
         self.append_to_rx_queue(msg)
