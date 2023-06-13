@@ -193,7 +193,7 @@ class OutgoingMonitor:
             elif time.time() > msg.timestamp + self._msg_max_age:
                 # msg too old, sending failed
                 msg.set('status', Message.STATUS_FAILED)
-                msg.error = 'Failed to send'
+                msg.error = 'failed to send'
                 self._callback(msg)
                 # msg dropped from queue
                 return None
