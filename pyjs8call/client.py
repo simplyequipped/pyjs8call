@@ -163,7 +163,7 @@ class Client:
 
         self.config = pyjs8call.ConfigHandler(config_path = config_path)
         self.settings = Settings(self)
-        self.callback = Callbacks
+        self.callback = Callbacks()
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
 
         # stop application and client at exit
