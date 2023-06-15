@@ -662,8 +662,8 @@ class JS8Call:
 
         elif msg.type == Message.RX_DIRECTED:
             # custom processing of incoming messages
-            if self.process_incoming is not None:
-                msg = self.process_incoming(msg)
+            if self._client.process_incoming is not None:
+                msg = self._client.process_incoming(msg)
 
                 if msg is None:
                     return
