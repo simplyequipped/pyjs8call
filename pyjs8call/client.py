@@ -1032,7 +1032,10 @@ class Client:
         - time
         - offset
         - origin
+        - destination
         - text
+
+        Dictionary keys *origin* and *destination* may be *None*.
 
         Args:
             own (bool): Include outgoing messages listed in the rx text field, defaults to True
@@ -1040,23 +1043,47 @@ class Client:
         Returns:
             list: Messages from the rx text field
         '''
+        #TODO is command handling required?
+
         rx_text = self.get_rx_text()
         callsign = self.settings.get_station_callsign()
-        msgs = rx_text.split('\n')
-        msgs = [m.strip() for m in msgs if len(m.strip()) > 0]
+        msgs = rx_text.split('\n\n')
+        msgs = [m.strip(' ' + Message.EOM) for m in msgs if len(m.strip()) > 0]
 
         rx_messages = []
         for msg in msgs:
-            parts = msg.split('-')
-            data = {
-                #TODO convert time format
-                'time' : parts[0].strip(),
-                'offset' : int(parts[1].strip(' \n()')),
-                'origin' : parts[2].split(':')[0].strip(),
-                'text' : parts[2].split(':')[1].strip(' \n' + Message.EOM)
-            }
+            if '-' not in msg:
+                continue
 
-            if not own and data['callsign'] == callsign:
+            #TODO
+            print(msg)
+
+            parts = msg.split('-')
+            data = {}
+
+            data['time'] = parts[0].strip()
+            data['offset'] = int(parts[1].strip(' \n()'))
+
+            if ':' not in parts[2]:
+                data['origin'] = None
+                data['destination'] = None
+                data['text'] = parts[2].strip()
+            else:
+                if '  ' in parts[2]:
+                    callsigns = parts[2].split('  ')[0].split(':')
+                    data['origin'] = callsigns[0].strip()
+                    data['destination'] = callsigns[1].strip()
+                    data['text'] = parts[2].split('  ')[1].strip()
+                elif '@HB' in parts[2]:
+                    data['origin'] = parts[2].split(':')[0].strip()
+                    data['destination'] = '@HB'
+                    data['text'] = parts[2].split('@HB')[1].strip()
+                else:
+                    data['origin'] = parts[2].split(':')[0].strip()
+                    data['destination'] = None
+                    data['text'] = parts[2].split(':')[1].strip()
+
+            if not own and data['origin'] == callsign:
                 continue
 
             rx_messages.append(data)
