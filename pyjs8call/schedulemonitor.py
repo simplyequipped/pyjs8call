@@ -125,11 +125,11 @@ class ScheduleEntry:
     
     def __repr__(self):
         '''Get schedule entry object representation.'''
-        return '<ScheduleEntry {time}L : {freq_mhz} : {speed} : {profile}>'.format(self.dict())
+        return '<ScheduleEntry {0[time]}L : {0[freq_mhz]} : {0[speed]} : {0[profile]}>'.format(self.dict())
             
     def __str__(self):
         '''Get schedule entry string.'''
-        return '{time}L | {state: <8} | {freq_mhz: <11} | {speed: <6} | {profile}'.format(self.dict())
+        return '{0[time]}L | {0[state]: <8} | {0[freq_mhz]: <11} | {0[speed]: <6} | {0[profile]}'.format(self.dict())
 
 
 class ScheduleMonitor:
