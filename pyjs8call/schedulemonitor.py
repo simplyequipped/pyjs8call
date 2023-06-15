@@ -208,6 +208,7 @@ class ScheduleMonitor:
             profile (str): Configuration profile name, defaults to the current profile
         '''
         start_time = datetime.datetime.strptime(start_time, '%H:%M').time()
+        now = datetime.datetime.now().time()
 
         if freq is None:
             freq = self._client.settings.get_freq()
@@ -219,6 +220,10 @@ class ScheduleMonitor:
             profile = self._client.settings.get_profile()
 
         new_schedule = ScheduleEntry(start_time, freq, speed, profile)
+
+        # avoid running past schedule entry immediately after creation
+        if new_schedule.start < now:
+            new_schedule.run = True
 
         if new_schedule in self._schedule:
             return
