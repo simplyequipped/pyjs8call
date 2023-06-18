@@ -923,7 +923,7 @@ class Client:
             age (int): Maximum activity age in minutes, defaults to 60
 
         Returns:
-            list: Call activity items
+            list: Call activity items, sorted decending by *time* (recent first)
         '''
         msg = Message()
         msg.type = Message.RX_GET_CALL_ACTIVITY
@@ -934,16 +934,19 @@ class Client:
         age *= 60 # minutes to seconds
         now = datetime.now(timezone.utc).timestamp()
 
-        for i in range(len(call_activity)):
-            origin = call_activity[i]['origin']
-            item_age = now - call_activity[i]['time']
+        for i in call_activity.copy():
+            activity = call_activity.pop(0)
 
-            if item_age > age:
+            if (now - activity['time']) > age:
+                # drop activity
                 continue
 
-            if origin in hearing:
-                call_activity[i]['hearing'] = hearing[origin]
+            if activity['origin'] in hearing:
+                activity['hearing'] = hearing[origin]
 
+            call_activity.append(activity)
+
+        call_activity.sort(key = lambda activity: activity['time'], reverse = True)
         return call_activity
 
     def get_band_activity(self):
@@ -1136,6 +1139,8 @@ class Client:
                 elif spot.destination != '@ALLCALL' and spot.destination not in hearing[spot.origin]:
                     hearing[spot.origin].append(spot.destination)
 
+        #TODO track spot snr for sorting
+        #return {callsign:stations.sort(lambda station: station['snr'], decending) for callsign, stations in hearing.items()}
         return hearing
 
     def heard_by(self, age=60):
