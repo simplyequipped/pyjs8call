@@ -906,8 +906,12 @@ class Client:
         '''
         return self.send_directed_command_message(destination, Message.CMD_STATUS_Q)
 
-    def get_call_activity(self, age=60):
+    def get_call_activity(self, age=None):
         '''Get JS8Call call activity.
+
+        To get or set JS8Call callsign activity aging from the configuration file:
+        `client.config.get('Configuration', 'CallsignAging', int)`
+        `client.config.set('Configuration', 'CallsignAging', 120) # 120 minutes`
 
         Each call activity item is a dictionary with the following keys:
 
@@ -920,25 +924,33 @@ class Client:
         | hearing | list |
 
         Args:
-            age (int): Maximum activity age in minutes, defaults to 60
+            age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
 
         Returns:
             list: Call activity items, sorted decending by *time* (recent first)
         '''
+        if age is None:
+            age = self.config.get('Configuration', 'CallsignAging', int)
+
+            if age == 0:
+                age = None
+
+        if age is not None:
+            age *= 60 # minutes to seconds
+
         msg = Message()
         msg.type = Message.RX_GET_CALL_ACTIVITY
         self.js8call.send(msg)
         call_activity = self.js8call.watch('call_activity')
 
         hearing = self.hearing(age = age)
-        age *= 60 # minutes to seconds
         now = datetime.now(timezone.utc).timestamp()
 
         for i in call_activity.copy():
             activity = call_activity.pop(0)
 
-            if (now - activity['time']) > age:
-                # drop activity
+            # remove aged activity
+            if age is not None and (now - activity['time']) > age:
                 continue
 
             if activity['origin'] in hearing:
@@ -949,8 +961,12 @@ class Client:
         call_activity.sort(key = lambda activity: activity['time'], reverse = True)
         return call_activity
 
-    def get_band_activity(self):
+    def get_band_activity(self, age=None):
         '''Get JS8Call band activity.
+
+        To get or set JS8Call callsign activity aging from the configuration file:
+        `client.config.get('Configuration', 'ActivityAging', int)`
+        `client.config.set('Configuration', 'ActivityAging', 5) # 5 minutes`
 
         Each band activity item is a dictionary with the following keys:
 
@@ -962,13 +978,39 @@ class Client:
         | time (UTC) | int |
         | text | str |
 
+        Args:
+            age (int): Maximum activity age in minutes, defaults to JS8Call band activity aging
+
         Returns:
-            list: Band activity items
+            list: Band activity items, sorted ascending by offset
         '''
+        if age is None:
+            age = self.config.get('Configuration', 'ActivityAging', int)
+
+            if age == 0:
+                age = None
+
+        if age is not None:
+            age *= 60 # minutes to seconds
+
         msg = Message()
         msg.type = Message.RX_GET_BAND_ACTIVITY
         self.js8call.send(msg)
         band_activity = self.js8call.watch('band_activity')
+
+        now = datetime.now(timezone.utc).timestamp()
+
+        if age is not None:
+            # remove aged activity
+            for i in band_activity.copy()
+                activity = band_activity.pop(0)
+    
+                if (now - activity['time']) > age:
+                    continue
+                
+                band_activity.append(activity)
+
+        band_activity.sort(key=lambda activity: activity['offset'])
         return band_activity
 
     def get_selected_call(self):
