@@ -982,7 +982,7 @@ class Client:
                 activity['distance'] = (None, None)
 
             spot = self.spots.filter(origin = activity['origin'], age = age, count = 1)
-            if len(spot) and spot.get('speed') is not None and isinstance(spot.speed, int):
+            if len(spot) and isinstance(spot.speed, int):
                 activity['speed'] = self.submode_to_speed(spot.speed)
             else:
                 activity['speed'] = ''
