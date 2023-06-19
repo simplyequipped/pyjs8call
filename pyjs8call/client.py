@@ -913,6 +913,8 @@ class Client:
         `client.config.get('Configuration', 'CallsignAging', int)`
         `client.config.set('Configuration', 'CallsignAging', 120) # 120 minutes`
 
+        See *client.get_distance()* for more information on the value and format of *distance*.
+
         Each call activity item is a dictionary with the following keys:
 
         | Key | Value Type |
@@ -920,14 +922,20 @@ class Client:
         | origin | str |
         | grid | str |
         | snr | int |
-        | time (UTC) | int |
+        | time | str |
+        | utc | int |
+        | speed | str |
         | hearing | list |
+        | heard_by | list |
+        | distance | tuple |
 
         Args:
             age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
 
         Returns:
             list: Call activity items, sorted decending by *time* (recent first)
+
+            If grid is not set, distance is *(None, None)*.
         '''
         if age is None:
             age = self.config.get('Configuration', 'CallsignAging', int)
@@ -943,7 +951,9 @@ class Client:
         self.js8call.send(msg)
         call_activity = self.js8call.watch('call_activity')
 
+        #TODO improve efficiency (heard_by calls hearing again)
         hearing = self.hearing(age = age)
+        heard_by = self.heard_by(age = age)
         now = datetime.now(timezone.utc).timestamp()
 
         for i in call_activity.copy():
@@ -953,8 +963,29 @@ class Client:
             if age is not None and (now - activity['time']) > age:
                 continue
 
+            activity['utc'] = activity['time']
+            activity['time'] = time.strftime('%X', time.localtime(activity['utc']))
+
             if activity['origin'] in hearing:
-                activity['hearing'] = hearing[origin]
+                activity['hearing'] = hearing[activity['origin']]
+            else:
+                activity['hearing'] = []
+
+            if activity['origin'] in heard_by:
+                activity['heard_by'] = heard_by[activity['origin']]
+            else:
+                activity['heard_by'] = []
+
+            if activity['grid'] not in (None, ''):
+                activity['distance'] = self.get_distance(activity['grid'])
+            else:
+                activity['distance'] = (None, None)
+
+            spot = self.spots.filter(origin = activity['origin'], age = age, count = 1)
+            if len(spot) and spot.get('speed') is not None and isinstance(spot.speed, int):
+                activity['speed'] = self.submode_to_speed(spot.speed)
+            else:
+                activity['speed'] = ''
 
             call_activity.append(activity)
 
@@ -975,7 +1006,8 @@ class Client:
         | freq (Hz) | int |
         | offset (Hz) | int |
         | snr | int |
-        | time (UTC) | int |
+        | utc | int |
+        | time | str |
         | text | str |
 
         Args:
@@ -1002,12 +1034,15 @@ class Client:
 
         if age is not None:
             # remove aged activity
-            for i in band_activity.copy()
+            for i in band_activity.copy():
                 activity = band_activity.pop(0)
     
                 if (now - activity['time']) > age:
                     continue
                 
+                activity['utc'] = activity['time']
+                activity['time'] = time.strftime('%X', time.localtime(activity['utc']))
+
                 band_activity.append(activity)
 
         band_activity.sort(key=lambda activity: activity['offset'])
@@ -1223,7 +1258,7 @@ class Client:
 #                '>'.join()
             
         
-    def grid_distance(self, grid_a, grid_b=None, miles=True):
+    def grid_distance(self, grid_a, grid_b=None):
         '''Calculate great circle distance and bearing between grid squares.
 
         If *grid_b* is *None* the JS8Call grid square is used.
@@ -1236,14 +1271,15 @@ class Client:
 
         Args:
             grid_a (str): First grid square
-            grid_b (str): Second grid square, defaults to None
-            miles (bool): Calculate distance in miles if True, in km if False, defaults to True
+            grid_b (str): Second grid square, defaults to JS8Call grid square
 
         Returns:
             tuple (int, int): Distance/bearing pair (ex. (1194, 312))
 
         Raises:
             ValueError: *grid_b* is *None* and JS8Call grid square is not set
+            
+            Distnace units match JS8Call distance units (miles or km), see *client.settings.get_distance_units()*.
         '''
         earth_radius_km = 6371
         earth_radius_mi = 3958.756
@@ -1262,7 +1298,7 @@ class Client:
         # calculate great circle distance
         gcd = acos(sin(lat_a) * sin(lat_b) + cos(lat_a) * cos(lat_b) * cos(lon_b - lon_a))
         
-        if miles:
+        if self.settings.get_distance_units_miles():
             distance = int(round(earth_radius_mi * gcd, 0))
         else:
             distance = int(round(earth_radius_km * gcd, 0))
@@ -1766,10 +1802,10 @@ class Settings:
         '''Get JS8Call distance units.
         
         Returns:
-            str: Configured distance units: 'miles' or 'km'
+            str: Configured distance units: 'mi' or 'km'
         '''
         if self.get_distance_units_miles():
-            return 'miles'
+            return 'mi'
         else:
             return 'km'
         
