@@ -1170,16 +1170,20 @@ class Client:
 
         return rx_messages
     
-    def hearing(self, age=60):
+    def hearing(self, age=None):
         '''Which stations other stations are hearing.
 
         Args:
-            age (int): Maximum message age in minutes, defaults to 60
+            age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
 
         Returns:
-            dict: Example format *{'station': ['station', ...], ...}*
+            dict: Example format `{'station': ['station', ...], ...}`
         '''
-        age *= 60
+        if age is None:
+            age = self.config.get('Configuration', 'CallsignAging', int)
+
+        age *= 60 # minutes to seconds
+            
         callsign = self.settings.get_station_callsign()
         hearing = {}
         
@@ -1220,21 +1224,30 @@ class Client:
         #return {callsign:stations.sort(lambda station: station['snr'], decending) for callsign, stations in hearing.items()}
         return hearing
 
-    def heard_by(self, age=60):
+    def heard_by(self, age=None, hearing=None):
         '''Which stations are heard by other stations.
 
-        *heard_by* is the inverse of *hearing*.
+        *client.heard_by()* is the inverse of *client.hearing()*.
+
+        If calling both *client.hearing()* and *client.heard_by*, it is more efficient to pass the result of *client.hearing()* to *client.heard_by()*. Otherwise, *client.heard_by()* will call *client.hearing()* again internally.
 
         Args:
-            age (int): Maximum message age in minutes, defaults to 60
+            age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
+            hearing (dict): Result of *client.hearing()*, defaults to result of *client.hearing()*
 
         Returns:
-            dict: Example format *{'station': ['station', ...], ...}*
+            dict: Example format `{'station': ['station', ...], ...}`
         '''
+        if age is None:
+            age = self.config.get('Configuration', 'CallsignAging', int)
+        
         age *= 60
         heard_by = {}
 
-        for key, value in self.hearing().items():
+        if hearing is None:
+            hearing = self.hearing(age)
+
+        for key, value in hearing.items():
             for callsign in value:
                 if callsign not in heard_by:
                     heard_by[callsign] = [key]
