@@ -948,16 +948,14 @@ class Client:
         call_activity = self.js8call.watch('call_activity')
 
         #TODO improve efficiency (heard_by calls hearing again)
-        hearing = self.hearing(age = age)
-        heard_by = self.heard_by(age = age)
+        hearing = self.hearing(age)
+        heard_by = self.heard_by(age , hearing)
         now = datetime.now(timezone.utc).timestamp()
 
         for i in call_activity.copy():
             activity = call_activity.pop(0)
-
-            #TODO
-            print(activity)
-
+            activity['origin'] = activity['origin'].strip()
+            activity['grid'] = activity['grid'].strip()
             activity['utc'] = activity['time'] / 1000 # milliseconds to seconds
 
             # remove aged activity
