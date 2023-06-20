@@ -955,6 +955,9 @@ class Client:
         for i in call_activity.copy():
             activity = call_activity.pop(0)
 
+            #TODO
+            print(activity)
+
             activity['utc'] = activity['time'] / 1000 # milliseconds to seconds
 
             # remove aged activity
