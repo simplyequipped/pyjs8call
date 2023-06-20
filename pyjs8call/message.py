@@ -180,6 +180,7 @@ class Message:
         value (str): Message contents
         time (float): UTC timestamp (see *datetime.now(timezone.utc).timestamp*)
         timestamp (float): Local timestamp (see *time.time*)
+        local_time_str (str): Local time string (see *time.strftime('%X', time.localtime())*)
         tdrift (float): Time drift specified by JS8call, defaults to None
         params (dict): Message parameters used by certain JS8Call API messages
         attributes (list): Attributes for internal use (see *Message.set*)
@@ -381,6 +382,7 @@ class Message:
         self.set('value', value)
         self.set('time', datetime.now(timezone.utc).timestamp())
         self.set('timestamp', time.time())
+        self.set('local_time_str' time.strftime('%X', time.localtime(self.get('timestamp'))))
         self.set('params', {})
         self.set('status', Message.STATUS_CREATED)
 
@@ -581,7 +583,9 @@ class Message:
                     'offset' : message['params']['OFFSET'],
                     'snr' : message['params']['SNR'],
                     'speed' : message['params']['SUBMODE'],
-                    'time' : message['params']['UTC'],
+                    'time' : message['params']['UTC'] / 1000, # milliseconds to seconds
+                    'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
+                    'local_time_str' = time.strftime('%X', time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
                     'origin' : message['params']['FROM'],
                     'destination' : message['params']['TO'],
                     'path' : message['params']['PATH'],
@@ -600,11 +604,11 @@ class Message:
 
                 self.call_activity.append({
                     'origin' : key,
-                    'grid' : value['GRID'],
+                    'grid' : value['GRID'].strip(),
                     'snr' : value['SNR'],
-                    'time' : value['UTC'],
-                    # hearing data added in client.get_call_activity
-                    'hearing': []
+                    'time' : value['UTC'] / 1000, # milliseconds to seconds
+                    'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
+                    'local_time_str' = time.strftime('%X', time.localtime(value['UTC'] / 1000)) # milliseconds to seconds
                 })
 
         #TODO can this replace activity monitor?
@@ -619,7 +623,9 @@ class Message:
                         'freq' : value['DIAL'],
                         'offset' : value['OFFSET'],
                         'snr' : value['SNR'],
-                        'time' : value['UTC'],
+                        'time' : value['UTC'] / 1000, # milliseconds to seconds
+                        'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
+                        'local_time_str' = time.strftime('%X', time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
                         'text' : value['TEXT']
                     })
                 except ValueError:
