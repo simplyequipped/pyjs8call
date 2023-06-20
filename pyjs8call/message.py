@@ -205,6 +205,7 @@ class Message:
         band_activity (list): JS8Call band activity items, defaults to None
         call_activity (list): JS8Call call activity items, defaults to None
         distance (int): Distance from JS8Call grid square to message grid square, defaults to None
+        distance_units (str): Distance units (mi/km) of *distance*, defaults to None
         bearing (int): Bearing from JS8Call grid square to message grid square, defaults to None
         profile (str): Active configuration profile when message was received, defaults to None
         error (str): Error message, defaults to None
@@ -364,6 +365,7 @@ class Message:
             'band_activity',
             'call_activity',
             'distance',
+            'distance_units',
             'bearing',
             'profile',
             'error'
