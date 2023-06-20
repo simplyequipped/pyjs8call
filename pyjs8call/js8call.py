@@ -631,11 +631,12 @@ class JS8Call:
             msg (pyjs8call.message): Message to process
         '''
         # try to get distance and bearing
-        if msg.grid not in (None, ''):
+        if msg.get('grid') not in (None, ''):
             try:
                 # raises ValueError for incorrect grid format
-                distance, bearing = self._client.grid_distance(msg.grid)
+                distance, units, bearing = self._client.grid_distance(msg.get('grid'))
                 msg.set('distance', distance)
+                msg.set('distance_units', units)
                 msg.set('bearing', bearing)
             except ValueError:
                 pass
