@@ -922,8 +922,9 @@ class Client:
         | origin | str |
         | grid | str |
         | snr | int |
-        | time | str |
-        | utc | int |
+        | time (UTC) | int |
+        | timestamp (local) | int |
+        | local_time_str | str |
         | speed | str |
         | hearing | list |
         | heard_by | list |
@@ -950,19 +951,16 @@ class Client:
         #TODO improve efficiency (heard_by calls hearing again)
         hearing = self.hearing(age)
         heard_by = self.heard_by(age , hearing)
-        now = datetime.now(timezone.utc).timestamp()
+        now = time.time()
 
         for i in call_activity.copy():
             activity = call_activity.pop(0)
             activity['origin'] = activity['origin'].strip()
             activity['grid'] = activity['grid'].strip()
-            activity['utc'] = activity['time'] / 1000 # milliseconds to seconds
 
             # remove aged activity
-            if age != 0 and (now - activity['utc']) > age:
+            if age != 0 and (now - activity['timestamp']) > age:
                 continue
-
-            activity['time'] = time.strftime('%X', time.localtime(activity['utc']))
 
             if activity['origin'] in hearing:
                 activity['hearing'] = hearing[activity['origin']]
@@ -977,7 +975,7 @@ class Client:
             if activity['grid'] not in (None, ''):
                 activity['distance'] = self.grid_distance(activity['grid'])
             else:
-                activity['distance'] = (None, None)
+                activity['distance'] = (None, None, None)
 
             spot = self.spots.filter(origin = activity['origin'], age = age, count = 1)
             if len(spot) and isinstance(spot[0].get('speed'), int):
@@ -987,7 +985,7 @@ class Client:
 
             call_activity.append(activity)
 
-        call_activity.sort(key = lambda activity: activity['time'], reverse = True)
+        call_activity.sort(key = lambda activity: activity['timestamp'], reverse = True)
         return call_activity
 
     def get_band_activity(self, age=None):
@@ -1004,8 +1002,9 @@ class Client:
         | freq (Hz) | int |
         | offset (Hz) | int |
         | snr | int |
-        | utc | int |
-        | time | str |
+        | time (UTC) | int |
+        | timestamp (local) | int |
+        | local_time_str | str |
         | text | str |
 
         Args:
@@ -1028,19 +1027,15 @@ class Client:
         self.js8call.send(msg)
         band_activity = self.js8call.watch('band_activity')
 
-        now = datetime.now(timezone.utc).timestamp()
+        now = time.time()
 
         if age is not None:
             # remove aged activity
             for i in band_activity.copy():
                 activity = band_activity.pop(0)
-    
-                activity['utc'] = activity['time'] / 1000 # milliseconds to seconds
 
-                if (now - activity['utc']) > age:
+                if (now - activity['timestamp']) > age:
                     continue
-                
-                activity['time'] = time.strftime('%X', time.localtime(activity['utc']))
 
                 band_activity.append(activity)
 
@@ -1286,12 +1281,12 @@ class Client:
             grid_b (str): Second grid square, defaults to JS8Call grid square
 
         Returns:
-            tuple (int, int): Distance/bearing pair (ex. (1194, 312))
+            tuple (int, str, int): Distance, distance units, and bearing in degrees (ex. (1194, 'mi', 312)).
+            
+            Distance units match JS8Call distance units, see *client.settings.get_distance_units()*.
 
         Raises:
             ValueError: *grid_b* is *None* and JS8Call grid square is not set
-            
-            Distnace units match JS8Call distance units (miles or km), see *client.settings.get_distance_units()*.
         '''
         earth_radius_km = 6371
         earth_radius_mi = 3958.756
@@ -1312,8 +1307,10 @@ class Client:
         
         if self.settings.get_distance_units_miles():
             distance = int(round(earth_radius_mi * gcd, 0))
+            units = 'mi'
         else:
             distance = int(round(earth_radius_km * gcd, 0))
+            units = 'km'
 
         # calculate bearing
         y = sin(lon_a - lon_b) * cos(lat_a)
@@ -1322,7 +1319,7 @@ class Client:
         bearing = (angle * 180 / pi + 360) % 360
         bearing = int(round(bearing, 0))
 
-        return (distance, bearing)
+        return (distance, units, bearing)
 
     def grid_to_lat_lon(self, grid):
         '''Convert grid square to latitude/longitude.
