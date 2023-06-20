@@ -940,11 +940,7 @@ class Client:
         if age is None:
             age = self.config.get('Configuration', 'CallsignAging', int)
 
-            if age == 0:
-                age = None
-
-        if age is not None:
-            age *= 60 # minutes to seconds
+        age *= 60 # minutes to seconds
 
         msg = Message()
         msg.type = Message.RX_GET_CALL_ACTIVITY
@@ -962,7 +958,7 @@ class Client:
             activity['utc'] = activity['time'] / 1000 # milliseconds to seconds
 
             # remove aged activity
-            if age is not None and (now - activity['utc']) > age:
+            if age != 0 and (now - activity['utc']) > age:
                 continue
 
             activity['time'] = time.strftime('%X', time.localtime(activity['utc']))
