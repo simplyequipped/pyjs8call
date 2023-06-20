@@ -981,7 +981,7 @@ class Client:
 
             spot = self.spots.filter(origin = activity['origin'], age = age, count = 1)
             if len(spot) and isinstance(spot[0].get('speed'), int):
-                activity['speed'] = self.submode_to_speed(spot.speed)
+                activity['speed'] = self.settings.submode_to_speed(spot[0].get('speed'))
             else:
                 activity['speed'] = ''
 
