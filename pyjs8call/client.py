@@ -959,11 +959,12 @@ class Client:
         for i in call_activity.copy():
             activity = call_activity.pop(0)
 
+            activity['utc'] = activity['time'] / 1000 # milliseconds to seconds
+
             # remove aged activity
-            if age is not None and (now - activity['time']) > age:
+            if age is not None and (now - activity['utc']) > age:
                 continue
 
-            activity['utc'] = activity['time']
             activity['time'] = time.strftime('%X', time.localtime(activity['utc']))
 
             if activity['origin'] in hearing:
@@ -1037,10 +1038,11 @@ class Client:
             for i in band_activity.copy():
                 activity = band_activity.pop(0)
     
-                if (now - activity['time']) > age:
+                activity['utc'] = activity['time'] / 1000 # milliseconds to seconds
+
+                if (now - activity['utc']) > age:
                     continue
                 
-                activity['utc'] = activity['time']
                 activity['time'] = time.strftime('%X', time.localtime(activity['utc']))
 
                 band_activity.append(activity)
