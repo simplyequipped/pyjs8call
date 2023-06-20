@@ -978,7 +978,7 @@ class Client:
                 activity['heard_by'] = []
 
             if activity['grid'] not in (None, ''):
-                activity['distance'] = self.get_distance(activity['grid'])
+                activity['distance'] = self.grid_distance(activity['grid'])
             else:
                 activity['distance'] = (None, None)
 

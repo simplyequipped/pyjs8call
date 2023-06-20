@@ -632,11 +632,9 @@ class JS8Call:
         '''
         # try to get distance and bearing
         if msg.grid not in (None, ''):
-            miles = bool(self._client.config.get('Configuration', 'Miles') == 'true')
-
             try:
                 # raises ValueError for incorrect grid format
-                distance, bearing = self._client.grid_distance(msg.grid, miles = miles)
+                distance, bearing = self._client.grid_distance(msg.grid)
                 msg.set('distance', distance)
                 msg.set('bearing', bearing)
             except ValueError:
