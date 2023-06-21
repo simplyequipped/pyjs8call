@@ -382,7 +382,7 @@ class Message:
         self.set('value', value)
         self.set('time', datetime.now(timezone.utc).timestamp())
         self.set('timestamp', time.time())
-        self.set('local_time_str' time.strftime('%X', time.localtime(self.get('timestamp'))))
+        self.set('local_time_str', time.strftime('%X', time.localtime(self.get('timestamp'))))
         self.set('params', {})
         self.set('status', Message.STATUS_CREATED)
 
