@@ -766,7 +766,7 @@ class Client:
         time.sleep(self._set_get_delay)
         return self.get_inbox_messages()
 
-    def query_call(self, destination, callsign):
+    def query_call(self, callsign, destination='@ALLCALL'):
         '''Send JS8Call callsign query.
         
         Message format: *DESTINATION* QUERY CALL *CALLSIGN*?
@@ -776,8 +776,8 @@ class Client:
         The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
 
         Args:
-            destination (str, list): Callsign(s) to direct the query to
             callsign (str): Callsign to query for
+            destination (str, list): Callsign(s) to direct the query to, defaults to @ALLCALL
 
         Returns:
             pyjs8call.message: Constructed message object
