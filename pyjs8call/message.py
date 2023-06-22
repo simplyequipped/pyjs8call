@@ -382,7 +382,7 @@ class Message:
         self.set('value', value)
         self.set('time', datetime.now(timezone.utc).timestamp())
         self.set('timestamp', time.time())
-        self.set('local_time_str', time.strftime('%X', time.localtime(self.get('timestamp'))))
+        self.set('local_time_str', '{}L'.format(time.strftime('%X', time.localtime(self.get('timestamp')))))
         self.set('params', {})
         self.set('status', Message.STATUS_CREATED)
 
@@ -585,7 +585,7 @@ class Message:
                     'speed' : message['params']['SUBMODE'],
                     'time' : message['params']['UTC'] / 1000, # milliseconds to seconds
                     'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
-                    'local_time_str' : time.strftime('%X', time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
+                    'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))), # milliseconds to seconds
                     'origin' : message['params']['FROM'],
                     'destination' : message['params']['TO'],
                     'path' : message['params']['PATH'],
@@ -608,7 +608,7 @@ class Message:
                     'snr' : value['SNR'],
                     'time' : value['UTC'] / 1000, # milliseconds to seconds
                     'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
-                    'local_time_str' : time.strftime('%X', time.localtime(value['UTC'] / 1000)) # milliseconds to seconds
+                    'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))) # milliseconds to seconds
                 })
 
         #TODO can this replace activity monitor?
@@ -625,7 +625,7 @@ class Message:
                         'snr' : value['SNR'],
                         'time' : value['UTC'] / 1000, # milliseconds to seconds
                         'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
-                        'local_time_str' : time.strftime('%X', time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
+                        'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))), # milliseconds to seconds
                         'text' : value['TEXT']
                     })
                 except ValueError:
