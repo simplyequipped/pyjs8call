@@ -598,10 +598,6 @@ class JS8Call:
                         # if parsing message fails, stop processing
                         continue
 
-                # if error in message value, stop processing
-                if msg.value is not None and Message.ERR in msg.value:
-                    continue
-
                 if msg.type in Message.USER_MSG_TYPES:
                     self.last_incoming = time.time()
 
