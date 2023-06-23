@@ -488,27 +488,16 @@ class JS8Call:
 
         while self.online:
             # TxMonitor updates tx_text every second
-            # do not attempt to update while value is being watched (i.e. updated)
-            try:
-                if (
-                    not self.watching('tx_text') and
-                    self.state['tx_text'] is not None and
-                    len(self.state['tx_text'].strip()) > 0
-                ):
-                    tx_text = True
-                    active_tx_state = False
-                else:
-                    tx_text = False
-
-            except AttributeError:
-                # handle tx_text state is None
-                time.sleep(0.1)
-                continue
+            if self.state['tx_text'] == '':
+                tx_text = False
+            else:
+                tx_text = True
+                active_tx_state = False
 
             with self._tx_queue_lock:
                 for msg in self._tx_queue.copy():
                     # hold off on sending messages while there is something being sent (text in the tx text field)
-                    if msg.type == Message.TX_SEND_MESSAGE and (tx_text or active_tx_state):
+                    if msg.type in Message.USER_MSG_TYPES and (tx_text or active_tx_state):
                         continue
             
                     packed = msg.pack()
@@ -522,7 +511,7 @@ class JS8Call:
                     try:
                         self._socket.sendall(packed)
                         self._tx_queue.remove(msg)
-                    
+
                         if msg.type in Message.USER_MSG_TYPES:
                             self.last_outgoing = time.time()
                             # make sure the next queued msg doesn't get sent before the tx text state updates

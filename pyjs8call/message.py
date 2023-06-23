@@ -713,9 +713,10 @@ class Message:
     def __eq__(self, msg):
         '''Whether another message is considered equal to self.
 
-        There are two cases where spots are considered equal:
-        - When both messages have the same timestamps (literally the same message)
-        - When both messages have the same origin, offset frequency, and snr (same station event reported by differnt JS8Call API messages at slightly differnt times) 
+        There are multiple cases where spots are considered equal:
+        - When both incoming messages have the same timestamps (literally the same message)
+        - When both incoming messages have the same origin, offset frequency, and snr (same station event reported by differnt JS8Call API messages at slightly differnt times) 
+        - When both outgoing messages have the same timestamp, type, and value
 
         Args:
             msg (pyjs8call.message): Message to compare
@@ -729,8 +730,13 @@ class Message:
         # comparing origin, offset, and snr allows equating the same message sent more than once
         # from the js8call application (likely as different message types) at slightly different
         # times (likely milliseconds apart)
-        return bool( self.timestamp == msg.timestamp or
-            (msg.origin == self.origin and msg.offset == self.offset and msg.snr == self.snr) )
+        if msg.type in self.RX_TYPES:
+            return bool( self.timestamp == msg.timestamp or
+                (msg.origin == self.origin and msg.offset == self.offset and msg.snr == self.snr) )
+
+        else:
+            # tx types
+            return bool(msg.type == self.type and msg.value == msg.value and msg.timestamp == self.timestamp)
 
     def __lt__(self, msg):
         '''Whether another message is less than self.
