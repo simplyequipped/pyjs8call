@@ -172,6 +172,8 @@ class OutgoingMonitor:
 
     def _process_queue(self, tx_text):
         '''Compare queued message to tx text.'''
+        tx_text_wo_checksum = ' '.join(tx_text.split()[:-1])
+
         for i in range(len(self._msg_queue)):
             msg = self._msg_queue.pop(0)
 
@@ -180,11 +182,14 @@ class OutgoingMonitor:
 
             msg_value = msg.packed_dict['value'].strip()
 
-            if msg_value == tx_text and msg.status == Message.STATUS_QUEUED:
+            if (
+                ( (msg.cmd in Message.CHECKSUM_COMMANDS and msg_value == tx_text_wo_checksum) or msg_value == tx_text ) and
+                msg.status == Message.STATUS_QUEUED
+            ):
                 # msg text was added to js8call tx field, sending
                 msg.set('status', Message.STATUS_SENDING)
                 self._callback(msg)
-            elif msg_value != tx_text and msg.status == Message.STATUS_SENDING:
+            elif msg_value != tx_text_wo_checksum and msg_value != tx_text and msg.status == Message.STATUS_SENDING:
                 # msg text was removed from js8call tx field, sent
                 msg.set('status', Message.STATUS_SENT)
                 self._callback(msg)

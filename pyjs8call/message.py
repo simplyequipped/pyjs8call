@@ -140,7 +140,7 @@ class Message:
     | &nbsp; | &nbsp; |
     | **Commands** | **Value** |
     | AUTOREPLY_COMMANDS | *list* of autoreply commands |
-    | COMMAND_RESPONSES | *list* of responses to commands |
+    | CHECKSUM_COMMANDS | *list* of checksumed commands |
     | COMMANDS | *list* of all commands |
 
     &nbsp;
@@ -313,6 +313,8 @@ class Message:
     AUTOREPLY_COMMANDS = [CMD_SNR_Q, CMD_Q, CMD_HEARING_Q, CMD_GRID, CMD_STATUS_Q, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_INFO_Q, CMD_AGN_Q, CMD_ACK, CMD_NACK]
 
     COMMAND_RESPONSES = [CMD_HEARTBEAT_SNR, CMD_SNR, CMD_GRID, CMD_INFO, CMD_STATUS, CMD_HEARING, CMD_NO, CMD_YES, CMD_ACK, CMD_SNR]
+
+    CHECKSUM_COMMANDS = [CMD_RELAY, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_CMD]
 
     # status types
     STATUS_CREATED          = 'created'
@@ -491,11 +493,12 @@ class Message:
                         destination = self.destination
                     
                     if self.cmd is None:
+                        # directed message without command
                         # note: double space!
-                        value = destination + '  ' + value
+                        value = '{}  {}'.format(destination, value)
                     else:
-                        # note: double space!
-                        value = destination + self.cmd + '  ' + value
+                        # directed message with command
+                        value = '{}{} {}'.format(destination, self.cmd, value)
 
                 value = value.strip()
 
