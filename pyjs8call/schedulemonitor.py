@@ -115,7 +115,7 @@ class ScheduleEntry:
             'start': self.start,
             'time': self.start.strftime('%H:%M'),
             'freq': self.freq,
-            'freq_mhz': '{:.4} MHz'.format(self.freq / 1000000),
+            'freq_mhz': '{:.3f} MHz'.format(self.freq / 1000000),
             'speed': self.speed,
             'profile': self.profile,
             'active': self.active,
