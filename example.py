@@ -4,26 +4,26 @@ import pyjs8call
 
 # callback for received directed messages (includes groups such as @HB)
 def rx_message(msg):
-    print('\t--- Message from ' + str(msg.origin) + ': ' + str(msg.text))
+    print('\t--- Message from {}: {}'.format(msg.origin, msg.text))
 
 # callback for new spots
 def new_spots(spots):
     for spot in spots:
-        if spot.grid == '':
+        if spot.grid in (None, ''):
             grid = ' '
         else:
             grid = ' (' + spot.grid + ') '
 
-        print('\t--- Spot: ' + spot.origin + grid + '@ ' + str(spot.offset) + ' Hz\t' + time.strftime('%x %X', time.localtime(spot.timestamp)))
+        print('\t--- Spot: {}{}@ {} Hz\t{}L'.format(spot.origin, grid, spot.offset, time.strftime('%x %X', time.localtime(spot.timestamp))))
 
 # callback for tx monitor status change
 def tx_status(msg):
-    print('\tMessage ' + msg.id + ' status: ' + msg.status)
+    print('\tMessage {} status: {}'.format(msg.id, msg.status))
     
 # callback for new inbox messages
 def new_inbox_msg(msgs):
     for msg in msgs:
-        print('\t--- New inbox message from ' + msg['origin'])
+        print('\t--- New inbox message from {}'.format(msg['origin']))
 
 # function to send a directed message
 def send_message():
@@ -31,22 +31,21 @@ def send_message():
     destination = input('\n\tEnter destination callsign: ')
     text = input('\tEnter message: ')
     msg = js8call.send_directed_message(destination, text)
-    print('\n\tSending message ' + msg.id + ' on next transmit cycle')
+    print('\n\tSending message {} on next transmit cycle'.format(msg.id))
     input()
 
 # function to show JS8Call inbox messages
 def show_inbox():
     global js8call
     messages = js8call.get_inbox_messages()
-    print('\n--- Inbox Messages: ' + str(len(messages)))
+    print('\n--- Inbox Messages: {}'.format(len(messages)))
 
     if len(messages) > 0:
         print('')
         for msg in messages:
-            print('\tFrom: ' + msg.origin + '\t\tTo: ' + msg.destination + '\t\tPath: ' + msg.path)
-            print('\tDate/Time: ' + time.strftime('%c', msg.timestamp))
-            print('\tMessage: ' + msg.text)
-            print('')
+            print('\tFrom: {}\t\tTo: {}\t\tPath: {}'.format(msg.origin, msg.destination, msg.path))
+            print('\tData/Time: {}'.format(time.strftime('%c', msg.timestamp)))
+            print('\tMessage: {}\n'.format(msg.text))
     else:
         print('')
 
@@ -54,9 +53,9 @@ def show_inbox():
 def set_freq():
     global js8call
     new_freq = input('\n\tEnter new dial frequency in Hz: ')
-    freq = js8call.settings.set_freq(new_freq)
+    freq = js8call.settings.set_freq(new_freq) / 1000000
     offset = js8call.settings.get_offset()
-    print('\nNew dial frequency: ' + str(freq / 1000000).format('0.000') + ' MHz (' + str(offset) + ' Hz)\n')
+    print('\nNew dial frequency: {:.3f} MHz ({} Hz offset)'.format(freq, offset))
 
 # function for printing the menu and handling selections
 def show_menu():
@@ -98,10 +97,11 @@ js8call.start(headless = headless)
 
 # enable local inbox monitoring and periodic remote inbox message query
 # WARNING: enabling the inbox monitor will cause JS8Call to transmit almost immediately
+# ensure configured radio and antenna are set properly for the transmit frequency
 #js8call.inbox.enable()
 
 # read current configuration values
-freq = js8call.settings.get_freq()
+freq = js8call.settings.get_freq() / 1000000
 offset = js8call.settings.get_offset()
 grid = js8call.settings.get_station_grid()
 callsign = js8call.settings.get_station_callsign()
@@ -115,8 +115,8 @@ else:
     state = 'Disconnected'
 
 # print a summary of this station
-print('\nStation ' + callsign + ' (' + grid + ') - ' + state + ' ---------------------------------------------')
-print('Frequency: ' + str(freq / 1000000).format('0.000') + ' MHz (' + str(offset) + ' Hz)\n')
+print('\nStation {} ({}) - {}  ---------------------------------------------'.format(callsign, grid, state))
+print('Frequency: {:.3f} MHz ({} Hz offset)'.format(freq, offset))
 
 # show the menu until the user exits
 while js8call.online:
