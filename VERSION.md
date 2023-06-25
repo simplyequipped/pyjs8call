@@ -3,6 +3,7 @@
 **0.2.1**
 - Fix *pyjs8call.Message.text* being overwritten during object initialization
 - Fix intermittent *NoneType* error in *pyjs8call.js8call* transmit function
+- Fix removal of incorrect message from outgoing queue due to incorrect equality logic
 - Fix *IndexError* in *pyjs8call.offsetmonitor* when no unused spectrum is found
 - Change the maximum time to wait for a socket connection during JS8Call application start to 120 seconds
 - Improve JS8Call application start process by waiting for socket response (supports slower SBCs)
@@ -12,22 +13,26 @@
 - Rename module *enable* and *disable* functions as needed for consistency
 - Rename *pyjs8call.Client.drift* to *pyjs8call.Client.drift_sync*
 - Add *hb* argument to *pyjs8call.Client.identities*
-- Add additional *pyjs8call.Client.settings* configuration profile functions
+- Add *pyjs8call.Client.settings* configuration profile functions
 - Add *pyjs8call.Client.settings* distance units functions
-- Add *pyjs8call.message* default attributes *tdrift* and *profile*
+- Add *pyjs8call.message* default attributes *tdrift*, *profile*, *error*, and *local_time_str*
 - Set spotted message *status* to *Message.STATUS_RECEIVED*
 - Set incoming and outgoing message *profile* attribute to the active configuration profile
 - Add *profile* argument to the *pyjs8call.spotmonitor.filter* function
-- Spot outgoing messages in addition to incoming messages
 - Change message type used by *pyjs8call.windowmonitor* from *TX_FRAME* to *RIG_PTT*
 - Improve JS8Call "ping" (application connectivity check) handling
 - Add *pyjs8call.Client.heard_by* function
-- Improve *pyjs8call.Client.hearing* command response handling
+- Improve *pyjs8call.Client.hearing* command handling and aging
+- Add additional information to *pyjs8call.Client.get_call_activity*
+- Fix message value handling for various JS8Call transmit messages type
 - Add support for JS8Call command line arguments
-- Add config file handling when rig name command line argument is specified
+- Add necessary config file handling when rig name command line argument is specified
 - Change default application close action to exit instead of automatic restart
-- Improve restart handling
-- Implement custom processing of incoming and outgoing messages
+- Improve internal restart handling
+- Implement support for custom processing of incoming and outgoing messages
+- Add *pyjs8call.schedulemonitor*
+- Change minimum Python version to 3.6.1
+- Stability improvements
 - Minor bug fixes
 - Minor documentation improvements
 
