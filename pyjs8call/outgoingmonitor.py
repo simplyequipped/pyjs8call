@@ -132,6 +132,9 @@ class OutgoingMonitor:
             thread.daemon = True
             thread.start()
 
+        if msg.destination == '@HB':
+            self._client.heartbeat._outgoing(msg)
+
     def monitor(self, msg):
         '''Monitor a new message.
 
