@@ -25,6 +25,8 @@
 Directed messages are monitored by default (see pyjs8call.client.Client.monitor_outgoing).
 
 Set `client.callback.outgoing` to receive outgoing message status updates. See pyjs8call.client.Callbacks for *outgoing* callback function details.
+
+Autoreply messages sent directly by the JS8Call application (not by pyjs8call) are detected as outgoing activity.
 '''
 
 __docformat__ = 'google'
@@ -107,7 +109,7 @@ class OutgoingMonitor:
     def disable(self):
         '''Disable outgoing message monitoring.
         
-        **Caution**: Internal processes rely on the transmit text field state updates performed by this module.
+        **Caution**: Internal processes rely on the transmit text field state updates performed by this module. Disabling this module is not recommended.
         '''
         self._enabled = False
 
@@ -161,6 +163,11 @@ class OutgoingMonitor:
 
             if tx_text is None:
                 tx_text = ''
+
+            # detect autoreplies as outgoing activity
+            # sets last outgoing timestamp to end of tx for all msgs
+            if tx_text != '':
+                self._client.js8call.last_outgoing = time.time()
 
             # drop the first callsign and strip spaces and end-of-message
             # original format: 'callsign: callsign  message'
