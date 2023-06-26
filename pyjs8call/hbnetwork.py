@@ -39,7 +39,7 @@ class HeartbeatNetworking:
 
     Send heartbeat messages automatically on a time interval. The JS8Call offset frequency will automatically change to an available offset in the heartbeat sub-band (500 - 1000 Hz) during transmit, and back to the previous offset at the end of the rx/tx cycle. If no frequency is determined to be available, or if there is no recent activity, a random frequency in the heartbeat sub-band is used.
 
-    Outgoing activity via pyjs8call will reset the timer for the next heartbeat message. Activity not handled by pyjs8call (ex. JS8Call autoreplies) will not reset the interval timer.
+    Outgoing activity via pyjs8call will reset the timer for the next heartbeat message.
     '''
     def __init__(self, client):
         '''Initialize heartbeat networking object.
