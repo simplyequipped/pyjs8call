@@ -65,6 +65,7 @@ class OffsetMonitor:
         self.activity_cycles = 1.5
         self._enabled = False
         self._paused = False
+        self._hb = False
 
     def enabled(self):
         '''Get enabled status.
@@ -325,7 +326,7 @@ class OffsetMonitor:
         Update activity just before the end of the current tx window. This allows a new offset to be selected before the next rx/tx window if new activity overlaps with the current offset. Activity is not updated if a message is being sent (i.e. there is text in the tx text box).
         '''
         while self._enabled:
-            # wait until 1 second before the end of the rx/tx window
+            # wait until just before the end of the rx/tx window
             self._client.window.sleep_until_next_transition(before = self.before_transition)
 
             if self._paused:
@@ -337,15 +338,12 @@ class OffsetMonitor:
 
             # get the current settings
             self.bandwidth = self._client.settings.get_bandwidth()
-            current_offset = self._client.settings.get_offset(update=True)
-
-            if current_offset != self.offset:
-                self.offset = current_offset
+            self.offset = self._client.settings.get_offset(update=True)
 
             # force offset into specified pass band
-            if self.offset < self.min_offset or self.offset > self.max_offset:
+            if not self._hb and ( self.offset < self.min_offset or self.offset > (self.max_offset - self.bandwidth) ):
                 mid_range = ((self.max_offset - self.min_offset) / 2) + self.min_offset
-                self._client.settings.set_offset(mid_range)
+                self.offset = self._client.settings.set_offset(mid_range)
 
             # get recent spots
             activity_age = int(self.activity_cycles * self._client.settings.get_window_duration())
