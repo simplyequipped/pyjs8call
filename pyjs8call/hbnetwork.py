@@ -32,7 +32,7 @@ import time
 import threading
 import random
 
-from pyjs8call import OffsetMonitor
+from pyjs8call import OffsetMonitor, Message
 
 class HeartbeatNetworking:
     '''Manage outgoing heartbeat network messaging.
@@ -55,6 +55,7 @@ class HeartbeatNetworking:
         self._paused = False
         self._last_outgoing = 0
         self._offset = None
+        self._outgoing_msg = None
 
     def enabled(self):
         '''Get enabled status.
@@ -82,8 +83,10 @@ class HeartbeatNetworking:
             return
 
         self._enabled = True
+        self._last_outgoing = time.time()
 
         self._offset = OffsetMonitor(self._client)
+        self._offset._hb = True
         self._offset.min_offset = 500
         self._offset.max_offset = 1000
         self._offset.bandwidth_safety_factor = 1.1
@@ -110,23 +113,22 @@ class HeartbeatNetworking:
         self._last_outgoing = time.time()
         self._paused = False
 
+    def _outgoing(self, msg):
+        '''Process outgoing heartbeat message state.'''
+        self._outgoing_msg = msg
+
     def _monitor(self, interval):
         '''Heartbeat monitor thread.'''
-        interval *= 60
-        self._last_outgoing = time.time()
+        interval *= 60 # minutes to seconds
 
         while self._enabled:
             time.sleep(1)
-
-            # outgoing activity, reset interval timer
-            if self._client.js8call.activity(age = interval):
-                self._last_outgoing = self._client.js8call.last_outgoing
-                continue
 
             # wait for accurate window timing
             if self._client.window.next_transition_seconds() is None:
                 continue
 
+            # skip heartbeating if paused or there has been recent outgoing activity
             if (self._last_outgoing + interval) > time.time() or self._paused:
                 continue
 
@@ -142,24 +144,36 @@ class HeartbeatNetworking:
             if self._paused:
                 continue
 
+            # check recent outgoing activity as late as possible
+            # also ensures there are no queued outgoing msgs or text in the tx text field
+            if self._client.js8call.activity(age = interval):
+                self._last_outgoing = self._client.js8call.last_outgoing
+                continue
+
             # pause main offset monitor
             main_offset_is_paused = self._client.offset.paused()
             self._client.offset.pause()
             last_offset = self._client.settings.get_offset()
 
-            # if no free hb offset or no activity, use pre-set random offset
+            # if no free heartbeat offset or no activity, use pre-set random offset
+            # offset monitor skips offset processing if no free specturm or no activity
             max_offset = self._offset.max_offset - self._offset.bandwidth
             hb_offset = random.randrange(self._offset.min_offset, max_offset)
             self._client.settings.set_offset(hb_offset)
-            # resume hb offset monitor
+            # resume heartbeat offset monitor
             self._offset.resume()
 
-            # send heartbeat on next cycle
-            #TODO self._client.window.ignore_next_tx_frame()
-            self._client.send_heartbeat()
-            
-            # wait until the end of the following cycle
-            self._client.window.sleep_until_next_transition(within = 1, before = 1)
+            # send heartbeat on next rx/tx window
+            hb_msg = self._client.send_heartbeat()
+
+            # wait for sent or failed msg status of outgoing heartbeat msg
+            while (
+                self._outgoing_msg is None or
+                self._outgoing_msg.id != hb_msg.id or
+                self._outgoing_msg.status not in (Message.STATUS_SENT, Message.STATUS_FAILED)
+            ):
+                time.sleep(0.1)
+                
             self._last_outgoing = time.time()
             self._offset.pause()
             self._client.settings.set_offset(last_offset)
