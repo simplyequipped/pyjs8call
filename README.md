@@ -8,7 +8,7 @@ A Python package for interfacing with the JS8Call API.
 
 ### &beta;eta Software
 
-This software is currently in a beta state. This means that the software will likely change in the future, and that there will be bugs. You can provide feedback in the [Discussions](https://github.com/simplyequipped/pyjs8call/discussions) section of this repository.
+This software is currently in a beta state. This means that the software will likely change in the future, and that there will be bugs. You can provide feedback in the [Discussions](https://github.com/simplyequipped/pyjs8call/discussions) section of the repository.
 
 &nbsp;
 
