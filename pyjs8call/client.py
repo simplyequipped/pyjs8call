@@ -169,7 +169,7 @@ class Client:
         # stop application and client at exit
         atexit.register(self.stop)
         
-    def start(self, headless=False, args=None, debugging=False, logging=False):
+    def start(self, headless=False, args=None, debugging=False, logging=False, heartbeat=True):
         '''Start and connect to the the JS8Call application.
 
         Initializes sub-module objects:
@@ -183,6 +183,16 @@ class Client:
         - Inbox monitor (see pyjs8call.inboxmonitor)
         - Schedule monitor (see pyjs8call.schedulemonitor)
 
+        Enables sub-module objects:
+        - window
+        - spots
+        - offset
+        - outgoing
+        - schedule
+        - heartbeat (if *heartbeat* is True, and heartbeat networking enabled in config file)
+
+        If heartbeat networking is enabled at start, the heartbeat interval set in the config file is used.
+
         Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
 
         If logging is enabled the log file will be stored in the current user's *HOME* directory.
@@ -194,6 +204,7 @@ class Client:
             args (list): Command line arguments (see appmonitor.start()), defaults to None
             debugging (bool): Print message data to the console, defaults to False
             logging (bool): Print message data to ~/pyjs8call.log, defaults to False
+            heartbeat (bool): Start pyjs8call heartbeat networking (if enabled in config), defaults to True
 
         Raises:
             RuntimeError: JS8Call config file section does not exist (likely because JS8Call has not been run and configured after installation)
@@ -263,6 +274,12 @@ class Client:
         self.offset.enable()
         self.outgoing.enable()
         self.schedule.enable()
+
+        # if heartbeat networking is enabled, and transmit is not disabled, start pyjs8call heartbeat networking
+        if heartbeat and self.config.get('Common', 'SubModeHB', bool) and not self.config.get('Configuration', 'TransmitOFF', bool):
+            # use heartbeat interval from config file
+            hb_interval = self.config.get('Common', 'HBInterval', int)
+            self.heartbeat.enable(hb_interval)
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
