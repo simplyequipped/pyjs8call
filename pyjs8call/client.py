@@ -1066,12 +1066,18 @@ class Client:
         rx_text = self.js8call.watch('rx_text')
         return rx_text
         
-    def get_tx_text(self):
+    def get_tx_text(self, update=True):
         '''Get JS8Call tx text.
 
+        Args:
+            update (bool): Update tx text if True or use local state if False, defaults to True
+            
         Returns:
             str: Text from the JS8Call tx text field
         '''
+        if not update:
+            return self.js8call.get_state('tx_text')
+            
         msg = Message()
         msg.set('type', Message.TX_GET_TEXT)
         self.js8call.send(msg)
