@@ -315,10 +315,6 @@ class Message:
 
     AUTOREPLY_COMMANDS = [CMD_HEARTBEAT_SNR, CMD_SNR, CMD_GRID, CMD_INFO, CMD_STATUS, CMD_HEARING, CMD_NO, CMD_YES, CMD_ACK, CMD_NACK]
 
-    # monitored autoreply commands differs from the full list of autoreply commands by not including
-    # CMD_YES and CMD_NO, which are more likely to exist in non-autoreply messages
-    _MONITORED_AUTOREPLY_COMMANDS = [CMD_HEARTBEAT_SNR, CMD_SNR, CMD_GRID, CMD_INFO, CMD_STATUS, CMD_HEARING, CMD_ACK, CMD_NACK]
-
     CHECKSUM_COMMANDS = [CMD_RELAY, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_CMD]
 
     # status types
