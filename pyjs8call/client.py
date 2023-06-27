@@ -172,7 +172,7 @@ class Client:
     def start(self, headless=False, args=None, debugging=False, logging=False, heartbeat=True):
         '''Start and connect to the the JS8Call application.
 
-        Initializes sub-module objects:
+        Initializes module objects:
         - Spot monitor (see pyjs8call.spotmonitor)
         - Window monitor (see pyjs8call.windowmonitor)
         - Offset monitor (see pyjs8call.offsetmonitor)
@@ -183,15 +183,13 @@ class Client:
         - Inbox monitor (see pyjs8call.inboxmonitor)
         - Schedule monitor (see pyjs8call.schedulemonitor)
 
-        Enables sub-module objects:
+        Enables module objects:
         - window
         - spots
         - offset
         - outgoing
         - schedule
         - heartbeat (if *heartbeat* is True, and heartbeat networking enabled in config file)
-
-        If heartbeat networking is enabled at start, the heartbeat interval set in the config file is used.
 
         Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
 
@@ -275,11 +273,13 @@ class Client:
         self.outgoing.enable()
         self.schedule.enable()
 
-        # if heartbeat networking is enabled, and transmit is not disabled, start pyjs8call heartbeat networking
-        if heartbeat and self.config.get('Common', 'SubModeHB', bool) and not self.config.get('Configuration', 'TransmitOFF', bool):
-            # use heartbeat interval from config file
-            hb_interval = self.config.get('Common', 'HBInterval', int)
-            self.heartbeat.enable(hb_interval)
+        if (
+            heartbeat and
+            self.settings.heartbeat_networking_enabled() and
+            self.settings.transmit_enabled() and
+            self.settings.get_speed() != 'turbo'
+        ):
+            self.heartbeat.enable()
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
@@ -1441,6 +1441,35 @@ class Settings:
         '''
         self._client.config.set('Common', 'SubModeHB', 'false')
 
+    def heartbeat_networking_enabled(self):
+        '''Whether heartbeat networking enabled in config file.
+        
+        Returns:
+            bool: True if heartbeat networking enabled, False otherwise
+        '''
+        return self._client.config.get('Common', 'SubModeHB', bool)
+
+    def get_heartbeat_interval(self):
+        '''Get heartbeat networking interval.
+        
+        Returns:
+            int: Heartbeat networking time interval in minutes
+        '''
+        return self.config.get('Common', 'HBInterval', int)
+        
+    def set_heartbeat_interval(self, interval):
+        '''Set the heartbeat networking interval.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+
+        Args:
+            interval (int): New heartbeat networking time interval in minutes
+        
+        Returns:
+            int: Current heartbeat networking time interval in minutes
+        '''
+        return self.config.set('Common', 'HBInterval', interval)
+        
     def enable_heartbeat_acknowledgements(self):
         '''Enable heartbeat acknowledgements via config file.
         
@@ -1454,6 +1483,14 @@ class Settings:
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Common', 'SubModeHBAck', 'false')
+
+    def heartbeat_acknowledgements_enabled(self):
+        '''Whether heartbeat acknowledgements enabled in config file.
+        
+        Returns:
+            bool: True if heartbeat acknowledgements enabled, False otherwise
+        '''
+        return self._client.config.get('Common', 'SubModeHBAck', bool)
 
     def enable_multi_decode(self):
         '''Enable multi-speed decoding via config file.
@@ -1469,6 +1506,14 @@ class Settings:
         '''
         self._client.config.set('Common', 'SubModeMultiDecode', 'false')
 
+    def multi_decode_enabled(self):
+        '''Whether multi-decode enabled in config file.
+        
+        Returns:
+            bool: True if multi-decode enabled, False otherwise
+        '''
+        return self._client.config.get('Common', 'SubModeMultiDecode', bool)
+
     def enable_autoreply_startup(self):
         '''Enable autoreply on start-up via config file.
         
@@ -1482,6 +1527,14 @@ class Settings:
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'false')
+
+    def autoreply_startup_enabled(self):
+        '''Whether autoreply enabled at start-up in config file.
+        
+        Returns:
+            bool: True if autoreply is enabled at start-up, False otherwise
+        '''
+        return self._client.config.get('Configuration', 'AutoreplyOnAtStartup', bool)
 
     def enable_autoreply_confirmation(self):
         '''Enable autoreply confirmation via config file.
@@ -1499,6 +1552,14 @@ class Settings:
         '''
         self._client.config.set('Configuration', 'AutoreplyConfirmation', 'false')
 
+    def autoreply_confirmation_enabled(self):
+        '''Whether autoreply confirmation enabled in config file.
+        
+        Returns:
+            bool: True if autoreply confirmation enabled, False otherwise
+        '''
+        return self._client.config.get('Configuration', 'AutoreplyConfirmation', bool)
+
     def enable_allcall(self):
         '''Enable @ALLCALL participation via config file.
         
@@ -1512,6 +1573,14 @@ class Settings:
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Configuration', 'AvoidAllcall', 'true')
+
+    def allcall_enabled(self):
+        '''Whether @ALLCALL participation enabled in config file.
+        
+        Returns:
+            bool: True if @ALLCALL participation enabled, False otherwise
+        '''
+        return not self._client.config.get('Configuration', 'AvoidAllcall', bool)
 
     def enable_reporting(self):
         '''Enable PSKReporter reporting via config file.
@@ -1527,19 +1596,35 @@ class Settings:
         '''
         self._client.config.set('Configuration', 'PSKReporter', 'false')
 
+    def reporting_enabled(self):
+        '''Whether PSKReporter reporting enabled in config file.
+        
+        Returns:
+            bool: True if reporting enabled, False otherwise
+        '''
+        return self._client.config.get('Configuration', 'PSKReporter', bool)
+
     def enable_transmit(self):
-        '''Enable transmitting via config file.
+        '''Enable JS8Call transmitting via config file.
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Configuration', 'TransmitOFF', 'false')
 
     def disable_transmit(self):
-        '''Disable transmitting via config file.
+        '''Disable JS8Call transmitting via config file.
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Configuration', 'TransmitOFF', 'true')
+
+    def transmit_enabled(self):
+        '''Whether JS8Call transmitting enabled in config file.
+        
+        Returns:
+            bool: True if transmitting enabled, False otherwise
+        '''
+        return not self._client.config.get('Configuration', 'TransmitOFF', bool)
 
     def get_profile(self):
         '''Get active JS8call configuration profile via config file.
@@ -1787,7 +1872,7 @@ class Settings:
     def set_idle_timeout(self, timeout):
         '''Set JS8Call idle timeout.
 
-        If the JS8Call idle timeout is less than 5 minutes, JS8Call will force it to 5 minutes on the next application start or exit.
+        If the JS8Call idle timeout is between 1 and 5 minutes, JS8Call will force the idle timeout to 5 minutes on the next application start or exit.
 
         The maximum idle timeout is 1440 minutes (24 hours).
 
