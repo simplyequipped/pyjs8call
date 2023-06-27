@@ -5,7 +5,6 @@
 - Improve pyjs8call heartbeat interval timing
 - Utilize config file heartbeat interval
 - Prevent pyjs8call heartbeat networking in turbo mode
-- Auto-start pyjs8call heartbeat networking if enabled in config file
 - Add functions to get state of enable/disable settings in *pyjs8call.client.settings*
 - Update *pyjs8call.message* autoreply commands
 - Detect JS8Call autoreplies as out-going activity
