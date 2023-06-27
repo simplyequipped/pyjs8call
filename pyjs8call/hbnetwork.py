@@ -128,7 +128,7 @@ class HeartbeatNetworking:
 
             # update interval from config
             interval = self._client.settings.get_heartbeat_interval() * 60 # minutes to seconds
-            window = self_client.settings.get_window_duration()
+            window = self._client.settings.get_window_duration()
 
             # skip heartbeating if paused or there has been recent outgoing activity
             # subtract half of window duration to prevent bumping to next window
