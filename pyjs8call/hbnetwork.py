@@ -42,6 +42,8 @@ class HeartbeatNetworking:
     The heartbeat time interval is read from the JS8Call config file. See *Client.settings.set_heartbeat_interval()* to set the time interval. The time interval can be changed while pyjs8call heartbeat networking is enabled.
 
     Outgoing message activity (including JS8Call autoreplies) will reset the timer for the next heartbeat message. This is consistent with JS8Call funtionality.
+
+    Heartbeat messages are not sent if JS8Call modem speed is set to turbo. This is consistent with JS8Call funtionality.
     '''
     def __init__(self, client):
         '''Initialize heartbeat networking object.
@@ -129,6 +131,10 @@ class HeartbeatNetworking:
 
             # skip heartbeating if paused or there has been recent outgoing activity
             if (self._last_outgoing + interval) > time.time() or self._paused:
+                continue
+
+            # no heartbeat in turbo mode
+            if self._client.settings.get_speed() == 'turbo':
                 continue
 
             # if we made it this far we are ready to send a heartbeat
