@@ -169,7 +169,7 @@ class Client:
         # stop application and client at exit
         atexit.register(self.stop)
         
-    def start(self, headless=False, args=None, debugging=False, logging=False, heartbeat=True):
+    def start(self, headless=False, args=None, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
 
         Initializes module objects:
@@ -189,7 +189,6 @@ class Client:
         - offset
         - outgoing
         - schedule
-        - heartbeat (if *heartbeat* is True, and heartbeat networking enabled in config file)
 
         Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
 
@@ -202,7 +201,6 @@ class Client:
             args (list): Command line arguments (see appmonitor.start()), defaults to None
             debugging (bool): Print message data to the console, defaults to False
             logging (bool): Print message data to ~/pyjs8call.log, defaults to False
-            heartbeat (bool): Start pyjs8call heartbeat networking (if enabled in config), defaults to True
 
         Raises:
             RuntimeError: JS8Call config file section does not exist (likely because JS8Call has not been run and configured after installation)
@@ -272,14 +270,6 @@ class Client:
         self.offset.enable()
         self.outgoing.enable()
         self.schedule.enable()
-
-        if (
-            heartbeat and
-            self.settings.heartbeat_networking_enabled() and
-            self.settings.transmit_enabled() and
-            self.settings.get_speed() != 'turbo'
-        ):
-            self.heartbeat.enable()
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
