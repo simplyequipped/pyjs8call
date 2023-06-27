@@ -1455,7 +1455,7 @@ class Settings:
         Returns:
             int: Heartbeat networking time interval in minutes
         '''
-        return self.config.get('Common', 'HBInterval', int)
+        return self._client.config.get('Common', 'HBInterval', int)
         
     def set_heartbeat_interval(self, interval):
         '''Set the heartbeat networking interval.
@@ -1468,7 +1468,7 @@ class Settings:
         Returns:
             int: Current heartbeat networking time interval in minutes
         '''
-        return self.config.set('Common', 'HBInterval', interval)
+        return self._client.config.set('Common', 'HBInterval', interval)
         
     def enable_heartbeat_acknowledgements(self):
         '''Enable heartbeat acknowledgements via config file.
@@ -1901,7 +1901,7 @@ class Settings:
         Returns:
             bool: True if distance units are set to miles, False if km
         '''
-        return self._client.config.get('Configuration', 'Miles', value_type=bool)
+        return self._client.config.get('Configuration', 'Miles', bool)
         
     def set_distance_units_miles(self, units_miles):
         '''Set JS8Call distance unit setting.
