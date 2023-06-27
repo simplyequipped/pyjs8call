@@ -22,7 +22,7 @@
 
 '''Manage outgoing heartbeat network messaging.
 
-Heartbeat networking cannot be started while running JS8Call headless. This module recreates basic outgoing heartbeat network messaging while running headless. This module only sends heartbeat messages on a time interval in the heartbeat sub-band. Automatic replies such as heartbeat acknowledgements are handled by the JS8Call application.
+JS8Call heartbeat networking cannot be started while running the application headless, since a button click on the user intefrace is required. This module recreates basic outgoing heartbeat network messaging while running headless. This module only sends heartbeat messages on a time interval in the heartbeat sub-band. Automatic replies such as heartbeat acknowledgements are handled by the JS8Call application.
 '''
 
 __docformat__ = 'google'
@@ -37,9 +37,11 @@ from pyjs8call import OffsetMonitor, Message
 class HeartbeatNetworking:
     '''Manage outgoing heartbeat network messaging.
 
-    Send heartbeat messages automatically on a time interval. The JS8Call offset frequency will automatically change to an available offset in the heartbeat sub-band (500 - 1000 Hz) during transmit, and back to the previous offset at the end of the rx/tx cycle. If no frequency is determined to be available, or if there is no recent activity, a random frequency in the heartbeat sub-band is used.
+    Send heartbeat messages automatically on a time interval. The JS8Call offset frequency will automatically change to an available offset in the heartbeat sub-band (500 - 1000 Hz) during transmit, and back to the previous offset at the end of the transmission. If no frequency is determined to be available (lots of recent activity), or if there is no recent activity, a random frequency in the heartbeat sub-band is selected. This is consistent with JS8Call heartbeat offset frequency selection.
 
-    Outgoing activity via pyjs8call will reset the timer for the next heartbeat message.
+    The heartbeat time interval is read from the JS8Call config file. See *Client.settings.set_heartbeat_interval()* to set the time interval. The time interval can be changed while pyjs8call heartbeat networking is enabled.
+
+    Outgoing message activity (including JS8Call autoreplies) will reset the timer for the next heartbeat message. This is consistent with JS8Call funtionality.
     '''
     def __init__(self, client):
         '''Initialize heartbeat networking object.
@@ -73,12 +75,8 @@ class HeartbeatNetworking:
         '''
         return self._paused
 
-    def enable(self, interval=10):
-        '''Enable heartbeat networking.
-
-        Args:
-            interval (int): Number of minutes between outgoing messages, defaults to 10
-        '''
+    def enable(self):
+        '''Enable heartbeat networking.'''
         if self._enabled:
             return
 
@@ -95,21 +93,21 @@ class HeartbeatNetworking:
         self._offset.pause()
         self._offset.enable()
 
-        thread = threading.Thread(target=self._monitor, args=(interval,))
+        thread = threading.Thread(target=self._monitor)
         thread.daemon = True
         thread.start()
 
     def disable(self):
-        '''Disable heartbeat monitoring.'''
+        '''Disable heartbeat networking.'''
         self._enabled = False
         self._offset.disable()
 
     def pause(self):
-        '''Pause heartbeat monitoring.'''
+        '''Pause heartbeat networking.'''
         self._paused = True
 
     def resume(self):
-        '''Resume heartbeat monitoring.'''
+        '''Resume heartbeat networking.'''
         self._last_outgoing = time.time()
         self._paused = False
 
@@ -117,16 +115,17 @@ class HeartbeatNetworking:
         '''Process outgoing heartbeat message state.'''
         self._outgoing_msg = msg
 
-    def _monitor(self, interval):
-        '''Heartbeat monitor thread.'''
-        interval *= 60 # minutes to seconds
-
+    def _monitor(self):
+        '''Heartbeat interval monitor thread.'''
         while self._enabled:
             time.sleep(1)
 
             # wait for accurate window timing
             if self._client.window.next_transition_seconds() is None:
                 continue
+
+            # update interval from config
+            interval = self._client.settings.get_heartbeat_interval() * 60 # minutes to seconds
 
             # skip heartbeating if paused or there has been recent outgoing activity
             if (self._last_outgoing + interval) > time.time() or self._paused:
