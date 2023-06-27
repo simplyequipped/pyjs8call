@@ -26,6 +26,7 @@
 '''
 
 __docformat__ = 'google'
+__version__ = '0.2.2-dev'
 
 
 from pyjs8call.offsetmonitor import OffsetMonitor
