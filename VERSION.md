@@ -1,5 +1,16 @@
 ### Versions
 
+**0.2.2**
+- Fix intermittent transmission of heartbeat messages outside of sub-band
+- Improve pyjs8call heartbeat interval timing
+- Utilize config file heartbeat interval
+- Prevent pyjs8call heartbeat networking in turbo mode
+- Auto-start pyjs8call heartbeat networking if enabled in config file
+- Add functions to get state of enable/disable settings in *pyjs8call.client.settings*
+- Update *pyjs8call.message* autoreply commands
+- Detect JS8Call autoreplies as out-going activity
+- Prevent past schedule entries running when pyjs8call.client.schedule* re-enabled
+
 **0.2.1**
 - Fix *pyjs8call.Message.text* being overwritten during object initialization
 - Fix intermittent *NoneType* error in *pyjs8call.js8call* transmit function
