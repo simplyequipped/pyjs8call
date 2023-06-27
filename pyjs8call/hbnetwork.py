@@ -131,8 +131,8 @@ class HeartbeatNetworking:
             window = self._client.settings.get_window_duration()
 
             # skip heartbeating if paused or there has been recent outgoing activity
-            # subtract half of window duration to prevent bumping to next window
-            if (self._last_outgoing + interval - (window/2)) > time.time() or self._paused:
+            # subtract window duration to prevent bumping to next window after interval
+            if (self._last_outgoing + interval - window) > time.time() or self._paused:
                 continue
 
             # no heartbeat in turbo mode
