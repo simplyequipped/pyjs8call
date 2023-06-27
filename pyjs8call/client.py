@@ -1989,15 +1989,22 @@ class Settings:
 
         return info
 
-    def set_station_info(self, info):
+    def set_station_info(self, info, append_pyjs8call=False):
         '''Set JS8Call station information.
+
+        If *append_pyjs8call* is *True* a string like ', PYJS8CALL V0.0.0' is appended to the provided station info.
+        Example: 'QRP-LABS QDX, 40M DIPOLE 33FT, PYJS8CALL V0.2.2'
 
         Args:
             info (str): Station information
+            append_pyjs8call (bool): Append pyjs8call info to station info if True, defaults to False
 
         Returns:
             str: JS8Call configured station information
         '''
+        if append_pyjs8call:
+            info = '{}, PYJS8CALL {}'.format(info, pyjs8call.__version__)
+            
         msg = Message()
         msg.type = Message.STATION_SET_INFO
         msg.value = info
