@@ -160,15 +160,19 @@ class HeartbeatNetworking:
             # pause main offset monitor
             main_offset_is_paused = self._client.offset.paused()
             self._client.offset.pause()
-            last_offset = self._client.settings.get_offset()
+            last_offset = self._client.offset.offset
 
-            # if no free heartbeat offset or no activity, use pre-set random offset
-            # offset monitor skips offset processing if no free specturm or no activity
-            max_offset = self._offset.max_offset - self._offset.bandwidth
-            hb_offset = random.randrange(self._offset.min_offset, max_offset)
-            self._client.settings.set_offset(hb_offset)
             # resume heartbeat offset monitor
             self._offset.resume()
+            # heartbeat offset monitor runs at 0.5 seconds before transition
+            self._client.window.sleep_until_next_transition(before = 0.25)
+            
+            # heartbeat offset monitor skips offset processing if no free specturm or no activity
+            # set random offset if offset is outside heartbeat sub-band
+            max_offset = self._offset.max_offset - self._offset.bandwidth
+            if self._offset.min_offset > self._offset.offset > max_offset:
+                hb_offset = random.randrange(self._offset.min_offset, max_offset)
+                self._client.settings.set_offset(hb_offset)
 
             # send heartbeat on next rx/tx window
             hb_msg = self._client.send_heartbeat()
