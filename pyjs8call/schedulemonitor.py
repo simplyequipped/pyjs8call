@@ -52,6 +52,8 @@ class ScheduleEntry:
     Do not use this object to create a schedule entry directly. See ScheduleMonitor.add().
 
     This object is passed to the *client.callback.schedule* callback function when a schedule entry is activated.
+
+    This object is also passed to the *ScheduleEntry.callback* fallback function when that schedule entry is activated.
     
     String (str) format:
         {time}L | {state: <8} | {freq_mhz: <11} | {speed: <6} | {profile}
@@ -68,14 +70,17 @@ class ScheduleEntry:
             '<ScheduleEntry 10:00L : 14.078 MHz : fast : FT857>'
     '''
 
-    def __init__(self, start, freq, speed, profile):
+    def __init__(self, start, freq, speed, profile, callback):
         '''Initialize schedule entry.
+
+        *callback* signature: *func(schedule)* where *schedule* is the *ScheduleEntry* object being activated.
 
         Args:
             start (str): Start time as *datetime.time* object
             freq (int): Dial frequency in Hz
             speed (str): Modem speed ('slow', 'normal', 'fast', 'turbo')
             profile (str): Configuration profile name
+            callback (func): Function to call when the schedule entry becomes active
 
         Returns:
             pyjs8call.schedulemonitor.ScheduleEntry: Constructed schedule entry
@@ -84,17 +89,9 @@ class ScheduleEntry:
         self.start = start
         self.freq = freq
         self.speed = speed
+        self.callback = callback
         self.active = False
         self.run = False
-
-    def __eq__(self, schedule):
-        '''Equality test.'''
-        return bool(
-            self.profile == schedule.profile and
-            self.start == schedule.start and
-            self.freq == schedule.freq and
-            self.speed == schedule.speed
-        )
     
     def dict(self):
         '''Get dictionary representation of shedule entry.
@@ -122,6 +119,15 @@ class ScheduleEntry:
             'state': 'active' if self.active else 'inactive',
             'run': self.run
         }
+
+    def __eq__(self, schedule):
+        '''Equality test.'''
+        return bool(
+            self.profile == schedule.profile and
+            self.start == schedule.start and
+            self.freq == schedule.freq and
+            self.speed == schedule.speed
+        )
     
     def __repr__(self):
         '''Get schedule entry object representation.'''
@@ -212,7 +218,7 @@ class ScheduleMonitor:
         '''Resume schedule monitoring.'''
         self._paused = False
 
-    def add(self, start_time, freq=None, speed=None, profile=None):
+    def add(self, start_time, freq=None, speed=None, profile=None, callback=None):
         '''Add new schedule entry.
 
         Args:
@@ -220,6 +226,7 @@ class ScheduleMonitor:
             freq (int): Dial frequency in Hz, defaults to current frequency
             speed (str): Modem speed ('slow', 'normal', 'fast', 'turbo'), defaults to current speed
             profile (str): Configuration profile name, defaults to the current profile
+            callback (func): Function to call when the schedule entry becomes active, defaults to None
         '''
         start_time = datetime.datetime.strptime(start_time, '%H:%M').time()
         now = datetime.datetime.now().time()
@@ -233,7 +240,7 @@ class ScheduleMonitor:
         if profile is None:
             profile = self._client.settings.get_profile()
 
-        new_schedule = ScheduleEntry(start_time, freq, speed, profile)
+        new_schedule = ScheduleEntry(start_time, freq, speed, profile, callback)
 
         # avoid running past schedule entry immediately after creation
         if new_schedule.start < now:
@@ -293,12 +300,15 @@ class ScheduleMonitor:
 
     def _callback(self, schedule):
         '''Callback handling function.'''
-        if self._client.callback.schedule is None:
-            return
-
-        thread = threading.Thread(target=self._client.callback.schedule, args=(schedule,))
-        thread.daemon = True
-        thread.start()
+        if schedule.callback is not None:
+            thread = threading.Thread(target=schedule.callback, args=(schedule,))
+            thread.daemon = True
+            thread.start()
+            
+        if self._client.callback.schedule is not None:
+            thread = threading.Thread(target=self._client.callback.schedule, args=(schedule,))
+            thread.daemon = True
+            thread.start()
 
     def _monitor(self):
         '''Schedule monitor loop.'''
@@ -358,4 +368,3 @@ class ScheduleMonitor:
                         self._callback(schedule)
 
             reset_run = False
-
