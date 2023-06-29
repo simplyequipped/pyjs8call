@@ -1989,21 +1989,16 @@ class Settings:
 
         return info
 
-    def set_station_info(self, info, append_pyjs8call=False):
+    def set_station_info(self, info):
         '''Set JS8Call station information.
-
-        If *append_pyjs8call* is *True* a string like ', PYJS8CALL V0.0.0' is appended to the provided station info.
-        Example: 'QRP-LABS QDX, 40M DIPOLE 33FT, PYJS8CALL V0.2.2'
 
         Args:
             info (str): Station information
-            append_pyjs8call (bool): Append pyjs8call info to station info if True, defaults to False
 
         Returns:
             str: JS8Call configured station information
         '''
         if append_pyjs8call:
-            info = '{}, PYJS8CALL {}'.format(info, pyjs8call.__version__)
             
         msg = Message()
         msg.type = Message.STATION_SET_INFO
@@ -2011,6 +2006,27 @@ class Settings:
         self._client.js8call.send(msg)
         time.sleep(self._client._set_get_delay)
         return self.get_station_info(update = True)
+
+    def append_pyjs8call_to_station_info(self):
+        '''Append pyjs8call info to station info
+
+        A string like ', PYJS8CALL V0.0.0' is appended to the current station info.
+        Example: 'QRPLABS QDX, 40M DIPOLE 33FT, PYJS8CALL V0.2.2'
+
+        If a string like ', PYJS8CALL' or ',PYJS8CALL' is found in the current station info, that substring (and everything after it) is dropped before appending the new pyjs8call info.
+
+        Returns:
+            str: JS8Call configured station information
+        '''
+        info = self.get_station_info().upper()
+        
+        if ', PYJS8CALL' in info:
+            info = info.split(', PYJS8CALL')[0]
+        elif ',PYJS8CALL' in info:
+            info = info.split(',PYJS8CALL')[0]
+            
+        info = '{}, PYJS8CALL {}'.format(info, pyjs8call.__version__)
+        return self.set_station_info(info)
 
     def get_bandwidth(self, speed=None):
         '''Get JS8Call signal bandwidth based on modem speed.
