@@ -1998,8 +1998,6 @@ class Settings:
         Returns:
             str: JS8Call configured station information
         '''
-        if append_pyjs8call:
-            
         msg = Message()
         msg.type = Message.STATION_SET_INFO
         msg.value = info
