@@ -169,10 +169,10 @@ class HeartbeatNetworking:
             
             # heartbeat offset monitor skips offset processing if no free specturm or no activity
             # set random offset if offset is outside heartbeat sub-band
-            max_offset = self._offset.max_offset - self._offset.bandwidth
-            if self._offset.min_offset > self._offset.offset > max_offset:
-                hb_offset = random.randrange(self._offset.min_offset, max_offset)
-                self._client.settings.set_offset(hb_offset)
+            #max_offset = self._offset.max_offset - self._offset.bandwidth
+            #if self._offset.min_offset > self._offset.offset > max_offset:
+            #    hb_offset = random.randrange(self._offset.min_offset, max_offset)
+            #    self._client.settings.set_offset(hb_offset)
 
             # send heartbeat on next rx/tx window
             hb_msg = self._client.send_heartbeat()

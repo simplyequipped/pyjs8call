@@ -31,6 +31,7 @@ __docformat__ = 'google'
 
 
 import threading
+import random
 
 
 class OffsetMonitor:
@@ -340,10 +341,22 @@ class OffsetMonitor:
             self.bandwidth = self._client.settings.get_bandwidth()
             self.offset = self._client.settings.get_offset(update=True)
 
+            #TODO
+            print('offset: {}, min offset: {}, max offset: {}, hb: {}'.format(self.offset, self.min_offset, self.max_offset, self._hb))
+
             # force offset into specified pass band
-            if not self._hb and ( self.offset < self.min_offset or self.offset > (self.max_offset - self.bandwidth) ):
-                mid_range = ((self.max_offset - self.min_offset) / 2) + self.min_offset
-                self.offset = self._client.settings.set_offset(mid_range)
+            if self.offset < self.min_offset or self.offset > (self.max_offset - self.bandwidth):
+                if self._hb:
+                    # random offset in heartbeat sub-band
+                    new_offset = random.randrange(self.min_offset, self.max_offset - self.bandwidth)
+                else:
+                    # middle of pass band
+                    new_offset = ((self.max_offset - self.min_offset) / 2) + self.min_offset
+
+                #TODO
+                print('new offset: {}'.format(new_offset))
+
+                self.offset = self._client.settings.set_offset(new_offset)
 
             # get recent spots
             activity_age = int(self.activity_cycles * self._client.settings.get_window_duration())
