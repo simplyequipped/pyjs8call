@@ -286,38 +286,38 @@ class OffsetMonitor:
         # keep track of unused_spectrum position after distance sort
         i = 0
         for lower_limit, upper_limit in unused_spectrum:
-            if upper_limit < self.offset:
+            # distance tuple index 0 = unused spectrum index
+            # distance tuple index 1 = distance from current offset
+            # distance tuple index 2 = direction from current offset
+            if upper_limit <= (self.offset + self.bandwidth):
                 # below the current offset
-                distance.append( (i, self.offset - upper_limit) )
-            elif lower_limit > self.offset:
+                distance.append( (i, self.offset - upper_limit, 'down') )
+            elif lower_limit >= self.offset:
                 # above the current offset
-                distance.append( (i, lower_limit - self.offset) )
+                distance.append( (i, lower_limit - self.offset, 'up') )
 
             i += 1
 
-        # sort by distance from current offset
-        distance.sort(key = lambda dist: dist[1])
-
-        try:
-            # index of nearest unused section
-            nearest = distance[0][0]
-        except IndexError:
+        if len(distance) == 0:
             return None
 
-        # use nearest unused section
+        # sort by distance from current offset
+        distance.sort(key = lambda dist: dist[1])
+        # index of nearest unused spectrum
+        nearest = distance[0][0]
+        # direction to nearest unused spectrum from current offset
+        direction = distance[0][2]
+        # nearest unused section limits
         lower_limit = unused_spectrum[nearest][0]
         upper_limit = unused_spectrum[nearest][1]
-
         safe_bandwidth = self.bandwidth * self.bandwidth_safety_factor
 
-        # move offset up the spectrum to the beginning of the next unused section
-        if lower_limit > self.offset:
+        if direction == 'up':
+            # move offset up the spectrum to the beginning of the next unused section
             return int(lower_limit + (safe_bandwidth - self.bandwidth))
-
-        # move offset down the spectrum to the end of the next unused section
-        elif upper_limit < self.offset:
+        elif direction == 'down':
+            # move offset down the spectrum to the end of the next unused section
             return int(upper_limit - safe_bandwidth)
-
         else:
             return None
             
@@ -329,6 +329,7 @@ class OffsetMonitor:
         while self._enabled:
             # wait until just before the end of the rx/tx window
             self._client.window.sleep_until_next_transition(before = self.before_transition)
+            new_offset = None
 
             if self._paused:
                 continue
@@ -337,57 +338,49 @@ class OffsetMonitor:
             if self._client.js8call.activity():
                 continue
 
-            # get the current settings
+            # get current settings
             self.bandwidth = self._client.settings.get_bandwidth()
             self.offset = self._client.settings.get_offset(update=True)
-
-            #TODO
-            print('offset: {}, min offset: {}, max offset: {}, hb: {}'.format(self.offset, self.min_offset, self.max_offset, self._hb))
 
             # force offset into specified pass band
             if self.offset < self.min_offset or self.offset > (self.max_offset - self.bandwidth):
                 if self._hb:
                     # random offset in heartbeat sub-band
-                    new_offset = random.randrange(self.min_offset, self.max_offset - self.bandwidth)
+                    self.offset = random.randrange(self.min_offset, self.max_offset - self.bandwidth)
                 else:
                     # middle of pass band
-                    new_offset = ((self.max_offset - self.min_offset) / 2) + self.min_offset
-
-                #TODO
-                print('new offset: {}'.format(new_offset))
-
-                self.offset = self._client.settings.set_offset(new_offset)
+                    self.offset = ((self.max_offset - self.min_offset) / 2) + self.min_offset
 
             # get recent spots
             activity_age = int(self.activity_cycles * self._client.settings.get_window_duration())
             activity = self._client.spots.filter(age = activity_age) 
 
-            # skip processing if there is no activity
-            if len(activity) == 0:
-                continue
+            if len(activity) > 0:
+                # process activity into signal tuples (min_freq, max_freq)
+                signals = self.parse_activity(activity)
 
-            # process activity into signal tuples (min_freq, max_freq)
-            signals = self.parse_activity(activity)
+                # check for signals overlapping our signal
+                overlap = False
+                for signal in signals:
+                    if self.signal_overlapping(*signal):
+                        overlap = True
+                        break
 
-            # check for signals overlapping our signal
-            overlap = False
-            for signal in signals:
-                if self.signal_overlapping(*signal):
-                    overlap = True
-                    break
+                if overlap:
+                    # find unused spectrum (between heard signals)
+                    unused_spectrum = self.find_unused_spectrum(signals)
 
-            if overlap:
-                # find unused spectrum (between heard signals)
-                unused_spectrum = self.find_unused_spectrum(signals)
+                    if len(unused_spectrum) > 0:
+                        # find nearest unused spectrum and determine new offset
+                        new_offset = self.find_new_offset(unused_spectrum)
 
-                # if no unused spectrum, stop processing
-                if len(unused_spectrum) == 0:
-                    continue
-
-                # find nearest unused spectrum and determine new offset
-                new_offset = self.find_new_offset(unused_spectrum)
-
-                if new_offset is not None:
-                    # set new offset
-                    self.offset = self._client.settings.set_offset(new_offset)
+            # set new offset
+            if new_offset is not None:
+                self.offset = self._client.settings.set_offset(new_offset)
+            elif self.offset != self._client.settings.get_offset():
+                # offset needs changed to be in specified band
+                self.offset = self._client.settings.set_offset(self.offset)
+                
+            # ensure loop only runs once per window
+            self._client.window.sleep_until_next_transition()
 

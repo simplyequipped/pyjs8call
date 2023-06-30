@@ -91,7 +91,7 @@ class HeartbeatNetworking:
         self._offset.max_offset = 1000
         self._offset.bandwidth_safety_factor = 1.1
         self._offset.activity_cycles = 4
-        self._offset.before_transition = 0.5
+        #self._offset.before_transition = 1
         self._offset.pause()
         self._offset.enable()
 
@@ -129,7 +129,7 @@ class HeartbeatNetworking:
             # update interval from config
             interval = self._client.settings.get_heartbeat_interval() * 60 # minutes to seconds
             # subtract window duration to prevent bumping to next window after interval
-            interval -= self._client.settings.get_window_duration()
+            interval -= self._client.settings.get_window_duration() + self._offset.before_transition
 
             # skip heartbeating if paused or there has been recent outgoing activity
             if (self._last_outgoing + interval) > time.time() or self._paused:
@@ -139,10 +139,18 @@ class HeartbeatNetworking:
             if self._client.settings.get_speed() == 'turbo':
                 continue
 
-            # if we made it this far we are ready to send a heartbeat
+            # if we made it this far we are ready to send a heartbeat, wait for end of rx/tx window
 
-            self._client.window.sleep_until_next_transition(before = 0.75)
+            #TODO
+            #next_transition = self._client.window.next_transition_seconds()
+            #print('wait for end of window: {} sec'.format(next_transition))
+
+            self._client.window.sleep_until_next_transition(before = 1.5)
             
+            #TODO
+            #next_transition = self._client.window.next_transition_seconds()
+            #print('1.5 sec before end of window: {} sec'.format(next_transition))
+
             # allow disable as late as possible
             if not self._enabled:
                 return
@@ -164,15 +172,17 @@ class HeartbeatNetworking:
 
             # resume heartbeat offset monitor
             self._offset.resume()
-            # heartbeat offset monitor runs at 0.5 seconds before transition
+            # heartbeat offset monitor runs 1 second before transition
+
+            #TODO
+            #next_transition = self._client.window.next_transition_seconds()
+            #print('hb offset resumed: {} sec'.format(next_transition))
+
             self._client.window.sleep_until_next_transition(before = 0.25)
             
-            # heartbeat offset monitor skips offset processing if no free specturm or no activity
-            # set random offset if offset is outside heartbeat sub-band
-            #max_offset = self._offset.max_offset - self._offset.bandwidth
-            #if self._offset.min_offset > self._offset.offset > max_offset:
-            #    hb_offset = random.randrange(self._offset.min_offset, max_offset)
-            #    self._client.settings.set_offset(hb_offset)
+            #TODO
+            #next_transition = self._client.window.next_transition_seconds()
+            #print('sending hb: {} sec'.format(next_transition))
 
             # send heartbeat on next rx/tx window
             hb_msg = self._client.send_heartbeat()
@@ -185,6 +195,10 @@ class HeartbeatNetworking:
             ):
                 time.sleep(0.1)
                 
+            #TODO
+            #next_transition = self._client.window.next_transition_seconds()
+            #print('hb sent: {} sec\n'.format(next_transition))
+
             self._last_outgoing = time.time()
             self._offset.pause()
             self._client.settings.set_offset(last_offset)
