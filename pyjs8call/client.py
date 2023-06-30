@@ -480,7 +480,7 @@ class Client:
             pyjs8call.message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
-        msg = Message(value = message)
+        msg = Message(value = message, origin = self.settings.get_station_callsign())
         
         # custom processing of outgoing messages
         if self.process_outgoing is not None:
@@ -513,7 +513,7 @@ class Client:
             message (str): Message text to send, defaults to None
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
-        msg = Message(destination, command, message)
+        msg = Message(destination, command, message, self.settings.get_station_callsign())
         
         # custom processing of outgoing messages
         if self.process_outgoing is not None:
@@ -548,7 +548,7 @@ class Client:
             pyjs8call.message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
-        msg = Message(destination = destination, value = message)
+        msg = Message(destination, value = message, origin = self.settings.get_station_callsign())
         
         # custom processing of outgoing messages
         if self.process_outgoing is not None:
