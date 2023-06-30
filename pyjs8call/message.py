@@ -30,8 +30,9 @@ __docformat__ = 'google'
 
 import json
 import time
-from datetime import datetime, timezone
+import math
 import secrets
+from datetime import datetime, timezone
 
 
 class Message:
@@ -332,13 +333,40 @@ class Message:
     EOM = '♢'   # end of message, end of transmission
     ERR = '…'   # error
 
-    def __init__(self, destination=None, cmd=None, value=None):
+    @staticmethod
+    def is_compound_callsign(callsign):
+        '''Whether specified callsign is compound type.
+
+        A callsign is compound if it contains '@' (groups) or '/' (ex. KT7RUN/P).
+
+        Args:
+            callsign (str): Callsign to evaluate
+
+        Returns:
+            bool: *True* if callsign is compound, *False* otherwise
+        '''
+        # relay paths are stored as a list
+        if callsign in (None, '') or type(callsign) == list:
+            return False
+
+        compound_symbols = '/@'
+        
+        for symbol in compound_symbols:
+            if symbol in callsign:
+                return True
+
+        return False
+
+    def __init__(self, destination=None, cmd=None, value=None, origin=None):
         '''Initialize message.
+
+        For outgoing messages, *origin* is used to calculate number of frames.
 
         Args:
             destination (bool): Callsign to send the message to, defaults to None
             cmd (str): Command to use in message, defaults to None (see static commands)
             value (str): Message text to send, defaults to None
+            origin (str): Local station callsign, defaults to None
 
         Returns:
             pyjs8call.message: Constructed message object
@@ -383,6 +411,7 @@ class Message:
         self.set('destination', destination)
         self.set('cmd', cmd)
         self.set('value', value)
+        self.set('origin', origin)
         self.set('time', datetime.now(timezone.utc).timestamp())
         self.set('timestamp', time.time())
         self.set('local_time_str', '{}L'.format(time.strftime('%X', time.localtime(self.get('timestamp')))))
@@ -714,6 +743,85 @@ class Message:
         for attribute, value in json.loads(msg_str).items():
             self.set(attribute, value)
 
+    def frame_count(self):
+        '''Determine number of JS8Call frames required to transmit.
+
+        Number of frames multipled by the rx/tx window duration equals the message transmit time.
+
+        Returns:
+            int: Number of frames
+        '''
+        #TODO
+        # - test if SCDC frame count is approximate for huff encoding (normal mode)
+        # - does own callsign get prepended to each data frame and parsed out on receive?
+        # - do directed commands like SNR and GRID with a value after the cmd send in one frame?
+        # - calculate relay path frame count
+
+        # only process outgoing user message types
+        if not (self.type in Message.TX_TYPES and self.type in Message.USER_MSG_TYPES):
+            return None
+
+        frames = 0
+        relay = False
+        compound = any(
+            self.is_compound_callsign(self.origin),
+            self.is_compound_callsign(self.destination)
+        )
+
+        heartbeat_commands = [
+            Message.CMD_HB,
+            Message.CMD_HEARTBEAT,
+            Mesage.CMD_HEARTBEAT_SNR,
+            Message.CMD_CQ
+        ]
+
+        if type(self.destination) == list:
+            relay_destination = True
+            #TODO calculate relay path frame count
+            frames += len(self.destination)
+
+        # heartbeat, cq, or other command with no attached data, and no compound callsigns
+        # (i.e. directed command)
+        # heartbeat and cq group callsigns are compound, but still sent in one frame
+        if self.cmd in heartbeat_commands or (self.cmd in Message.COMMANDS and not compound):
+            frames += 1
+
+        # command with no attached data, but with compound callsigns
+        # (i.e. compound directed command)
+        # group callsigns or callsigns with '/' are compound callsigns
+        elif self.cmd in Message.COMMANDS and compound:
+            frames += 2
+
+        #TODO do directed commands like SNR and GRID with a value after the cmd send in one frame?
+        # no data, no relay, only directed command
+        if self.text in (None, '') and not relay:
+            return frames
+            
+        # calculate data frames
+        if self.text not in (None, ''):
+            if self.cmd is None:
+                # two spaces
+                # see directed message handling in dict()
+                spaces = '  '
+            else:
+                # one space
+                # see directed message handling in dict()
+                spaces = ' '
+
+            if self.cmd in Message.CHECKSUM_COMMANDS or relay:
+                # for length calculation only
+                checksum = ' ABC'
+            else:
+                checksum = ''
+
+            num_characters = len(self.text) + len(spaces) + len(checksum)
+            # js8call (s,c) dense coding uses 4 bits per character
+            num_bits = num_characters * 4
+            # js8call uses 70 bits out of each 72 bit frame for data
+            frames += math.ceil(num_bits / 70)
+            
+        return frames            
+
     def __eq__(self, msg):
         '''Whether another message is considered equal to self.
 
@@ -726,7 +834,7 @@ class Message:
             msg (pyjs8call.message): Message to compare
 
         Returns:
-            bool: Whether the two messages are considered equal
+            bool: *True* if the two messages are considered equal, *False* otherwise
         '''
         if not isinstance(msg, Message):
             return False
@@ -751,7 +859,7 @@ class Message:
             msg (pyjs8call.message): Message to compare
 
         Returns:
-            bool: Whether self.timestamp is less than the specified msg.timestamp
+            bool: *True* if self.timestamp is less than the specified msg.timestamp, *False* otherwise
         '''
         return bool(self.timestamp < msg.timestamp)
 
@@ -764,7 +872,7 @@ class Message:
             msg (pyjs8call.message): Message to compare
 
         Returns:
-            bool: Whether self.timestamp is greater than the specified msg.timestamp
+            bool: *True* if self.timestamp is greater than the specified msg.timestamp, *False* otherwise
         '''
         return bool(self.timestamp > msg.timestamp)
 
