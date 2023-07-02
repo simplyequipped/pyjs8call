@@ -303,7 +303,6 @@ class Message:
     CMD_QSL                 = ' QSL'
     CMD_QSL_Q               = ' QSL?'
     CMD_CMD                 = ' CMD'
-    CMD_SNR                 = ' SNR'
     CMD_73                  = ' 73'
     CMD_RELAY               = '>'
     CMD_Q                   = '?'
@@ -316,7 +315,7 @@ class Message:
 
     AUTOREPLY_COMMANDS = [CMD_HEARTBEAT_SNR, CMD_SNR, CMD_GRID, CMD_INFO, CMD_STATUS, CMD_HEARING, CMD_NO, CMD_YES, CMD_ACK, CMD_NACK]
 
-    CHECKSUM_COMMANDS = [CMD_RELAY, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_CMD]
+    CHECKSUM_COMMANDS = [CMD_RELAY, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_CALL, CMD_CMD]
 
     # status types
     STATUS_CREATED          = 'created'
@@ -329,9 +328,123 @@ class Message:
 
     STATUSES = [STATUS_CREATED, STATUS_QUEUED, STATUS_SENDING, STATUS_SENT, STATUS_FAILED, STATUS_RECEIVED, STATUS_ERROR]
 
-    # constants
     EOM = '♢'   # end of message, end of transmission
     ERR = '…'   # error
+
+    # special group callsigns
+    SPECIAL_GROUPS = [
+        "@ALLCALL",
+        "@JS8NET",
+        "@DX/NA",
+        "@DX/SA",
+        "@DX/EU",
+        "@DX/AS",
+        "@DX/AF",
+        "@DX/OC",
+        "@DX/AN",
+        "@REGION/1",
+        "@REGION/2",
+        "@REGION/3",
+        "@GROUP/0",
+        "@GROUP/1",
+        "@GROUP/2",
+        "@GROUP/3",
+        "@GROUP/4",
+        "@GROUP/5",
+        "@GROUP/6",
+        "@GROUP/7",
+        "@GROUP/8",
+        "@GROUP/9",
+        "@COMMAND",
+        "@CONTROL",
+        "@NET",
+        "@NTS",
+        "@RESERVE/0",
+        "@RESERVE/1",
+        "@RESERVE/2",
+        "@RESERVE/3",
+        "@RESERVE/4",
+        "@APRSIS",
+        "@RAGCHEW",
+        "@JS8",
+        "@EMCOMM",
+        "@ARES",
+        "@MARS",
+        "@AMRRON",
+        "@RACES",
+        "@RAYNET",
+        "@RADAR",
+        "@SKYWARN",
+        "@CQ",
+        "@HB",
+        "@QSO",
+        "@QSOPARTY",
+        "@CONTEST",
+        "@FIELDDAY",
+        "@SOTA",
+        "@IOTA",
+        "@POTA",
+        "@QRP",
+        "@QRO"
+    ]
+
+    CQS = [
+        "CQ CQ CQ",
+        "CQ DX",
+        "CQ QRP",
+        "CQ CONTEST",
+        "CQ FIELD",
+        "CQ FD",
+        "CQ CQ",
+        "CQ"
+    ]
+
+    _huff_table = {
+        ' ': '01',
+        'E': '100',
+        'T': '1101',
+        'A': '0011',
+        'O': '11111',
+        'I': '11100',
+        'N': '10111',
+        'S': '10100',
+        'H': '00011',
+        'R': '00000',
+        'D': '111011',
+        'L': '110011',
+        'C': '110001',
+        'U': '101101',
+        'M': '101011',
+        'W': '001011',
+        'F': '001001',
+        'G': '000101',
+        'Y': '000011',
+        'P': '1111011',
+        'B': '1111001',
+        '.': '1110100',
+        'V': '1100101',
+        'K': '1100100',
+        '-': '1100001',
+        '+': '1100000',
+        '?': '1011001',
+        '!': '1011000',
+        '"': '1010101',
+        'X': '1010100',
+        '0': '0010101',
+        'J': '0010100',
+        '1': '0010001',
+        'Q': '0010000',
+        '2': '0001001',
+        'Z': '0001000',
+        '3': '0000101',
+        '5': '0000100',
+        '4': '11110101',
+        '9': '11110100',
+        '8': '11110001',
+        '6': '11110000',
+        '7': '11101011',
+        '/': '11101010'
+    }
 
     @staticmethod
     def is_compound_callsign(callsign):
@@ -347,6 +460,9 @@ class Message:
         '''
         # relay paths are stored as a list
         if callsign in (None, '') or type(callsign) == list:
+            return False
+
+        if callsign in Message.SPECIAL_GROUPS:
             return False
 
         compound_symbols = '/@'
@@ -722,6 +838,19 @@ class Message:
         elif isinstance(station, list):
             return any( [self.is_directed_to(str(callsign)) for callsign in station] )
 
+    def is_relay(self):
+        '''Message is relayed.
+
+        Incoming relay message *path* attribute is a list. Outgoing relay message *destination* attribute is a list.
+
+        Returns:
+            bool: *True* if message is relayed, *False* otherwise
+        '''
+        if type(self.destination) == list or type(self.path) == list:
+            return True
+
+        return False
+
     def dump(self):
         '''Get object attributes as *str*.
 
@@ -754,71 +883,77 @@ class Message:
         #TODO
         # - test if SCDC frame count is approximate for huff encoding (normal mode)
         # - does own callsign get prepended to each data frame and parsed out on receive?
-        # - do directed commands like SNR and GRID with a value after the cmd send in one frame?
-        # - calculate relay path frame count
+        # - calculate relay path (destination list) frame count
+        # - handle various CQ types
 
         # only process outgoing user message types
         if not (self.type in Message.TX_TYPES and self.type in Message.USER_MSG_TYPES):
             return None
 
         frames = 0
-        relay = False
-        compound = any(
-            self.is_compound_callsign(self.origin),
-            self.is_compound_callsign(self.destination)
-        )
+        relay = self.is_relay()
 
         heartbeat_commands = [
             Message.CMD_HB,
             Message.CMD_HEARTBEAT,
-            Mesage.CMD_HEARTBEAT_SNR,
+            Message.CMD_HEARTBEAT_SNR,
             Message.CMD_CQ
         ]
 
-        if type(self.destination) == list:
-            relay_destination = True
-            #TODO calculate relay path frame count
-            frames += len(self.destination)
+        multi_frame_commands = Message.CHECKSUM_COMMANDS.copy()
+        multi_frame_commands.append(Message.CMD_GRID)
+        multi_frame_commands.append(Message.CMD_HEARING)
 
-        # heartbeat, cq, or other command with no attached data, and no compound callsigns
-        # (i.e. directed command)
-        # heartbeat and cq group callsigns are compound, but still sent in one frame
-        if self.cmd in heartbeat_commands or (self.cmd in Message.COMMANDS and not compound):
+        variable_data_commands = Message.CHECKSUM_COMMANDS.copy()
+        variable_data_commands.remove(Message.CMD_QUERY_CALL)
+        variable_data_commands.remove(Message.CMD_QUERY)
+
+        if (
+            self.cmd is not None and
+            self.cmd not in multi_frame_commands and
+            not relay
+        ):
+            frames += 1
+        elif self.cmd in [Message.CMD_QUERY, Message.CMD_GRID]:
+            frames += 2
+        elif self.cmd in [Message.CMD_QUERY_CALL]:
+            frames += 3
+        elif self.cmd in [Message.CMD_HEARING]:
+            frames += 5
+        else:
+            # callsign(s) in first frame
+            # origin only if destination is compound
+            # origin and destination if destination is standard
             frames += 1
 
-        # command with no attached data, but with compound callsigns
-        # (i.e. compound directed command)
-        # group callsigns or callsigns with '/' are compound callsigns
-        elif self.cmd in Message.COMMANDS and compound:
-            frames += 2
+        if self.is_compound_callsign(self.destination):
+            frames += 1
 
-        #TODO do directed commands like SNR and GRID with a value after the cmd send in one frame?
-        # no data, no relay, only directed command
-        if self.text in (None, '') and not relay:
+        # no data, or known frame length
+        if (
+            self.cmd is not None and
+            self.cmd not in variable_data_commands and
+            not relay
+        ):
             return frames
-            
+
         # calculate data frames
         if self.text not in (None, ''):
-            if self.cmd is None:
-                # two spaces
-                # see directed message handling in dict()
-                spaces = '  '
-            else:
-                # one space
-                # see directed message handling in dict()
-                spaces = ' '
+            text = self.text
+            bits = ''
 
             if self.cmd in Message.CHECKSUM_COMMANDS or relay:
                 # for length calculation only
-                checksum = ' ABC'
-            else:
-                checksum = ''
+                text += ' ABC'
 
-            num_characters = len(self.text) + len(spaces) + len(checksum)
-            # js8call (s,c) dense coding uses 4 bits per character
-            num_bits = num_characters * 4
-            # js8call uses 70 bits out of each 72 bit frame for data
-            frames += math.ceil(num_bits / 70)
+            for char in text:
+                if char in self._huff_table:
+                    bits += self._huff_table[char]
+
+            #TODO
+            print('prev frames: {}, bit len: {}, bits: {}'.format(frames, len(bits), bits))
+
+            frames += math.ceil(len(bits) / 70)
             
         return frames            
 
