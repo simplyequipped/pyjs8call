@@ -825,8 +825,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        cmd = Message.CMD_QUERY + Message.CMD_MSG
-        return self.send_directed_command_message(destination, cmd, str(msg_id))
+        return self.send_directed_command_message(destination, Message.CMD_QUERY, 'MSG {}'.format(msg_id))
 
     def query_hearing(self, destination):
         '''Send JS8Call hearing query.
