@@ -1171,7 +1171,8 @@ class Client:
                 data['origin'] = directed_parts[0].strip()
                 data['text'] = directed_parts[1].strip()
                 first_space = data['text'].find(' ')
-            
+
+                # double space
                 if '  ' in data['text']:
                     # directed message without command
                     directed_parts = data['text'].split('  ')
@@ -1181,7 +1182,7 @@ class Client:
                 elif first_space > 0:
                     # directed message with command
                     destination = data['text'][:first_space].strip()
-                    text = data['text'][first_space:].strip()
+                    text = data['text'][first_space:]
 
                     # look for command at begining of text to confirm destination/text split is correct
                     commands = Message.COMMANDS.copy()
