@@ -1170,7 +1170,6 @@ class Client:
                 directed_parts = data['text'].split(':')
                 data['origin'] = directed_parts[0].strip()
                 data['text'] = directed_parts[1].strip()
-                first_space = data['text'].find(' ')
 
                 # double space
                 if '  ' in data['text']:
@@ -1181,7 +1180,9 @@ class Client:
 
                 elif first_space > 0:
                     # directed message with command
+                    first_space = data['text'].find(' ')
                     destination = data['text'][:first_space].strip()
+                    # do not strip whitespace here, this removes leading space in command string
                     text = data['text'][first_space:]
 
                     # look for command at begining of text to confirm destination/text split is correct
