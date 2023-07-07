@@ -1129,45 +1129,69 @@ class Client:
         Returns:
             list: Messages from the rx text field
         '''
-        #TODO is command handling required?
+        # rx message structure:
+        # hh:mm:ss - (offset) - text
+        #   [0]        [1]      [2]
+        #    ^ index when split on '-'
 
         rx_text = self.get_rx_text()
         callsign = self.settings.get_station_callsign()
         msgs = rx_text.split('\n\n')
-        msgs = [m.strip(' ' + Message.EOM) for m in msgs if len(m.strip()) > 0]
+        msgs = [msg.strip(' ' + Message.EOM) for msg in msgs if len(msg.strip()) > 0]
 
         rx_messages = []
         for msg in msgs:
-            if '-' not in msg:
+            # check for first dash and opening offset parenthesis to avoid processing malformed text 
+            # this string avoids finding negative SNR values in message text
+            if ' - (' not in msg:
                 continue
 
-            #TODO
-            print(msg)
-
             parts = msg.split('-')
+            # handle dash/hyphen/negative in message text
+            if len(parts) > 3:
+                parts[2] = '-'.join(parts[2:])
+                parts = parts[:3]
+
             data = {}
 
             data['time'] = parts[0].strip()
             data['offset'] = int(parts[1].strip(' \n()'))
+            data['text'] = parts[2].strip()
+            data['origin'] = None
+            data['destination'] = None
 
-            if ':' not in parts[2]:
-                data['origin'] = None
-                data['destination'] = None
-                data['text'] = parts[2].strip()
-            else:
-                if '  ' in parts[2]:
-                    callsigns = parts[2].split('  ')[0].split(':')
-                    data['origin'] = callsigns[0].strip()
-                    data['destination'] = callsigns[1].strip()
-                    data['text'] = parts[2].split('  ')[1].strip()
-                elif '@HB' in parts[2]:
-                    data['origin'] = parts[2].split(':')[0].strip()
-                    data['destination'] = '@HB'
-                    data['text'] = parts[2].split('@HB')[1].strip()
-                else:
-                    data['origin'] = parts[2].split(':')[0].strip()
-                    data['destination'] = None
-                    data['text'] = parts[2].split(':')[1].strip()
+            if ':' in data['text']:
+                # directed message structure
+                #   origin: destination[ command] text
+                #   note: directed message without command has double space after destination
+                #
+                # free text with only origin falls through with no further processing
+
+                directed_parts = data['text'].split(':')
+                data['origin'] = directed_parts[0].strip()
+                data['text'] = directed_parts[1].strip()
+                first_space = data['text'].find(' ')
+            
+                if '  ' in data['text']:
+                    # directed message without command
+                    directed_parts = data['text'].split('  ')
+                    data['destination'] = directed_parts[0].strip()
+                    data['text'] = directed_parts[1].strip()
+
+                elif first_space > 0:
+                    # directed message with command
+                    destination = data['text'][:first_space].strip()
+                    text = data['text'][first_space:].strip()
+
+                    # look for command at begining of text to confirm destination/text split is correct
+                    commands = Message.COMMANDS.copy()
+                    commands.remove(Message.CMD_FREETEXT)
+                    commands.remove(Message.CMD_FREETEXT_2)
+
+                    for cmd in commands:
+                        if text.find(cmd) == 0:
+                            data['destination'] = destination
+                            data['text'] = text
 
             if not own and data['origin'] == callsign:
                 continue
