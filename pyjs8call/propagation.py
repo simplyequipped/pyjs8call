@@ -23,6 +23,8 @@
 '''Propagation analysis based on spot data.
 
 This module is initialized by pyjs8call.client.
+
+Set `client.callback.propagation` to receive new propagation analysis datasets.
 '''
 
 __docformat__ = 'google'
@@ -31,6 +33,8 @@ __docformat__ = 'google'
 import time
 import threading
 import statistics
+
+from pyjs8call import Message
 
 
 class Propagation:
@@ -47,8 +51,9 @@ class Propagation:
         self._propagation_data = {}
         self._propagation_data_lock = threading.Lock()
         
-        self.interval = 10 * 60 # minutes
-        self.wait_cycles = 5
+        self.interval = 10 * 60 # 10 minutes
+        self.wait_cycles = 5 # wait for heartbeat response
+        self.max_data_age = 3 * (24 * 60 * 60) # 3 days
 
     def enabled(self):
         '''Get enabled status.
@@ -91,6 +96,7 @@ class Propagation:
     def resume(self):
         '''Resume propagation analysis.'''
         self._paused = False
+
     def get_data(self, age=0, count=1):
         '''Get propagation analysis data set.
 
@@ -101,7 +107,9 @@ class Propagation:
             count (int): number of data sets to return, defaults to 1
             
         Returns:
-            dict or None: {'grids': {'GRID': SNR, ...}, 'origins': {'GRID': SNR, ...}}, or None if no data
+            dict: {'grids': {'GRID': SNR, ...}, 'origins': {'ORIGIN': SNR, ...}}
+
+            Returns None if there is no propagation data.
         '''
         if len(self._propagation_data) == 0:
             return None
@@ -112,8 +120,7 @@ class Propagation:
                 if len(self._propagation_data) <= count:
                     return self._propagation_data
                     
-                timestamps = self._propagation_data.keys()
-                timestamps = timestamps[:count]
+                timestamps = list(self._propagation_data.keys())[:count]
                 return {timestamp: value for timestamp, value in self._propagation_data.items() if timestamp in timestamps}
             else:
                 age *= 60 # minutes to seconds
@@ -127,9 +134,11 @@ class Propagation:
             count (int): number of data sets to return, defaults to 1
             
         Returns:
-            dict or None: {'grids': {'GRID': SNR, ...}, 'origins': {'GRID': SNR, ...}}, or None if no data
+            dict: {'grids': {'GRID': SNR, ...}, 'origins': {'ORIGIN': SNR, ...}}
+
+            Returns None if there is no propagation data.
         '''
-        data_sets = self.get_data_set(age, count)
+        data_sets = self.get_data(age, count)
         
         if data_sets is None:
             return None
@@ -138,14 +147,14 @@ class Propagation:
         origins = {}
 
         # build lists of snr data for each grid and origin callsign
-        for timestamp, data in data_sets:
-            for grid, snr in data['grids']:
+        for timestamp, data in data_sets.items():
+            for grid, snr in data['grids'].items():
                 if grid in grids:
                     grids[grid].append(snr)
                 else:
                     grids[grid] = [snr]
 
-            for origin, snr in data['origins']:
+            for origin, snr in data['origins'].items():
                 if origin in origins:
                     origins[origin].append(snr)
                 else:
@@ -153,7 +162,7 @@ class Propagation:
                         
         # calculate median snr for each grid and origin callsign
         grids = {grid: statistics.median(snrs) for grid, snrs in grids.items()}
-        origins = {origin: statistics.median(snrs) for origin, snrs in origin.items()}
+        origins = {origin: statistics.median(snrs) for origin, snrs in origins.items()}
         return {'grids': grids, 'origins': origins}
 
     def get_grid_snr(self, grid):
@@ -195,49 +204,89 @@ class Propagation:
                     if _origin == origin:
                         return (self._propagation_data[timestamp]['origins'][origin], timestamp)
 
+    def parse(self, spots):
+        '''Parse spots into median SNR dataset.
+
+        Args:
+            spots (list): List of pyjs8call.Message objects to analyse
+
+        Returns:
+            dict: {'grids': {'GRID': SNR, ...}, 'origins': {'ORIGIN': SNR, ...}}
+
+            Returns None if *spots* is an empty list.
+        '''
+        if len(spots) == 0:
+            return None
+            
+        grids = {}
+        origins = {}
+
+        # build lists of snr data for each grid and origin callsign
+        for spot in spots:
+            if spot.grid not in (None, ''):
+                if spot.grid in grids:
+                    grids[spot.grid].append(spot.snr)
+                else:
+                    grids[spot.grid] = [spot.snr]
+
+            if spot.origin not in (None, ''):
+                if spot.origin in origins:
+                    origins[spot.origin].append(spot.snr)
+                else:
+                    origins[spot.origin] = [spot.snr]
+
+        # calculate median snr for each grid and origin callsign
+        grids = {grid: statistics.median(snrs) for grid, snrs in grids.items()}
+        origins = {origin: statistics.median(snrs) for origin, snrs in origins.items()}
+        return {'grids': grids, 'origins': origins}
+
+    def _callback(self, dataset):
+        '''Call new propagation dataset callback function.'''
+        if self._client.callback.propagation is not None:
+            thread = threading.Thread(target = self._client.callback.propagation, args=(dataset,))
+            thread.daemon = True
+            thread.start()
+
     def _monitor(self):
-        ''''''
+        '''Monitor interval and perform propagation analysis.'''
         while self._enabled:
             self._client.window.sleep_until_next_transition()
+            
+            if not self._enabled:
+                return
+
+            if self._paused:
+                continue
+
             last_heartbeat = self._client.heartbeat.last_heartbeat
-            response_duration = self._client.get_window_duration() * self.wait_cycles # seconds
+            response_duration = self._client.settings.get_window_duration() * self.wait_cycles # seconds
             spot_age = self.interval + response_duration
 
+            #TODO use last_interval, combine with last_heartbeat? rethink logic that allows analysis to occur
             # allow heartbeat responses before performing propagation analysis
-            if last_heartbeat + response_duration < time.time():
+            if time.time() < last_heartbeat + response_duration:
                 continue
 
             spots = self._client.spots.filter(age = spot_age)
-            
-            if len(spots) == 0:
+            dataset = self.parse(spots)
+
+            if dataset is None:
                 continue
                 
-            grids = {}
-            origins = {}
-
-            # build lists of snr data for each grid and origin callsign
-            for spot in spots:
-                if spot.grid is not None:
-                    if spot.grid in grids:
-                        grids[spot.grid].append(spot.snr)
-                    else:
-                        grids[spot.grid] = [spot.snr]
-
-                if spot.origin is not None:
-                    if spot.origin in origins:
-                        origins[spot.origin].append(spot.snr)
-                    else:
-                        origins[spot.origin] = [spot.snr]
-
-            # calculate median snr for each grid and origin callsign
-            grids = {grid: statistics.median(snrs) for grid, snrs in grids.items()}
-            origins = {origin: statistics.median(snrs) for origin, snrs in origin.items()}
+            self._callback(dataset)
             timestamp = int(time.time())
-            
+
             with self._propagation_data_lock:
-                self._propagation_data[timestamp] = {'grids': grids, 'origins': origins}
+                # record new interval data
+                self._propagation_data[timestamp] = dataset
     
                 # sort propagation data to find most recent data first when searching
-                timestamps = self._propagation_data.keys()
+                timestamps = list(self._propagation_data.keys())
                 timestamps.sort(reverse = True)
-                self._propagation_data = {timestamp: unsorted_data[timestamp] for timestamp in timetamps}
+
+                # cull old propagation data
+                while timestamps[-1] < time.time() - self.max_data_age:
+                    timestamps.pop()
+
+                self._propagation_data = {timestamp: self._propagation_data[timestamp] for timestamp in timestamps}
+                    
