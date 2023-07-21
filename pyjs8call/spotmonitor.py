@@ -98,8 +98,7 @@ class SpotMonitor:
 
     def all(self):
         '''Get all stored spot messages.'''
-        with self._client.js8call._spots_lock:
-            return self._client.js8call.get_spots()
+        return self._client.js8call.get_spots()
 
     def filter(self, origin=None, destination=None, distance=0, age=0, count=0, profile=None):
         '''Get filtered spot messages.
@@ -120,16 +119,15 @@ class SpotMonitor:
             list: Spot messages matching specified filter criteria
         '''
         spots = []
-        with self._client.js8call._spots_lock:
-            for spot in self._client.js8call.get_spots():
-                if (
-                    (age == 0 or spot.age() <= age) and
-                    (distance == 0 or (spot.distance is not None and spot.distance <= distance)) and
-                    (origin is None or origin.upper() == spot.origin) and 
-                    (destination is None or destination.upper() == spot.destination) and
-                    (profile is None or profile == spot.profile)
-                ):
-                    spots.append(spot)
+        for spot in self._client.js8call.get_spots():
+            if (
+                (age == 0 or spot.age() <= age) and
+                (distance == 0 or (spot.distance is not None and spot.distance <= distance)) and
+                (origin is None or origin.upper() == spot.origin) and 
+                (destination is None or destination.upper() == spot.destination) and
+                (profile is None or profile == spot.profile)
+            ):
+                spots.append(spot)
 
         if 0 < count < len(spots):
             count *= -1
@@ -147,8 +145,7 @@ class SpotMonitor:
             list: Last *count* spot messages received
         '''
         count *= -1
-        with self._client.js8call._spots_lock:
-            return self._client.js8call.get_spots()[count:]
+        return self._client.js8call.get_spots()[count:]
 
     def add_station_watch(self, station):
         '''Add watched station.
