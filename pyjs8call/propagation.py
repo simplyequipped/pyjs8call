@@ -51,8 +51,10 @@ class Propagation:
         self._propagation_data = {}
         self._propagation_data_lock = threading.Lock()
         
-        self.interval = 10 * 60 # 10 minutes
-        self.wait_cycles = 5 # wait for heartbeat response
+        # default to heartbeat interval
+        self.use_heartbeat_interval = True
+        self.interval = self._client.settings.get_heartbeat_interval() * 60 # minutes to seconds
+        self.wait_cycles = 5 # how long to wait for heartbeat responses
         self.max_data_age = 3 * (24 * 60 * 60) # 3 days
 
     def enabled(self):
@@ -78,8 +80,6 @@ class Propagation:
             return
 
         self._enabled = True
-        self._client.settings.set_heartbeat_interval(self.interval)
-        self._client.heartbeat.enable()
 
         thread = threading.Thread(target=self._monitor)
         thread.daemon = True
@@ -161,8 +161,8 @@ class Propagation:
                     origins[origin] = [snr]
                         
         # calculate median snr for each grid and origin callsign
-        grids = {grid: statistics.median(snrs) for grid, snrs in grids.items()}
-        origins = {origin: statistics.median(snrs) for origin, snrs in origins.items()}
+        grids = {grid: round(statistics.median(snrs)) for grid, snrs in grids.items()}
+        origins = {origin: round(statistics.median(snrs)) for origin, snrs in origins.items()}
         return {'grids': grids, 'origins': origins}
 
     def get_grid_snr(self, grid):
@@ -236,8 +236,8 @@ class Propagation:
                     origins[spot.origin] = [spot.snr]
 
         # calculate median snr for each grid and origin callsign
-        grids = {grid: statistics.median(snrs) for grid, snrs in grids.items()}
-        origins = {origin: statistics.median(snrs) for origin, snrs in origins.items()}
+        grids = {grid: round(statistics.median(snrs)) for grid, snrs in grids.items()}
+        origins = {origin: round(statistics.median(snrs)) for origin, snrs in origins.items()}
         return {'grids': grids, 'origins': origins}
 
     def _callback(self, dataset):
@@ -258,13 +258,17 @@ class Propagation:
             if self._paused:
                 continue
 
-            last_heartbeat = self._client.heartbeat.last_heartbeat
-            response_duration = self._client.settings.get_window_duration() * self.wait_cycles # seconds
-            spot_age = self.interval + response_duration
+            if self.use_heartbeat_interval:
+                self.interval = self._client.settings.get_heartbeat_interval() * 60 # minutes to seconds
 
-            #TODO use last_interval, combine with last_heartbeat? rethink logic that allows analysis to occur
-            # allow heartbeat responses before performing propagation analysis
-            if time.time() < last_heartbeat + response_duration:
+            last_heartbeat = self._client.heartbeat.last_heartbeat
+            response_delay = self._client.settings.get_window_duration() * self.wait_cycles
+            spot_age = self.interval + response_delay
+
+            # one analysis per interval
+            # allow time for heartbeat responses before performing propagation analysis
+            now = time.time()
+            if self._last_analysis + self.interval > now or last_heartbeat + response_delay > now:
                 continue
 
             spots = self._client.spots.filter(age = spot_age)
@@ -273,7 +277,6 @@ class Propagation:
             if dataset is None:
                 continue
                 
-            self._callback(dataset)
             timestamp = int(time.time())
 
             with self._propagation_data_lock:
@@ -289,4 +292,7 @@ class Propagation:
                     timestamps.pop()
 
                 self._propagation_data = {timestamp: self._propagation_data[timestamp] for timestamp in timestamps}
+
+            self._last_analysis = time.time()
+            self._callback(dataset)
                     
