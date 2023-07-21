@@ -95,7 +95,6 @@ class HeartbeatNetworking:
         self._offset.max_offset = 1000
         self._offset.bandwidth_safety_factor = 1.1
         self._offset.activity_cycles = 4
-        #self._offset.before_transition = 1
         self._offset.pause()
         self._offset.enable()
 
@@ -145,15 +144,7 @@ class HeartbeatNetworking:
 
             # if we made it this far we are ready to send a heartbeat, wait for end of rx/tx window
 
-            #TODO
-            #next_transition = self._client.window.next_transition_seconds()
-            #print('wait for end of window: {} sec'.format(next_transition))
-
             self._client.window.sleep_until_next_transition(before = 1.5)
-            
-            #TODO
-            #next_transition = self._client.window.next_transition_seconds()
-            #print('1.5 sec before end of window: {} sec'.format(next_transition))
 
             # allow disable as late as possible
             if not self._enabled:
@@ -177,16 +168,7 @@ class HeartbeatNetworking:
             # resume heartbeat offset monitor
             self._offset.resume()
             # heartbeat offset monitor runs 1 second before transition
-
-            #TODO
-            #next_transition = self._client.window.next_transition_seconds()
-            #print('hb offset resumed: {} sec'.format(next_transition))
-
             self._client.window.sleep_until_next_transition(before = 0.25)
-            
-            #TODO
-            #next_transition = self._client.window.next_transition_seconds()
-            #print('sending hb: {} sec'.format(next_transition))
 
             # send heartbeat on next rx/tx window
             hb_msg = self._client.send_heartbeat()
@@ -198,10 +180,6 @@ class HeartbeatNetworking:
                 self._outgoing_msg.status not in (Message.STATUS_SENT, Message.STATUS_FAILED)
             ):
                 time.sleep(0.1)
-                
-            #TODO
-            #next_transition = self._client.window.next_transition_seconds()
-            #print('hb sent: {} sec\n'.format(next_transition))
 
             self._last_outgoing = time.time()
             self.last_heartbeat = time.time()
