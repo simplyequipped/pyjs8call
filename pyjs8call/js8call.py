@@ -404,12 +404,49 @@ class JS8Call:
         return self.state[item]
 
     def get_spots(self):
-        '''Get list of spot messages.
+        '''Get spotted message objects.
         
         Returns:
-            list: All spot message objects
+            list: spot message objects
         '''
-        return self._spots
+        with self._spots_lock:
+             return self._spots
+
+    def get_spots_str(self):
+        '''Get spotted message objects as json string.
+
+         Used with *set_spots_str* to save spot messages for later use.
+
+        Returns:
+            str: json.dumps of each spot dictionary representation, joined with newlines
+        '''
+        spots = [spot.dump() for spot in self.get_spots()]
+        return '\n'.join(spots)
+
+    def set_spots(self, spots, append=True):
+        '''Set spotted message objects.
+
+        Args:
+            spots (list): list of spot message objects
+            append (bool): append to spot list if True, replace spots if False, defaults to True
+        '''
+        with self._spots_lock:
+            if append:
+                self._spots.append(spots)
+            else:
+                self._spots = spots
+
+    def set_spots_str(self, spots, append=True):
+        '''Set spotted message objects from json string.
+
+         Used with *get_spots_str* to load previously saved spot messages.
+
+        Args:
+            spots (str): json string of spot message dictionaries, separated with newlines
+            append (bool): append to spots if True, replace spots if False, defaults to True
+        '''
+        spots = [Message().load(spot.strip()) for spot in spots.split('\n')]
+        self.set_spots(spots, append)
 
     def _spot(self, msg):
         '''Store a message when a station is heard.
