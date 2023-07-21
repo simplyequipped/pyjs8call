@@ -868,9 +868,14 @@ class Message:
 
         Args:
             msg_str (str): *str* of attributes to convert using *json.loads*
+
+        Returns:
+            pyjs8call.Message: self, for use like `msg = Message().load(str)`
         '''
         for attribute, value in json.loads(msg_str).items():
             self.set(attribute, value)
+
+        return self
 
     def frame_count(self):
         '''Determine number of JS8Call frames required to transmit.
