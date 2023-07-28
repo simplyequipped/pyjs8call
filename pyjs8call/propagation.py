@@ -54,7 +54,6 @@ class Propagation:
         # default to heartbeat interval
         self.use_heartbeat_interval = True
         self.interval = self._client.settings.get_heartbeat_interval() * 60 # minutes to seconds
-        self.wait_cycles = 5 # how long to wait for heartbeat responses
         self.max_data_age = 3 * (24 * 60 * 60) # 3 days
 
     def enabled(self):
@@ -111,10 +110,12 @@ class Propagation:
 
             Returns None if there is no propagation data.
         '''
-        if len(self._propagation_data) == 0:
-            return None
+        age *= 60 # minutes to seconds
 
         with self._propagation_data_lock:
+            if len(self._propagation_data) == 0:
+                return None
+            
             if age == 0:
                 # age ignored, return *count* data sets
                 if len(self._propagation_data) <= count:
@@ -123,14 +124,13 @@ class Propagation:
                 timestamps = list(self._propagation_data.keys())[:count]
                 return {timestamp: value for timestamp, value in self._propagation_data.items() if timestamp in timestamps}
             else:
-                age *= 60 # minutes to seconds
                 return {timestamp: value for timestamp, value in self._propagation_data.items() if timestamp > time.time() - age}
         
-    def get_data_median(self, age=60, count=0):
+    def get_data_median(self, age=30, count=0):
         '''Get median propagation analysis data.
 
         Args:
-            age (int): maximum data set age in minutes, defaults to 60
+            age (int): maximum data set age in minutes, defaults to 30
             count (int): number of data sets to return, defaults to 1
             
         Returns:
@@ -168,13 +168,11 @@ class Propagation:
     def get_grid_snr(self, grid):
         '''Get recent SNR for specified grid square.
 
-        The returned SNR may not be from the most recent analysis interval if the specified grid square is not found in the most recent interval data.
-
         Args:
             grid (str): Grid square to find
 
         Returns:
-            tuple or None: tuple like (SNR, timestamp) if grid is found, None otherwise
+            tuple or None: tuple like (SNR, timestamp) if grid in most recent dataset, othersise None
         '''
         if len(grid) < 4:
             raise ValueError('Grid must be at least 4 characters')
@@ -182,39 +180,55 @@ class Propagation:
             grid = grid[:4]
             
         with self._propagation_data_lock:
-            for timestamp in self._propagation_data:
-                for _grid in self._propagation_data[timestamp]['grids']:
-                    if _grid == grid:
-                        return (self._propagation_data[timestamp]['grids'][grid], timestamp)
+            if len(self.propagation_data) == 0:
+                return None
+                
+            # most recent timestamp from sorted dict
+            timestamp = self._propagation_data.keys()[0]
+            recent_grid_dataset = self._propagation_data[timestamp]['grids']
+    
+            for _grid in recent_grid_dataset:
+                if _grid == grid:
+                    return (recent_grid_dataset[grid], timestamp)
     
     def get_origin_snr(self, origin):
         '''Get recent SNR for specified origin callsign.
-        
-        The returned SNR may not be from the most recent analysis interval if the specified origin is not found in the most recent interval data.
 
         Args:
             origin (str): Origin callsign to find
 
         Returns:
-            tuple or None: tuple like (SNR, timestamp) if origin is found, None otherwise
+            tuple or None: tuple like (SNR, timestamp) if origin in most recent dataset, othersise None
         '''
         with self._propagation_data_lock:
-            for timestamp in self._propagation_data:
-                for _origin in self._propagation_data[timestamp]['origins']:
-                    if _origin == origin:
-                        return (self._propagation_data[timestamp]['origins'][origin], timestamp)
+            if len(self.propagation_data) == 0:
+                return None
 
-    def parse(self, spots):
-        '''Parse spots into median SNR dataset.
+            # most recent timestamp from sorted dict
+            timestamp = self._propagation_data.keys()[0]
+            recent_origin_dataset = self._propagation_data[timestamp]['origins']
+    
+            for _origin in recent_origin_dataset:
+                if _origin == origin:
+                    return (recent_origin_dataset[origin], timestamp)
+
+    def analyze(self, age=None):
+        '''Parse recent spot messages into median SNR dataset.
 
         Args:
-            spots (list): List of pyjs8call.Message objects to analyse
+            age (int): Age of spot messages in minutes to include in dataset, defaults to *Propagation.interval*
 
         Returns:
             dict: {'grids': {'GRID': SNR, ...}, 'origins': {'ORIGIN': SNR, ...}}
 
-            Returns None if *spots* is an empty list.
+            Returns None if there are no spot messages with an age less than or equal to *age*.
         '''
+        if age is None:
+            age = self.interval
+
+        age *= 60 # minutes to seconds
+        spots = self._client.spots.filter(age = age)
+        
         if len(spots) == 0:
             return None
             
@@ -248,7 +262,7 @@ class Propagation:
             thread.start()
 
     def _monitor(self):
-        '''Monitor interval and perform propagation analysis.'''
+        '''Monitor time interval and perform propagation analysis.'''
         while self._enabled:
             self._client.window.sleep_until_next_transition()
             
@@ -261,18 +275,12 @@ class Propagation:
             if self.use_heartbeat_interval:
                 self.interval = self._client.settings.get_heartbeat_interval() * 60 # minutes to seconds
 
-            last_heartbeat = self._client.heartbeat.last_heartbeat
-            response_delay = self._client.settings.get_window_duration() * self.wait_cycles
-            spot_age = self.interval + response_delay
-
-            # one analysis per interval
-            # allow time for heartbeat responses before performing propagation analysis
+            # one analysis per time interval
             now = time.time()
-            if self._last_analysis + self.interval > now or last_heartbeat + response_delay > now:
+            if self._last_analysis + self.interval > now:
                 continue
 
-            spots = self._client.spots.filter(age = spot_age)
-            dataset = self.parse(spots)
+            dataset = self.analyze(self.interval)
 
             if dataset is None:
                 continue
@@ -283,7 +291,7 @@ class Propagation:
                 # record new interval data
                 self._propagation_data[timestamp] = dataset
     
-                # sort propagation data to find most recent data first when searching
+                # sort propagation data by timestamp to find most recent data first when searching
                 timestamps = list(self._propagation_data.keys())
                 timestamps.sort(reverse = True)
 
@@ -295,4 +303,4 @@ class Propagation:
 
             self._last_analysis = time.time()
             self._callback(dataset)
-                    
+            
