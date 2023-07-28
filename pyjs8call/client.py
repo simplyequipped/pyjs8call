@@ -82,7 +82,6 @@ class Client:
     
     *process_outoing* function signature:
         `func(pyjs8call.message) -> pyjs8call.message`
-    
 
     Attributes:
         js8call (pyjs8call.js8call): Manages JS8Call application and TCP socket communication
@@ -106,7 +105,77 @@ class Client:
         port (int): Port number matching JS8Call *TCP Server Port* setting
         process_incoming (func): Function to call for custom processing of incoming messages, defaults to None
         process_outgoing (func): Function to call for custom processing of outgoing messages, defaults to None
+        BANDS (dict): mapping of frequency bands to minimum and maximum frequencies
+        OOB (str): out-of-band designator
     '''
+
+    BANDS = {
+        '2190m':  (136000,       137000),
+        '630m':   (472000,       479000),
+        '560m':   (501000,       504000),
+        '160m':   (1800000,      2000000),
+        '80m':    (3500000,      4000000),
+        '60m':    (5060000,      5450000),
+        '40m':    (7000000,      7300000),
+        '30m':    (10000000,     10150000),
+        '20m':    (14000000,     14350000),
+        '17m':    (18068000,     18168000),
+        '15m':    (21000000,     21450000),
+        '12m':    (24890000,     24990000),
+        '10m':    (28000000,     29700000),
+        '6m':     (50000000,     54000000),
+        '4m':     (70000000,     71000000),
+        '2m':     (144000000,    148000000),
+        '1.25m':  (222000000,    225000000),
+        '70cm':   (420000000,    450000000),
+        '33cm':   (902000000,    928000000),
+        '23cm':   (1240000000,   1300000000),
+        '13cm':   (2300000000,   2450000000),
+        '9cm':    (3300000000,   3500000000),
+        '6cm':    (5650000000,   5925000000),
+        '3cm':    (10000000000,  10500000000),
+        '1.25cm': (24000000000,  24250000000),
+        '6mm':    (47000000000,  47200000000),
+        '4mm':    (75500000000,  81000000000),
+        '2.5mm':  (119980000000, 120020000000),
+        '2mm':    (142000000000, 149000000000),
+        '1mm':    (241000000000, 250000000000)
+    }
+    
+    OOB = 'OOB'
+    
+    @staticmethod
+    def freq_to_band(freq):
+        '''Get band for specified frequency.
+
+        Args:
+            freq (int): Frequency in Hz
+
+        Returns:
+            str: Band designator like \'40m\' if frequency is in a known band, otherwise *Client.OOB*
+        '''
+        for band, freqs in Client.BANDS.items():
+            if freqs[0] <= freq <= freqs[1]:
+                return band
+
+        return Client.OOB
+
+    @staticmethod
+    def band_freq_range(band):
+        '''Get frequency range for specified band.
+
+        Args:
+            band (str): Band designator like \'40m\'
+
+        Returns:
+            tuple or str: (min_freq, max_freq) if band is known, otherwise *Client.OOB*
+        '''
+        band = band.lower()
+        
+        if band in Client.BANDS:
+            return Client.BANDS[band]
+        
+        return Client.OOB
 
     def __init__(self, host='127.0.0.1', port=2442, config_path=None):
         '''Initialize JS8Call API client.
