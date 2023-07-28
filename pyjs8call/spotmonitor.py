@@ -100,32 +100,41 @@ class SpotMonitor:
         '''Get all stored spot messages.'''
         return self._client.js8call.get_spots()
 
-    def filter(self, origin=None, destination=None, distance=0, age=0, count=0, profile=None):
+    def filter(self, origin=None, destination=None, grid=None, distance=0, age=0, count=0, profile=None, dial_freq=None, band=None):
         '''Get filtered spot messages.
 
-        Spots are *pyjs8call.message* objects. Specified *origin* and *destination* strings are converted to uppercase.
+        Spots are *pyjs8call.message* objects. Specified *origin*, *destination*, and *grid* strings are converted to uppercase. *band* strings are converted to lowercase.
 
         When *distance*, *age*, or *count* are 0 (zero) they are ignored.
 
+        See *pyjs8call.client.freq_to_band* for frequency band information.
+
         Args:
-            origin (str): Message origin callsign to match
-            destination (str): Message destination callsign or group designator to match
+            origin (str): Message origin callsign to match, defaults to None
+            destination (str): Message destination callsign or group designator to match, defaults to None
+            grid (str): Message grid square to match, defaults to None
             distance (int): Maximum message grid square distance, defaults to 0 (zero)
             age (int): Maximum message age in seconds, defaults to 0 (zero)
             count (int): Number of most recent spot messages to return, defaults to 0 (zero)
             profile (str): Configuration profile at the time spot was sent or received, defaults to None
+            dial_freq (int): Dial frequency in Hz to match, defaults to None
+            band (str): Frequency band (ex. \'40m\') to match, defaults to None
 
         Returns:
             list: Spot messages matching specified filter criteria
         '''
         spots = []
+        
         for spot in self._client.js8call.get_spots():
             if (
                 (age == 0 or spot.age() <= age) and
+                (grid is None or grid.upper() == spot.grid) and
                 (distance == 0 or (spot.distance is not None and spot.distance <= distance)) and
                 (origin is None or origin.upper() == spot.origin) and 
                 (destination is None or destination.upper() == spot.destination) and
-                (profile is None or profile == spot.profile)
+                (profile is None or profile == spot.profile) and
+                (freq is None or dial_freq == spot.dial) and
+                (band is None or band.lower() == spot.band)
             ):
                 spots.append(spot)
 
