@@ -154,6 +154,9 @@ class Client:
         Returns:
             str: Band designator like \'40m\' if frequency is in a known band, otherwise *Client.OOB*
         '''
+        if freq is None:
+            return Client.OOB
+            
         for band, freqs in Client.BANDS.items():
             if freqs[0] <= freq <= freqs[1]:
                 return band
@@ -170,6 +173,9 @@ class Client:
         Returns:
             tuple or str: (min_freq, max_freq) if band is known, otherwise *Client.OOB*
         '''
+        if freq is None:
+            return Client.OOB
+            
         band = band.lower()
         
         if band in Client.BANDS:
