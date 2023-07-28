@@ -48,7 +48,7 @@ class Propagation:
         self._enabled = False
         self._paused = False
         self._last_analysis = 0
-        self._propagation_data = {}
+        self._propagation_data = {'grids': [], 'origins': []}
         self._propagation_data_lock = threading.Lock()
         
         # default to heartbeat interval
@@ -168,11 +168,13 @@ class Propagation:
     def get_grid_snr(self, grid):
         '''Get recent SNR for specified grid square.
 
+        *grid* must be at least four characters in length. If *grid* is longer than four characters it is truncated.
+        
         Args:
-            grid (str): Grid square to find
+            grid (str): grid square to find in most recent dataset
 
         Returns:
-            tuple or None: tuple like (SNR, timestamp) if grid in most recent dataset, othersise None
+            tuple or None: tuple like (GRID, SNR, timestamp) if *grid* in most recent dataset, otherwise None
         '''
         if len(grid) < 4:
             raise ValueError('Grid must be at least 4 characters')
@@ -180,37 +182,39 @@ class Propagation:
             grid = grid[:4]
             
         with self._propagation_data_lock:
-            if len(self.propagation_data) == 0:
+            timestamps = self.get_data_timestamps()
+            
+            if len(timestamps) == 0:
                 return None
-                
-            # most recent timestamp from sorted dict
-            timestamp = self._propagation_data.keys()[0]
-            recent_grid_dataset = self._propagation_data[timestamp]['grids']
-    
-            for _grid in recent_grid_dataset:
-                if _grid == grid:
-                    return (recent_grid_dataset[grid], timestamp)
+
+            recent_timestamp = timestamps[0]
+            recent_grids = [entry for entry in self._propagation_data['grids'] if entry[2] == recent_timestamp]
+
+            for entry in recent_grids:
+                if entry[0] == grid:
+                    return entry
     
     def get_origin_snr(self, origin):
         '''Get recent SNR for specified origin callsign.
 
         Args:
-            origin (str): Origin callsign to find
+            origin (str): origin callsign to find in most recent dataset
 
         Returns:
-            tuple or None: tuple like (SNR, timestamp) if origin in most recent dataset, othersise None
+            tuple or None: tuple like (ORIGIN, SNR, timestamp) if *origin* in most recent dataset, otherwise None
         '''
         with self._propagation_data_lock:
-            if len(self.propagation_data) == 0:
+            timestamps = self.get_data_timestamps()
+            
+            if len(timestamps) == 0:
                 return None
 
-            # most recent timestamp from sorted dict
-            timestamp = self._propagation_data.keys()[0]
-            recent_origin_dataset = self._propagation_data[timestamp]['origins']
-    
-            for _origin in recent_origin_dataset:
-                if _origin == origin:
-                    return (recent_origin_dataset[origin], timestamp)
+            recent_timestamp = timestamps[0]
+            recent_origins = [entry for entry in self._propagation_data['origins'] if entry[2] == recent_timestamp]
+
+            for entry in recent_origins:
+                if entry[0] == origin:
+                    return entry
 
     def analyze(self, age=None):
         '''Parse recent spot messages into median SNR dataset.
@@ -219,9 +223,21 @@ class Propagation:
             age (int): Age of spot messages in minutes to include in dataset, defaults to *Propagation.interval*
 
         Returns:
-            dict: {'grids': {'GRID': SNR, ...}, 'origins': {'ORIGIN': SNR, ...}}
-
-            Returns None if there are no spot messages with an age less than or equal to *age*.
+            dict or None: dict structed as shown below, or None no spot messages found
+            ```
+            {
+            'grids':
+                [
+                    (GRID, SNR, timestamp),
+                    ...
+                ],
+            'origins':
+                [
+                    (ORIGIN, SNR, timestamp),
+                    ...
+                ]
+            }
+            ```
         '''
         if age is None:
             age = self.interval
@@ -250,9 +266,34 @@ class Propagation:
                     origins[spot.origin] = [spot.snr]
 
         # calculate median snr for each grid and origin callsign
-        grids = {grid: round(statistics.median(snrs)) for grid, snrs in grids.items()}
-        origins = {origin: round(statistics.median(snrs)) for origin, snrs in origins.items()}
+        timestamp = int(time.time())
+        grids = [(grid, round(statistics.median(snrs)), timestamp) for grid, snrs in grids.items()]
+        origins = [(origin, round(statistics.median(snrs)), timestamp) for origin, snrs in origins.items()]
         return {'grids': grids, 'origins': origins}
+
+    def get_data_timestamps(self, cull=False):
+        '''Get unique timestamps in propagation data.
+        '''
+        timestamps = []
+        now = time.time()
+        
+        with self._propagation_data_lock:
+            for entry in self._propagation_data['grids']:
+                timestamp = entry[2]
+                if timestamp not in timestamps:
+                    if cull and timestamp < (now - self.max_data_age):
+                        continue
+                    timestamps.append(timestamp)
+            
+            for entry in self._propagation_data['origins']:
+                timestamp = entry[2]
+                if timestamp not in timestamps:
+                    if cull and timestamp < (now - self.max_data_age):
+                        continue
+                    timestamps.append(timestamp)
+
+        timestamps.sort(reverse = True)
+        return timestamps
 
     def _callback(self, dataset):
         '''Call new propagation dataset callback function.'''
@@ -284,22 +325,16 @@ class Propagation:
 
             if dataset is None:
                 continue
-                
-            timestamp = int(time.time())
 
-            with self._propagation_data_lock:
-                # record new interval data
-                self._propagation_data[timestamp] = dataset
+            timestamps = self.get_data_timestamps(cull = True)
     
-                # sort propagation data by timestamp to find most recent data first when searching
-                timestamps = list(self._propagation_data.keys())
-                timestamps.sort(reverse = True)
-
-                # cull old propagation data
-                while timestamps[-1] < time.time() - self.max_data_age:
-                    timestamps.pop()
-
-                self._propagation_data = {timestamp: self._propagation_data[timestamp] for timestamp in timestamps}
+            with self._propagation_data_lock:
+                # cull old grid and origin data
+                self._propagation_data['grids'] = [entry for entry in self._propagation_data['grids'] if entry[2] in timestamps]
+                self._propagation_data['origins'] = [entry for entry in self._propagation_data['origins'] if entry[2] in timestamps]
+                # record new interval data
+                self._propagation_data['grids'].append(dataset['grids'])
+                self._propagation_data['origins'].append(dataset['origins'])
 
             self._last_analysis = time.time()
             self._callback(dataset)
