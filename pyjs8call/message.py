@@ -872,7 +872,7 @@ class Message:
         Returns:
             pyjs8call.Message: self, for use like `msg = Message().load(str)`
         '''
-        for attribute, value in json.loads(msg_str).items():
+        for attribute, value in json.loads(msg_str.strip()).items():
             self.set(attribute, value)
 
         return self
