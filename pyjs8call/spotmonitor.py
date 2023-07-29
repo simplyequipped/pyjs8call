@@ -133,7 +133,7 @@ class SpotMonitor:
                 (origin is None or origin.upper() == spot.origin) and 
                 (destination is None or destination.upper() == spot.destination) and
                 (profile is None or profile == spot.profile) and
-                (freq is None or dial_freq == spot.dial) and
+                (dial_freq is None or dial_freq == spot.dial) and
                 (band is None or band.lower() == self._client.freq_to_band(spot.freq).lower())
             ):
                 spots.append(spot)
