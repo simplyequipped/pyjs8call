@@ -130,10 +130,11 @@ class HeartbeatNetworking:
             # subtract window duration to prevent bumping to next window after interval
             interval -= self._client.settings.get_window_duration() + self._offset.before_transition
 
+            # callsign selected on js8call ui
             selected = not self._client.get_selected_call() is None
 
-            # skip heartbeating if there has been recent outgoing activity, paused, or callsign is selected
-            if (self._last_outgoing + interval) > time.time() or self._paused or selected:
+            # skip heartbeating if paused, a callsign is selected, or the heartbeat interval has not passed
+            if self._paused or selected or (self._last_outgoing + interval) > time.time():
                 continue
 
             # no heartbeat in turbo mode
