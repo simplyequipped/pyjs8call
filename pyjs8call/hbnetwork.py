@@ -57,7 +57,6 @@ class HeartbeatNetworking:
         self._client = client
         self._enabled = False
         self._paused = False
-        self._last_outgoing = 0
         self._offset = None
         self._outgoing_msg = None
 
@@ -83,7 +82,6 @@ class HeartbeatNetworking:
             return
 
         self._enabled = True
-        self._last_outgoing = time.time()
 
         self._offset = OffsetMonitor(self._client)
         self._offset._hb = True
@@ -120,44 +118,41 @@ class HeartbeatNetworking:
         '''Heartbeat interval monitor thread.'''
         while self._enabled:
             time.sleep(1)
-
+            
             # wait for accurate window timing
             if self._client.window.next_transition_seconds() is None:
                 continue
-
+                
+            # wait for end of rx/tx window
+            self._client.window.sleep_until_next_transition(before = 1.5)
+                
+            if not self._enabled:
+                return
+                
             # update interval from config
             interval = self._client.settings.get_heartbeat_interval() * 60 # minutes to seconds
             # subtract window duration to prevent bumping to next window after interval
             interval -= self._client.settings.get_window_duration() + self._offset.before_transition
 
-            # callsign selected on js8call ui
-            selected = not self._client.get_selected_call() is None
+            # update heartbeat during qso from config
+            pause_heartbeat_during_qso = self._client.settings.heartbeat_during_qso_paused()
+            # whether callsign is selected on js8call ui
+            callsign_selected = not self._client.get_selected_call() is None
 
-            # skip heartbeating if paused, a callsign is selected, or the heartbeat interval has not passed
-            if self._paused or selected or (self._last_outgoing + interval) > time.time():
+            now = time.time()
+
+            # skip heartbeating in the following cases:
+            if (
+                self._paused or
+                self._client.settings.get_speed() == 'turbo' or # no hb in turbo mode
+                (pause_heartbeat_during_qso and callsign_selected) or # callsign selected on js8call ui
+                self._client.js8call.activity(age = interval) or # recent activity, including text in the text box and queued outgoing msgs
+                (self._client.js8call.last_outgoing + interval) > now or # hb interval has not passed since last outgoing msg
+                (self._client.js8call.last_band_change + interval) > now # hb interval has not passed since last band change (including start)
+            ):
                 continue
 
-            # no heartbeat in turbo mode
-            if self._client.settings.get_speed() == 'turbo':
-                continue
-
-            # if we made it this far we are ready to send a heartbeat, wait for end of rx/tx window
-
-            self._client.window.sleep_until_next_transition(before = 1.5)
-
-            # allow disable as late as possible
-            if not self._enabled:
-                return
-
-            # allow pause as late as possible
-            if self._paused:
-                continue
-
-            # check recent outgoing activity as late as possible
-            # also ensures there are no queued outgoing msgs or text in the tx text field
-            if self._client.js8call.activity(age = interval):
-                self._last_outgoing = self._client.js8call.last_outgoing
-                continue
+            # if we made it this far we are ready to send a heartbeat
 
             # pause main offset monitor
             main_offset_is_paused = self._client.offset.paused()
@@ -180,7 +175,6 @@ class HeartbeatNetworking:
             ):
                 time.sleep(0.1)
 
-            self._last_outgoing = time.time()
             self._offset.pause()
             self._client.settings.set_offset(last_offset)
                 
