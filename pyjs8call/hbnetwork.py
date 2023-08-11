@@ -44,9 +44,6 @@ class HeartbeatNetworking:
     Outgoing message activity (including JS8Call autoreplies) will reset the timer for the next heartbeat message. This is consistent with JS8Call funtionality.
 
     Heartbeat messages are not sent if JS8Call modem speed is set to turbo. This is consistent with JS8Call funtionality.
-
-    Attributes:
-        last_heartbeat (int): timestamp of last outgoing heartbeat
     '''
     def __init__(self, client):
         '''Initialize heartbeat networking object.
@@ -63,7 +60,6 @@ class HeartbeatNetworking:
         self._last_outgoing = 0
         self._offset = None
         self._outgoing_msg = None
-        self.last_heartbeat = 0
 
     def enabled(self):
         '''Get enabled status.
@@ -184,7 +180,6 @@ class HeartbeatNetworking:
                 time.sleep(0.1)
 
             self._last_outgoing = time.time()
-            self.last_heartbeat = time.time()
             self._offset.pause()
             self._client.settings.set_offset(last_offset)
                 
