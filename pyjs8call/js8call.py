@@ -44,6 +44,8 @@ class JS8Call:
     Receives and transmits pyjs8call.message objects, and generally manages the local state representation of the JS8Call application.
 
     Initializes pyjs8call.appmonitor as well as rx, tx, logging, application ping threads.
+
+    Note: *last_band_change* is set to the current time when *pyjs8call* is started.
     
     Attributes:
         app (pyjs8call.appmonitor): Application monitor object
@@ -51,6 +53,7 @@ class JS8Call:
         max_spot_age (int): Maximum age (in seconds) of spots to store before dropping old spots, defaults to 7 days
         last_incoming (float): Timestamp of last incoming user message, defaults to 0 (zero)
         last_outgoing (float): Timestamp of last outgoing user message, defaults to 0 (zero)
+        last_band_change (float): Timestamp of last frequency band change
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442):
@@ -103,6 +106,7 @@ class JS8Call:
         self._last_outgoing_by_band = dict()
         self.last_incoming = 0
         self.last_outgoing = 0
+        self.last_band_change = time.time()
         self._last_incoming_api_msg = 0
 
         self._watching = None
@@ -246,7 +250,9 @@ class JS8Call:
             self._log_all = True
 
     def process_freq_change(self, previous_freq, current_freq=None):
-        '''Manage last incoming/outgoing timestamps on band change as necessary.
+        '''Manage last incoming/outgoing timestamps on band change.
+
+        This function is called internally when the local frequency state is updated. If a band change has occured, last incoming and outgoing timestamps for the previous band are stored, and last incoming and outgoing timestamps for the current band of loaded (if available).
 
         Note: Changing from one out-of-band frequency to another out-of-band frequency is not considered a band change.
 
@@ -270,6 +276,7 @@ class JS8Call:
 
         self._last_incoming_by_band[previous_band] == self.last_incoming
         self._last_outgoing_by_band[previous_band] == self.last_outgoing
+        self.last_band_change = time.time()
 
         if current_band in self._last_incoming_by_band:
             self.last_incoming = self._last_incoming_by_band[current_band]
