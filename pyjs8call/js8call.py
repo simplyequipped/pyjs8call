@@ -73,6 +73,8 @@ class JS8Call:
         self._tx_queue_lock = threading.Lock()
         self._socket = None
         self._socket_ping_delay = 60 # seconds
+        self.connected = False
+
         self._debug = False
         self._debug_all = False
         self._log = False
@@ -91,17 +93,20 @@ class JS8Call:
             Message.RIG_GET_FREQ,       # offset monitor every window transition
             Message.RIG_FREQ            # offset monitor every window transition
         ]
-        self._watching = None
-        self._watch_timeout = 3 # seconds
+
         self._spots = []
         self.max_spot_age = 7 * 24 * 60 * 60 # 7 days 
         self._recent_spots = []
         self._spots_lock = threading.Lock()
-        self.connected = False
+
+        self._last_incoming_by_band = dict()
+        self._last_outgoing_by_band = dict()
         self.last_incoming = 0
         self.last_outgoing = 0
         self._last_incoming_api_msg = 0
 
+        self._watching = None
+        self._watch_timeout = 3 # seconds
         self.state = {
             'ptt' : False,
             'dial': None,
@@ -201,7 +206,11 @@ class JS8Call:
             '_debug_all',
             '_debug_log_type_blacklist',
             '_log',
-            '_log_all'
+            '_log_all',
+            '_last_incoming_by_band',
+            '_last_outgoing_by_band',
+            'last_incoming',
+            'last_outgoing'
         ]
 
         return {setting: getattr(self, setting) for setting in settings}
@@ -235,6 +244,42 @@ class JS8Call:
         
         if log_all:
             self._log_all = True
+
+    def process_freq_change(self, previous_freq, current_freq=None):
+        '''Manage last incoming/outgoing timestamps on band change as necessary.
+
+        Note: Changing from one out-of-band frequency to another out-of-band frequency is not considered a band change.
+
+        Args:
+            previous_freq (int): Previous frequency in Hz
+            current_freq (int): Current frequency in Hz, defaults to current frequency
+        '''
+        if previous_freq is None:
+            # freq initialization on start, no band change
+            return
+
+        if current_freq is None:
+            current_freq = self._client.settings.get_freq()
+
+        current_band = pyjs8call.Client.freq_to_band(current_freq)
+        previous_band = pyjscall.Client.freq_to_band(previous_freq)
+
+        if current_band == previous_band:
+            # no band change
+            return
+
+        self._last_incoming_by_band[previous_band] == self.last_incoming
+        self._last_outgoing_by_band[previous_band] == self.last_outgoing
+
+        if current_band in self._last_incoming_by_band:
+            self.last_incoming = self._last_incoming_by_band[current_band]
+        else:
+            self.last_incoming = 0
+
+        if current_band in self._last_outgoing_by_band:
+            self.last_outgoing = self._last_outgoing_by_band[current_band]
+        else:
+            self.last_outgoing = 0
 
     def activity(self, age=0):
         '''Whether there is outgoing activity.
@@ -696,9 +741,13 @@ class JS8Call:
             self._spot(msg)
 
         elif msg.type == Message.RIG_FREQ:
+            previous_freq = self.state['dial']
+
             self.state['dial'] = msg.dial
             self.state['freq'] = msg.freq
-            self.state['offset'] = int(msg.offset)
+            self.state['offset'] = msg.offset
+
+            self.process_freq_change(previous_freq)
 
         elif msg.type == Message.RIG_PTT:
             if msg.value == 'on':
@@ -707,10 +756,14 @@ class JS8Call:
                 self.state['ptt'] = False
 
         elif msg.type == Message.STATION_STATUS:
+            previous_freq = self.state['dial']
+
             self.state['dial'] = msg.dial
             self.state['freq'] = msg.freq
-            self.state['offset'] = int(msg.offset)
+            self.state['offset'] = msg.offset
             self.state['speed'] = msg.speed
+
+            self.process_freq_change(previous_freq)
 
         elif msg.type == Message.STATION_CALLSIGN:
             self.state['callsign'] = msg.value
