@@ -1135,11 +1135,16 @@ class Client:
 
         Returns:
             str: Callsign selected on the JS8Call user interface
+            None: No callsign selected
         '''
         msg = Message()
         msg.type = Message.RX_GET_SELECTED_CALL
         self.js8call.send(msg)
         selected_call = self.js8call.watch('selected_call')
+
+        if selected_call == '':
+            selected_call = None
+
         return selected_call
 
     def get_rx_text(self):
