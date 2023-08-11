@@ -1593,6 +1593,28 @@ class Settings:
             bool: True if heartbeat acknowledgements enabled, False otherwise
         '''
         return self._client.config.get('Common', 'SubModeHBAck', bool)
+        
+    def pause_heartbeat_during_qso(self):
+        '''Pause heartbeat messages during QSO via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
+        self._client.config.set('Configuration', 'HeartbeatQSOPause', 'true')
+
+    def allow_heartbeat_during_qso(self):
+        '''Allow heartbeat messages during QSO via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
+        self._client.config.set('Configuration', 'HeartbeatQSOPause', 'false')
+
+    def heartbeat_during_qso_paused(self):
+        '''Whether heartbeat messages paused during QSO in config file.
+        
+        Returns:
+            bool: True if heartbeat messages paused during QSO, False otherwise
+        '''
+        return self._client.config.get('Configuration', 'HeartbeatQSOPause', bool)
 
     def enable_multi_decode(self):
         '''Enable multi-speed decoding via config file.
