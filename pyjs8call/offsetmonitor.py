@@ -380,7 +380,6 @@ class OffsetMonitor:
             elif self.offset != self._client.settings.get_offset():
                 # offset needs changed to be in specified band
                 self.offset = self._client.settings.set_offset(self.offset)
-                
-            # ensure loop only runs once per window
-            self._client.window.sleep_until_next_transition()
 
+            # loop runs before the end of the window, ensure loop only runs once
+            self._client.window.sleep_until_next_transition()
