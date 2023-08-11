@@ -1889,6 +1889,14 @@ class Settings:
         time.sleep(self._client._set_get_delay)
         return self.get_freq(update = True)
 
+    def get_band(self):
+        '''Get frequency band designation.
+
+        Returns:
+            str: Band designator like \'40m\' or Client.OOB (out-of-band)
+        '''
+        return Client.freq_to_band(self.get_freq())
+
     def get_offset(self, update=False):
         '''Get JS8Call offset frequency.
 
