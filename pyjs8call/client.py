@@ -1330,7 +1330,7 @@ class Client:
 
                 if isinstance(spot.path, list):
                     # handle relay path
-                    #TODO review if path list should be reversed
+                    #TODO check if path list should be reversed
                     relay_path = Message.CMD_RELAY.join(spot.path)
 
                     if relay_path not in hearing[spot.origin]:
@@ -1340,9 +1340,30 @@ class Client:
                     hearing[spot.origin].append(spot.destination)
 
         #TODO track spot snr for sorting
-        #return {callsign:stations.sort(lambda station: station['snr'], decending) for callsign, stations in hearing.items()}
         return hearing
 
+    def station_hearing(self, station=None, age=None):
+        '''Which stations the specified station is hearing.
+        
+        See *client.hearing()* for more information.
+
+        Args:
+            station (str): Station callsign to get hearing data for, defaults to local station callsign
+            age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
+
+        Returns:
+            list: Station callsigns the specified station is hearing
+        '''
+        hearing = self.hearing(age)
+
+        if station is None:
+            station = self.settings.get_station_callsign()
+
+        if station in hearing:
+            return hearing[station]
+        else:
+            return []
+    
     def heard_by(self, age=None, hearing=None):
         '''Which stations are heard by other stations.
 
@@ -1375,6 +1396,29 @@ class Client:
 
         return heard_by
 
+    def heard_by_station(self, station=None, age=None, hearing=None):
+        '''Which stations are heard by the specified station.
+
+        See *client.heard_by()* for more information.
+        
+        Args:
+            station (str): Station callsign to get heard by data for, defaults to local station callsign
+            age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
+            hearing (dict): Result of *client.hearing()*, defaults to result of *client.hearing()*
+
+        Returns:
+            list: Station callsigns heard by the specified station
+        '''
+        heard_by = self.heard_by(age, hearing)
+
+        if station is None:
+            station = self.settings.get_station_callsign()
+
+        if station in heard_by:
+            return heard_by[station]
+        else:
+            return []
+
 #    def discover_path(self, destination, age=60):
 #        '''
 #        '''
@@ -1393,7 +1437,7 @@ class Client:
     def grid_distance(self, grid_a, grid_b=None):
         '''Calculate great circle distance and bearing between grid squares.
 
-        If *grid_b* is *None* the JS8Call grid square is used.
+        If *grid_b* is *None*, the JS8Call grid square is used.
 
         Bearing is calculated from *grid_b* to *grid_a*.
 
@@ -1420,7 +1464,7 @@ class Client:
             grid_b = self.settings.get_station_grid()
 
         if grid_b in (None, ''):
-            raise ValueError('Second grid square required and JS8Call grid square not set.')
+            raise ValueError('Second grid square required, JS8Call grid square not set.')
 
         lat_a, lon_a = self.grid_to_lat_lon(grid_a)
         lat_b, lon_b = self.grid_to_lat_lon(grid_b)
@@ -1508,7 +1552,6 @@ class Client:
                              '(case insensitive), and square must be numbers 0-9 (ex. EM19es).') from e
 
         return (lat, lon)
-
 
 
 class Settings:
