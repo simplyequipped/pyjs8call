@@ -218,6 +218,7 @@ class Client:
         self.process_outgoing = None
         self.clean_directed_text = True
         self.monitor_outgoing = True
+        self._custom_commands = []
 
         self.js8call = None
         self.spots = None
@@ -456,10 +457,18 @@ class Client:
             msg = self.js8call.get_next_message()
 
             if msg is not None:
+                # incoming type callback
                 for callback in self.callback.incoming_type(msg.type):
                     thread = threading.Thread(target=callback, args=[msg])
                     thread.daemon = True
                     thread.start()
+
+                # custom command callback
+                if msg.cmd is not None and msg.cmd in self.callback.commands:
+                    for callback in self.callback.commands[msg.cmd]:
+                        thread = threading.Thread(target=callback, args=[msg])
+                        thread.daemon = True
+                        thread.start()
 
             time.sleep(0.1)
 
@@ -508,6 +517,8 @@ class Client:
         
         The *pyjs8call.message.text* attribute stores the cleaned text while the *pyjs8call.message.value* attribute is unchanged.
 
+        Custom commands are also parsed out of message text. If a custom command is found, it is set as the value of *pyjs8call.message.cmd* in the returned message.
+
         Args:
             message (pyjs8call.message): Message object to clean
 
@@ -539,8 +550,15 @@ class Client:
         else:
             # remove destination callsign or group
             message = ' '.join(message.split(' ')[1:])
+
+        # parse out custom commands
+        space_after_cmd = message.find(' ', 1)
+        cmd = message[0:space_after_cmd]
+
+        if msg.cmd is None and cmd in self.callback.commands:
+            msg.set('cmd', cmd)
         
-        # strip remaining spaces and end-of-message symbol
+        # strip spaces and end-of-message symbol
         message = message.strip(' ' + Message.EOM)
 
         msg.set('text', message)
@@ -2335,13 +2353,14 @@ class Callbacks:
         self.incoming = {
             Message.RX_DIRECTED: [],
         }
+        self.commands = {}
 
     def register_incoming(self, callback, message_type=Message.RX_DIRECTED):
         '''Register incoming message callback function.
 
         Incoming message callback functions are associated with specific message types. The directed message type is assumed unless otherwise specified. See pyjs8call.message for more information on message types.
 
-        Note that pyjs8call internal modules may register callback functions for specific message type handling.
+        Note that pyjs8call internal modules may register callback functions for specific message type handling. Keep this in mind if minipulating registered callback functions directly.
 
         Args:
             callback (func): Callback function object
@@ -2389,3 +2408,49 @@ class Callbacks:
         else:
             return []
 
+    def register_command(self, cmd, callback):
+        '''Register command callback function.
+
+        Note: All JS8Call commands must have a leading space. Custom command strings also require a leading space for consistent internal handling.
+
+        Note: Custom commands are only processed for directed messages.
+
+        Args:
+            cmd (str): Command string (with leading space)
+            callback (func): Callback function object
+
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+
+        Raises:
+            ValueError: Specified command string is an exsiting JS8Call command
+            ValueError: Specified command string does not have a leading space
+        '''
+        if cmd in Message.COMMANDS:
+            raise ValueError('\'' + cmd + '\' is an existing JS8Call command')
+
+        if cmd[0] != ' ':
+            raise ValueError('All JS8Call commands must have a leading space')
+
+        if cmd not in self.commands:
+            self.commands[cmd] = []
+
+        self.commands[cmd].append(callback)
+        
+    def remove_command(self, cmd):
+        '''Remove command and callback functions.
+
+        Args:
+            cmd (str): Command to remove
+        '''
+        if cmd in self.commands:
+            del self.commands[cmd]
+
+    def remove_command_callback(self, callback):
+        '''Remove command callback function.
+
+        Args:
+            callback (func): Function to remove
+        '''
+        for cmd, callbacks in self.commands.items():
+            if callback in callbacks:
+                self.commands[cmd].remove(callback)
