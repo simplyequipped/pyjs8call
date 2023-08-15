@@ -32,6 +32,9 @@ __docformat__ = 'google'
 
 import threading
 import random
+import time
+
+from pyjs8call import Message
 
 
 class OffsetMonitor:
@@ -135,9 +138,9 @@ class OffsetMonitor:
         with self._recent_signals_lock:
             self._recent_signals.append(signal)
             # sort signals in ascending order by offset
-            self._recent_signals.sort(key = lambda signal: signal[0])
+            #self._recent_signals.sort(key = lambda signal: signal[0])
 
-    def _min_signal_freq(self, offset, bandwidth):
+    def _min_signal_freq(self, offset, bandwidth, timestamp):
         '''Get lower edge of signal.
 
         Args:
@@ -150,7 +153,7 @@ class OffsetMonitor:
         # bandwidth unused, included to support expanding tuple into args
         return int(offset)
 
-    def _max_signal_freq(self, offset, bandwidth):
+    def _max_signal_freq(self, offset, bandwidth, timestamp):
         '''Get upper edge of signal.
 
         Args:
@@ -351,25 +354,27 @@ class OffsetMonitor:
     def _cull_recent_activity(self):
         '''Remove aged signal activity.
 
-        Must be called from within self._recent_activity_lock context.
+        Must be called from within self._recent_signals_lock context.
         '''
-        recent_activity = []
+        recent_signals = []
         offsets = []
         max_age = int(self.activity_cycles * self._client.settings.get_window_duration())
         
         # sort recent signals in descending order by timestamp,
         # causes the most recent activity on the same offset to be kept while culling
-        self._recent_activity.sort(key = lambda signal: signal[2], reverse = True)
+        self._recent_signals.sort(key = lambda signal: signal[2], reverse = True)
         
         now = time.time()
         
-        for signal in self._recent_activity:
+        for signal in self._recent_signals:
             if signal[0] not in offsets and now - signal[2] <= max_age:
                 # keep recent signals with a unique offset
-                recent_activity.append(signal)
+                recent_signals.append(signal)
                 offsets.append(signal[0])
                 
-        self._recent_activity = recent_activity
+        # sort ascending by offset
+        recent_signals.sort(key = lambda signal: signal[0])
+        self._recent_signals = recent_signals
     
     def _monitor(self):
         '''Offset monitor thread.
@@ -401,11 +406,11 @@ class OffsetMonitor:
                     # middle of pass band
                     self.offset = ((self.max_offset - self.min_offset) / 2) + self.min_offset
 
-            with self._recent_activity_lock:
+            with self._recent_signals_lock:
                 self._cull_recent_activity()
                 # check for signal overlap with transmit region
-                if self._activity_overlapping(self._recent_activity):
-                    new_offset = self._find_new_offset(self._recent_activity)
+                if self._activity_overlapping(self._recent_signals):
+                    new_offset = self._find_new_offset(self._recent_signals)
 
             # set new offset
             if new_offset is not None:

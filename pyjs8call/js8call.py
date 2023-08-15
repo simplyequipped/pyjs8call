@@ -268,14 +268,14 @@ class JS8Call:
             current_freq = self._client.settings.get_freq()
 
         current_band = pyjs8call.Client.freq_to_band(current_freq)
-        previous_band = pyjscall.Client.freq_to_band(previous_freq)
+        previous_band = pyjs8call.Client.freq_to_band(previous_freq)
 
         if current_band == previous_band:
             # no band change
             return
 
-        self._last_incoming_by_band[previous_band] == self.last_incoming
-        self._last_outgoing_by_band[previous_band] == self.last_outgoing
+        self._last_incoming_by_band[previous_band] = self.last_incoming
+        self._last_outgoing_by_band[previous_band] = self.last_outgoing
         self.last_band_change = time.time()
 
         if current_band in self._last_incoming_by_band:
