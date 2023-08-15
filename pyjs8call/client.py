@@ -1967,7 +1967,7 @@ class Settings:
         '''
         msg = Message()
         msg.set('type', Message.RIG_SET_FREQ)
-        msg.set('params', {'DIAL': freq, 'OFFSET': self._client.js8call.state['offset']})
+        msg.set('params', {'DIAL': freq, 'OFFSET': self._client.js8call.get_state('offset')})
         self._client.js8call.send(msg)
         time.sleep(self._client._set_get_delay)
         return self.get_freq(update = True)
@@ -2010,7 +2010,7 @@ class Settings:
         '''
         msg = Message()
         msg.set('type', Message.RIG_SET_FREQ)
-        msg.set('params', {'DIAL': self._client.js8call.state['dial'], 'OFFSET': offset})
+        msg.set('params', {'DIAL': self._client.js8call.get_state('dial'), 'OFFSET': offset})
         self._client.js8call.send(msg)
         time.sleep(self._client._set_get_delay)
         return self.get_offset(update = True)
