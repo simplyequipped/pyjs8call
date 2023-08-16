@@ -12,6 +12,11 @@ This software is currently in a beta state. This means that the software will li
 
 &nbsp;
 
+### Responsibility
+It is the station operator's reponsibility to ensure they are complying with locally applicable laws.
+
+&nbsp;
+
 ### Documentation
 
 See the official [pyjs8call documentation](https://simplyequipped.github.io/pyjs8call).
