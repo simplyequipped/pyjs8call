@@ -720,9 +720,6 @@ class JS8Call:
                     
                     self._state[item]['last_update_request'] = now
 
-                    #TODO
-                    print(msg_type)
-    
     def _tx(self):
         '''JS8Call application transmit thread.
 
