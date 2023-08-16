@@ -83,8 +83,7 @@ class HeartbeatNetworking:
 
         self._enabled = True
 
-        self._offset = OffsetMonitor(self._client)
-        self._offset._hb = True
+        self._offset = OffsetMonitor(self._client, hb = True)
         self._offset.min_offset = 500
         self._offset.max_offset = 1000
         self._offset.bandwidth_safety_factor = 1.1
@@ -110,8 +109,14 @@ class HeartbeatNetworking:
         self._last_outgoing = time.time()
         self._paused = False
 
-    def _outgoing(self, msg):
-        '''Process outgoing heartbeat message state.'''
+    def outgoing_msg(self, msg):
+        '''Process outgoing heartbeat message state.
+
+        Note: this function is called internally by the outgoing monitor.
+
+        Args:
+            msg (pyjs8call.Message): outgoing message object
+        '''
         self._outgoing_msg = msg
 
     def _monitor(self):
@@ -123,7 +128,8 @@ class HeartbeatNetworking:
             if self._client.window.next_transition_seconds() is None:
                 continue
                 
-            # wait for end of rx/tx window
+            # wait for end of rx/tx window,
+            # offset monitor runs 1 sec before transition, so it needs to be paused before it runs
             self._client.window.sleep_until_next_transition(before = 1.5)
                 
             if not self._enabled:
@@ -132,7 +138,7 @@ class HeartbeatNetworking:
             # update interval from config
             interval = self._client.settings.get_heartbeat_interval() * 60 # minutes to seconds
             # subtract window duration to prevent bumping to next window after interval
-            interval -= self._client.settings.get_window_duration() + self._offset.before_transition
+            interval -= self._client.settings.get_window_duration() + 1 # 1 = offset monitor before-transition time
 
             # update heartbeat during qso from config
             pause_heartbeat_during_qso = self._client.settings.heartbeat_during_qso_paused()
@@ -152,16 +158,16 @@ class HeartbeatNetworking:
             ):
                 continue
 
-            # if we made it this far we are ready to send a heartbeat
+            # ready to send a heartbeat
 
             # pause main offset monitor
-            main_offset_is_paused = self._client.offset.paused()
+            main_offset_paused = self._client.offset.paused()
             self._client.offset.pause()
-            last_offset = self._client.offset.offset
+            last_offset = self._client.settings.get_offset()
 
-            # resume heartbeat offset monitor
+            # resume heartbeat offset monitor, runs 1 second before transition
             self._offset.resume()
-            # heartbeat offset monitor runs 1 second before transition
+            # hb offset should be set by 0.25 sec before transition
             self._client.window.sleep_until_next_transition(before = 0.25)
 
             # send heartbeat on next rx/tx window
@@ -178,6 +184,6 @@ class HeartbeatNetworking:
             self._offset.pause()
             self._client.settings.set_offset(last_offset)
                 
-            if not main_offset_is_paused:
+            if not main_offset_paused:
                 self._client.offset.resume()
             
