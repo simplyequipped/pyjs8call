@@ -157,8 +157,14 @@ for message in inbox:
 # send a directed message
 js8call.send_directed_message('N0GQ', 'Thanks for your work on js8net')
 
-# see who is hearing who in the last hour
+# who is hearing who
 js8call.hearing()
+
+# who is hearing a specific station
+js8call.station_heard_by('KI6NAZ')
+
+# who a specific station is hearing
+js8call.station_hearing('KT7RUN')
 
 # get a list of spot messages from a specific station
 js8call.spots.filter(origin = 'OH8STN')
@@ -173,6 +179,9 @@ js8call.spots.filter(distance = 1000)
 # get a list of spot messages in the last 15 minutes
 max_age = 15 * 60 # convert minutes to seconds
 js8call.spots.filter(age = max_age)
+
+# get a list of the 10 most recent spot messages from regional stations in the last hour on the 40m band
+js8call.spots.filter(distance = 500, band = '40m', count = 10)
 ```
 
 Run multiple JS8Call instances:
@@ -200,15 +209,15 @@ import pyjs8call
 # callback function for all new spots
 def new_spots(spots):
     for spot in spots:
-        print('Spotted ' + spot.origin + ' with a ' + str(spot.snr) + 'dB SNR')
+        print('Spotted {} with a {}db SNR'.format(spot.origin, spot.snr))
     
 # callback function for watched station spots
 def station_spotted(spot):
-    print(spot.origin + ' spotted!')
+    print('{} spotted!'.format(spot.origin))
 
 # callback function for watched group spots
 def group_spotted(spot):
-    print(spot.destination + ' spotted!')
+    print('{} spotted!'.format(spot.destination))
     
 js8call = pyjs8call.Client()
 # set spot monitor callback
@@ -254,7 +263,7 @@ import pyjs8call
 
 # callback function for message status change
 def tx_status(msg):
-    print('Message ' + msg.id + ' status: ' + msg.status)
+    print('Message {} status: {}'.format(msg.id, msg.status))
     
 js8call = pyjs8call.Client()
 # set outgoing monitor callback
@@ -277,7 +286,7 @@ import pyjs8call
 js8call = pyjs8call.Client()
 js8call.start()
 
-# use default 10 minute interval
+# interval based on JS8Call settings
 js8call.heartbeat.enable()
 ```
 
@@ -287,7 +296,7 @@ import pyjs8call
 
 # callback function for schedule entry activation
 def schedule_activation(schedule_entry):
-    print('Activating ' + repr(schedule_entry))
+    print('Activating {}'.format(repr(schedule_entry)))
 
 js8call = pyjs8call.Client()
 # set schedule activation callback
@@ -313,10 +322,13 @@ Set config file settings:
 import pyjs8call
 
 js8call = pyjs8call.Client()
+
 # set config file settings before starting
 js8call.settings.enable_heartbeat_acknowledgements()
+js8call.settings.set_heartbeat_interval(15)
 js8call.settings.enable_reporting()
 js8call.settings.set_speed('normal')
+
 js8call.start()
 ```
 
@@ -327,8 +339,10 @@ import pyjs8call
 js8call = pyjs8call.Client()
 js8call.start()
 
-# use built-in spot distance filters
+# use built-in spot distance filter
 regional_stations = [spot.origin for spot in js8call.spots.filter(distance = 500)]
+for station in regional_stations:
+    print('{}: {} {} at {}\N{DEGREE SIGN}'.format(station.origin, station.distance, station.distance_units, station.bearing))
 
 # access message attributes directly
 # this requires the message to contain grid square data
@@ -337,10 +351,10 @@ distance = last_heartbeat.distance
 bearing = last_heartbeat.bearing
 
 # manually calculate distance and bearing from local station
-distance, bearing = js8call.grid_distance('FM16')
+distance, distance_units, bearing = js8call.grid_distance('FM16')
 
 # manually calculate distance and bearing between grid squares
-distance, bearing = js8call.grid_distance('FM16fq', 'EM19ub')
+distance, distance_units, bearing = js8call.grid_distance('FM16fq', 'EM19ub')
 ```
 
 &nbsp;
