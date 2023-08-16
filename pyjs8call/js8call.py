@@ -110,6 +110,11 @@ class JS8Call:
         self._watching = None
         self._watch_timeout = 3 # seconds
 
+        # update frequency:
+        #   positive value: update every X seconds
+        #   zero value:     update at window transition
+        #   negative value: update abs(X) seconds before window transition
+        #
         # minimum update frequency is 0.5 seconds
         self._state = {
             'ptt' : {
@@ -133,10 +138,12 @@ class JS8Call:
                 'last_update_request': 0,
                 'msg_type': Message.RIG_GET_FREQ
             },
-            'offset' : { # used by offset monitor
+            # offset monitor: runs 1 sec before window transition
+            # hb network:     runs 1 sec before window transition
+            'offset' : {
                 'value': None,
-                'update_frequency': None,
-                'last_update': -1,
+                'update_frequency': -1.25,
+                'last_update': 0,
                 'last_update_request': 0,
                 'msg_type': Message.RIG_GET_FREQ
             },
@@ -175,10 +182,11 @@ class JS8Call:
                 'last_update_request': 0,
                 'msg_type': Message.RX_GET_TEXT
             },
-            'tx_text' : { # used by outgoing monitor
+            # outgoing monitor: runs every 0.5 secs
+            'tx_text' : {
                 'value': None,
-                'update_frequency': None,
-                'last_update': 0.5,
+                'update_frequency': 0.5,
+                'last_update': 0,
                 'last_update_request': 0,
                 'msg_type': Message.GET_TX_TEXT
             },
