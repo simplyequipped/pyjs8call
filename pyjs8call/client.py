@@ -1308,7 +1308,7 @@ class Client:
         return rx_messages
     
     def hearing(self, age=None):
-        '''Which stations each received station is hearing.
+        '''Which stations other stations are hearing.
 
         Args:
             age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
@@ -1383,7 +1383,7 @@ class Client:
             return []
     
     def heard_by(self, age=None, hearing=None):
-        '''Which stations are heard by each received station.
+        '''Which stations are hearing other station.
 
         *client.heard_by()* is the inverse of *client.hearing()*.
 
@@ -1414,8 +1414,8 @@ class Client:
 
         return heard_by
 
-    def heard_by_station(self, station=None, age=None, hearing=None):
-        '''Which stations are heard by the specified station.
+    def station_heard_by(self, station=None, age=None, hearing=None):
+        '''Which stations are hearing the specified station.
 
         See *client.heard_by()* for more information.
         
