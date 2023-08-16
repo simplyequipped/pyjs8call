@@ -135,12 +135,13 @@ class OffsetMonitor:
         with self._recent_signals_lock:
             self._recent_signals.append(signal)
 
-    def _min_signal_freq(self, offset, bandwidth, timestamp):
+    def _min_signal_freq(self, offset, bandwidth, timestamp=0):
         '''Get lower edge of signal.
 
         Args:
             offset (int): Signal offset frequency in Hz
             bandwidth (int): Signal bandwidth in Hz
+            timestamp (float): Received timestamp in seconds, defaults to 0
 
         Returns:
             int: Minimum frequency of the signal in Hz
@@ -148,12 +149,13 @@ class OffsetMonitor:
         # bandwidth unused, included to support expanding tuple into args
         return int(offset)
 
-    def _max_signal_freq(self, offset, bandwidth, timestamp):
+    def _max_signal_freq(self, offset, bandwidth, timestamp=0):
         '''Get upper edge of signal.
 
         Args:
             offset (int): Signal offset frequency in Hz
             bandwidth (int): Signal bandwidth in Hz
+            timestamp (float): Received timestamp in seconds, defaults to 0
 
         Returns:
             int: Maximum frequency of the signal in Hz
@@ -178,13 +180,13 @@ class OffsetMonitor:
 
         return False
 
-    def _signal_overlapping(self, offset, bandwidth, timestamp):
+    def _signal_overlapping(self, offset, bandwidth, timestamp=0):
         '''Determine if signal overlaps with current offset.
 
         Args:
             offset (int): Signal offset frequency in Hz
             bandwidth (int): Signal bandwidth in Hz
-            timestamp (float): Received timestamp in seconds
+            timestamp (float): Received timestamp in seconds, defaults to 0
 
         Returns:
             bool: Whether the given signal overlaps with the transmit signal space
