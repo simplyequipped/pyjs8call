@@ -95,7 +95,7 @@ class Client:
         config (pyjs8call.confighandler): Manages JS8Call configuration file
         heartbeat (pyjs8call.hbnetwork): Manages heartbeat outgoing messages
         schedule (pyjs8call.schedulemonitor): Monitors and activates schedule entries
-        propagation (pyjs8call.propagation): Analyses spot data to determine propagation
+        propagation (pyjs8call.propagation): Parse spots into propagation data
         callback (pyjs8call.client.Callbacks): Callback function reference object
         settings (pyjs8call.client.Settings): Configuration setting function reference object
         clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages, defaults to True
@@ -262,13 +262,12 @@ class Client:
         - Schedule monitor (see pyjs8call.schedulemonitor)
         - Propagation (see pyjs8call.propagation)
 
-        Enables module objects:
+        Enables modules:
         - window
         - spots
         - offset
         - outgoing
         - schedule
-        - propagation
 
         Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
 
@@ -351,7 +350,6 @@ class Client:
         self.offset.enable()
         self.outgoing.enable()
         self.schedule.enable()
-        self.propagation.enable()
 
     def stop(self):
         '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
@@ -378,8 +376,7 @@ class Client:
             self.drift_sync,
             self.time_master,
             self.spots,
-            self.schedule,
-            self.propagation
+            self.schedule
         ]
 
         paused_modules = []
@@ -2330,10 +2327,6 @@ class Callbacks:
     *schedule* callback signature: *func(sch)* where *sch* is a pyjs8call.schedule.Schedule object
     - See *pyjs8call.schedule.Schedule* for object property details
     - Called by pyjs8call.schedulemonitor
-
-    *propagation* callback signature: *func(dataset)* where *dataset* is a dictionary
-    - See *pyjs8call.propagation.Propagation* for object property details
-    - Called by pyjs8call.propagation
     '''
 
     def __init__(self):
@@ -2349,7 +2342,6 @@ class Callbacks:
         self.window = None
         self.inbox = None
         self.schedule = None
-        self.propagation = None
         self.incoming = {
             Message.RX_DIRECTED: [],
         }
