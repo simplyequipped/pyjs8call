@@ -188,7 +188,7 @@ class JS8Call:
                 'update_frequency': 0.5,
                 'last_update': 0,
                 'last_update_request': 0,
-                'msg_type': Message.GET_TX_TEXT
+                'msg_type': Message.TX_GET_TEXT
             },
             'inbox': {
                 'value': None,
@@ -679,7 +679,7 @@ class JS8Call:
         Minimum update frequency is 0.5 seconds.
         '''
         # allow initial api messages and requests to initialize state
-        time.sleep(5)
+        time.sleep(2)
         
         while self.online:
             time.sleep(0.05)
@@ -696,8 +696,8 @@ class JS8Call:
                 # skip updating in the following cases:
                 if (self.watching(item) or # state is currently being updated
                     update_frequency is None or # do not update
-                    msg_type is None or # no assocaited message type
-                    now - last_update_request < 0.5 # update requested recently
+                    msg_type is None or # no associated message type
+                    now - last_update_request < max(0.5, abs(update_frequency)) # update requested recently
                 ):
                     continue
                 
@@ -705,10 +705,12 @@ class JS8Call:
                 if update_frequency > 0 and now - last_update >= update_frequency:
                     update = True
                 # zero, update at end of rx/tx window
-                elif update_frequency == 0 and self._client.window.next_transition_seconds() < 0.1:
+                # default transition time of 5 seconds prevents frequent state updates just after starting
+                elif update_frequency == 0 and self._client.window.next_transition_seconds(default = 5) < 0.1:
                     update = True
                 # negative, update abs(X) seconds before end of rx/tx window
-                elif update_frequency < 0 and self._client.window.next_transition_seconds() <= abs(update_frequency):
+                # default transition time of 5 seconds prevents frequent state updates just after starting
+                elif update_frequency < 0 and self._client.window.next_transition_seconds(default = 5) <= abs(update_frequency):
                     update = True
 
                 if update:
@@ -717,6 +719,9 @@ class JS8Call:
                     self.send(msg)
                     
                     self._state[item]['last_update_request'] = now
+
+                    #TODO
+                    print(msg_type)
     
     def _tx(self):
         '''JS8Call application transmit thread.
