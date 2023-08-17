@@ -514,7 +514,7 @@ class Client:
         
         The *pyjs8call.message.text* attribute stores the cleaned text while the *pyjs8call.message.value* attribute is unchanged.
 
-        Custom commands are also parsed out of message text. If a custom command is found, it is set as the value of *pyjs8call.message.cmd* in the returned message.
+        Custom commands are also parsed out of message text. If a custom command is found, *pyjs8call.message.cmd* is set in the returned message.
 
         Args:
             message (pyjs8call.message): Message object to clean
