@@ -43,14 +43,18 @@ class Propagation:
         '''
         self._client = client
     
-    def grids_dataset(self, max_age=30, min_age=0):
+    def grids_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None):
         '''Parse spot messages into propagation dataset for grid squares.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
+
+        If *start_time* is set, the dataset age will be calculated based on *start_time* and *end_time*. If *start_time* is set and *end_time* is not set, the minimum age is set to zero.
         
         Args:
             max_age (int): Maximum age of spot messages in minutes, defaults to 30
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
+            start_time (int, float): Dataset starting Unix timestamp, defaults to None
+            end_time (int, float): Dataset ending Unix timestamp, defaults to None
 
         Returns:
             list: `[ (GRID, SNR, timestamp), ... ]`
@@ -59,6 +63,14 @@ class Propagation:
             *SNR* is the SNR of the spot
             *timestamp* is the local timestamp of when the spot occured
         '''
+        if start_time is not None:
+            max_age = time.time() - start_time
+            
+            if end_time is None:
+                min_age = 0
+            else:
+                min_age = time.time() - end_time
+        
         min_age *= 60 # minutes to seconds
         max_age *= 60 # minutes to seconds
         spots = self._client.spots.filter(age = max_age)
@@ -70,14 +82,18 @@ class Propagation:
 
         return dataset
 
-    def grids_median_dataset(self, max_age=30, min_age=0):
+    def grids_median_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None):
         '''Parse spot messages into median propagation dataset for grid squares.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
         
+        If *start_time* is set, the dataset age will be calculated based on *start_time* and *end_time*. If *start_time* is set and *end_time* is not set, the minimum age is set to zero.
+        
         Args:
             max_age (int): Maximum age of spot messages in minutes, defaults to 30
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
+            start_time (int, float): Dataset starting Unix timestamp, defaults to None
+            end_time (int, float): Dataset ending Unix timestamp, defaults to None
 
         Returns:
             list: `[ (GRID, SNR, timestamp), ... ]`
@@ -86,6 +102,14 @@ class Propagation:
             *SNR* is the median SNR of GRID spots over the specified time period
             *timestamp* is the most recent local timestamp of GRID spots
         '''
+        if start_time is not None:
+            max_age = time.time() - start_time
+            
+            if end_time is None:
+                min_age = 0
+            else:
+                min_age = time.time() - end_time
+        
         min_age *= 60 # minutes to seconds
         max_age *= 60 # minutes to seconds
         spots = self._client.spots.filter(age = max_age)
@@ -104,15 +128,19 @@ class Propagation:
 
         return [(grid, round(statistics.median(data['snrs'])), data['timestamp']) for grid, data in dataset.items()]
 
-    def grid_median_snr(self, grid, max_age=30, min_age=0):
+    def grid_median_snr(self, grid, max_age=30, min_age=0, start_time=None, end_time=None):
         '''Parse spot messages into median SNR for specified grid square.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
+        
+        If *start_time* is set, the dataset age will be calculated based on *start_time* and *end_time*. If *start_time* is set and *end_time* is not set, the minimum age is set to zero.
         
         Args:
             grid (str): 4 or 6 character grid square to match
             max_age (int): Maximum age of spot messages in minutes, defaults to 30
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
+            start_time (int, float): Dataset starting Unix timestamp, defaults to None
+            end_time (int, float): Dataset ending Unix timestamp, defaults to None
 
         Returns:
             tuple: `(SNR, timestamp)`
@@ -120,6 +148,14 @@ class Propagation:
             *SNR* is the median SNR of *grid* spots over the specified time period
             *timestamp* is the most recent local timestamp of *grid* spots
         '''
+        if start_time is not None:
+            max_age = time.time() - start_time
+            
+            if end_time is None:
+                min_age = 0
+            else:
+                min_age = time.time() - end_time
+        
         min_age *= 60 # minutes to seconds
         max_age *= 60 # minutes to seconds
         spots = self._client.spots.filter(grid = grid, age = max_age)
@@ -136,14 +172,18 @@ class Propagation:
 
         return (round(statistics.median(snrs)), timestamp)
         
-    def origins_dataset(self, max_age=30, min_age=0):
+    def origins_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None):
         '''Parse spot messages into propagation dataset for origin callsigns.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
         
+        If *start_time* is set, the dataset age will be calculated based on *start_time* and *end_time*. If *start_time* is set and *end_time* is not set, the minimum age is set to zero.
+        
         Args:
             max_age (int): Maximum age of spot messages in minutes, defaults to 30
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
+            start_time (int, float): Dataset starting Unix timestamp, defaults to None
+            end_time (int, float): Dataset ending Unix timestamp, defaults to None
 
         Returns:
             list: `[ (ORIGIN, SNR, timestamp), ... ]`
@@ -152,6 +192,14 @@ class Propagation:
             *SNR* is the SNR of the spot
             *timestamp* is the local timestamp of when the spot occured
         '''
+        if start_time is not None:
+            max_age = time.time() - start_time
+            
+            if end_time is None:
+                min_age = 0
+            else:
+                min_age = time.time() - end_time
+        
         min_age *= 60 # minutes to seconds
         max_age *= 60 # minutes to seconds
         spots = self._client.spots.filter(age = max_age)
@@ -163,14 +211,18 @@ class Propagation:
 
         return dataset
 
-    def origins_median_dataset(self, max_age=30, min_age=0):
+    def origins_median_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None):
         '''Parse spot messages into median propagation dataset for origin callsigns.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
         
+        If *start_time* is set, the dataset age will be calculated based on *start_time* and *end_time*. If *start_time* is set and *end_time* is not set, the minimum age is set to zero.
+        
         Args:
             max_age (int): Maximum age of spot messages in minutes, defaults to 30
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
+            start_time (int, float): Dataset starting Unix timestamp, defaults to None
+            end_time (int, float): Dataset ending Unix timestamp, defaults to None
 
         Returns:
             list: `[ (ORIGIN, SNR, timestamp), ... ]`
@@ -179,6 +231,14 @@ class Propagation:
             *SNR* is the median SNR of ORIGIN spots over the specified time period
             *timestamp* is the most recent local timestamp of ORIGIN spots
         '''
+        if start_time is not None:
+            max_age = time.time() - start_time
+            
+            if end_time is None:
+                min_age = 0
+            else:
+                min_age = time.time() - end_time
+        
         min_age *= 60 # minutes to seconds
         max_age *= 60 # minutes to seconds
         spots = self._client.spots.filter(age = max_age)
@@ -197,15 +257,19 @@ class Propagation:
 
         return [(origin, round(statistics.median(data['snrs'])), data['timestamp']) for origin, data in dataset.items()]
 
-    def origin_median_snr(self, origin, max_age=30, min_age=0):
+    def origin_median_snr(self, origin, max_age=30, min_age=0, start_time=None, end_time=None):
         '''Parse spot messages into median SNR for specified origin callsign.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
+        
+        If *start_time* is set, the dataset age will be calculated based on *start_time* and *end_time*. If *start_time* is set and *end_time* is not set, the minimum age is set to zero.
         
         Args:
             origin (str): Origin callsign to match
             max_age (int): Maximum age of spot messages in minutes, defaults to 30
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
+            start_time (int, float): Dataset starting Unix timestamp, defaults to None
+            end_time (int, float): Dataset ending Unix timestamp, defaults to None
 
         Returns:
             tuple: `(SNR, timestamp)`
@@ -213,6 +277,14 @@ class Propagation:
             *SNR* is the median SNR of *origin* spots over the specified time period
             *timestamp* is the most recent local timestamp of *origin* spots
         '''
+        if start_time is not None:
+            max_age = time.time() - start_time
+            
+            if end_time is None:
+                min_age = 0
+            else:
+                min_age = time.time() - end_time
+        
         min_age *= 60 # minutes to seconds
         max_age *= 60 # minutes to seconds
         spots = self._client.spots.filter(origin = origin, age = max_age)
