@@ -399,80 +399,6 @@ class Message:
         "CQ"
     ]
 
-    _huff_table = {
-        ' ': '01',
-        'E': '100',
-        'T': '1101',
-        'A': '0011',
-        'O': '11111',
-        'I': '11100',
-        'N': '10111',
-        'S': '10100',
-        'H': '00011',
-        'R': '00000',
-        'D': '111011',
-        'L': '110011',
-        'C': '110001',
-        'U': '101101',
-        'M': '101011',
-        'W': '001011',
-        'F': '001001',
-        'G': '000101',
-        'Y': '000011',
-        'P': '1111011',
-        'B': '1111001',
-        '.': '1110100',
-        'V': '1100101',
-        'K': '1100100',
-        '-': '1100001',
-        '+': '1100000',
-        '?': '1011001',
-        '!': '1011000',
-        '"': '1010101',
-        'X': '1010100',
-        '0': '0010101',
-        'J': '0010100',
-        '1': '0010001',
-        'Q': '0010000',
-        '2': '0001001',
-        'Z': '0001000',
-        '3': '0000101',
-        '5': '0000100',
-        '4': '11110101',
-        '9': '11110100',
-        '8': '11110001',
-        '6': '11110000',
-        '7': '11101011',
-        '/': '11101010'
-    }
-
-    @staticmethod
-    def is_compound_callsign(callsign):
-        '''Whether specified callsign is compound type.
-
-        A callsign is compound if it contains '@' (groups) or '/' (ex. KT7RUN/P).
-
-        Args:
-            callsign (str): Callsign to evaluate
-
-        Returns:
-            bool: *True* if callsign is compound, *False* otherwise
-        '''
-        # relay paths are stored as a list
-        if callsign in (None, '') or type(callsign) == list:
-            return False
-
-        if callsign in Message.SPECIAL_GROUPS:
-            return False
-
-        compound_symbols = '/@'
-        
-        for symbol in compound_symbols:
-            if symbol in callsign:
-                return True
-
-        return False
-
     def __init__(self, destination=None, cmd=None, value=None, origin=None):
         '''Initialize message.
 
@@ -876,92 +802,7 @@ class Message:
             self.set(attribute, value)
 
         return self
-
-    def frame_count(self):
-        '''Determine number of JS8Call frames required to transmit.
-
-        Number of frames multipled by the rx/tx window duration equals the message transmit time.
-
-        Returns:
-            int: Number of frames
-        '''
-        #TODO
-        # - test if SCDC frame count is approximate for huff encoding (normal mode)
-        # - does own callsign get prepended to each data frame and parsed out on receive?
-        # - calculate relay path (destination list) frame count
-        # - handle various CQ types
-
-        # only process outgoing user message types
-        if not (self.type in Message.TX_TYPES and self.type in Message.USER_MSG_TYPES):
-            return None
-
-        frames = 0
-        relay = self.is_relay()
-
-        heartbeat_commands = [
-            Message.CMD_HB,
-            Message.CMD_HEARTBEAT,
-            Message.CMD_HEARTBEAT_SNR,
-            Message.CMD_CQ
-        ]
-
-        multi_frame_commands = Message.CHECKSUM_COMMANDS.copy()
-        multi_frame_commands.append(Message.CMD_GRID)
-        multi_frame_commands.append(Message.CMD_HEARING)
-
-        variable_data_commands = Message.CHECKSUM_COMMANDS.copy()
-        variable_data_commands.remove(Message.CMD_QUERY_CALL)
-        variable_data_commands.remove(Message.CMD_QUERY)
-
-        if (
-            self.cmd is not None and
-            self.cmd not in multi_frame_commands and
-            not relay
-        ):
-            frames += 1
-        elif self.cmd in [Message.CMD_QUERY, Message.CMD_GRID]:
-            frames += 2
-        elif self.cmd in [Message.CMD_QUERY_CALL]:
-            frames += 3
-        elif self.cmd in [Message.CMD_HEARING]:
-            frames += 5
-        else:
-            # callsign(s) in first frame
-            # origin only if destination is compound
-            # origin and destination if destination is standard
-            frames += 1
-
-        if self.is_compound_callsign(self.destination):
-            frames += 1
-
-        # no data, or known frame length
-        if (
-            self.cmd is not None and
-            self.cmd not in variable_data_commands and
-            not relay
-        ):
-            return frames
-
-        # calculate data frames
-        if self.text not in (None, ''):
-            text = self.text
-            bits = ''
-
-            if self.cmd in Message.CHECKSUM_COMMANDS or relay:
-                # for length calculation only
-                text += ' ABC'
-
-            for char in text:
-                if char in self._huff_table:
-                    bits += self._huff_table[char]
-
-            #TODO
-            print('prev frames: {}, bit len: {}, bits: {}'.format(frames, len(bits), bits))
-
-            frames += math.ceil(len(bits) / 70)
-            
-        return frames            
-
+        
     def __eq__(self, msg):
         '''Whether another message is considered equal to self.
 
@@ -1017,5 +858,5 @@ class Message:
         return bool(self.timestamp > msg.timestamp)
 
     def __repr__(self):
-        return '<Message {}>'.format(self.id)
+        return '<{} message {}>'.format(self.type, self.id)
 
