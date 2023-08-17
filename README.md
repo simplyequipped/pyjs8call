@@ -362,6 +362,62 @@ distance, distance_units, bearing = js8call.grid_distance('FM16')
 distance, distance_units, bearing = js8call.grid_distance('FM16fq', 'EM19ub')
 ```
 
+Using propagation data:
+```
+from datetime import datetime
+import pyjs8call
+
+js8call = pyjs8call.Client()
+js8call.start()
+
+# allow some time to capture spots
+# note: default maximum spot age is 7 days
+
+# get SNR data for each spotted grid square in the last 30 minutes
+js8call.propagation.grids_dataset()
+
+# get median SNR data for each unique grid square spotted in the last hour
+js8call.propagation.grids_median_dataset(60)
+
+# get median SNR data for each unique origin callsign spotted from 8pm to 10pm yesterday
+now = datetime.now()
+start = datetime(now.year, now.month, now.day - 1, hour = 20)
+end = datetime(now.year, now.month, now.day - 1, hour = 22)
+js8call.propagation.origins_median_dataset(start_time = start, end_time = end)
+
+# get the median SNR of a specific origin callsign spotted over the last 2 hours
+js8call.propagation.origin_median_snr(120)
+```
+
+Implementing custom commands:
+```
+import pyjs8call
+
+# custom command callback function
+def news_cmd(msg):
+    # do not respond in the following cases:
+    if (
+        js8call.settings.autoreply_confirmation_enabled() or
+        not js8call.msg_is_to_me(msg) or # not directed to local station or configured group
+        msg.text in (None, '') # message text is empty
+    ):
+        return
+
+    # read latest news from file
+    with open('latest_news.txt', 'r') as fd:
+        news = fd.read()
+
+    # respond to origin station with directed message
+    js8call.send_directed_message(msg.origin, news)
+
+js8call = pyjs8call.Client()
+js8call.start()
+
+# set custom command callback
+# note the leading space in the command string
+js8call.callback.register_command(' NEWS?', news_cmd)
+```
+
 &nbsp;
 
 ### Acknowledgements
