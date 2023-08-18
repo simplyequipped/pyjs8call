@@ -44,6 +44,7 @@ __docformat__ = 'google'
 import time
 import datetime
 import threading
+import json
 
 
 class ScheduleEntry:
@@ -80,7 +81,6 @@ class ScheduleEntry:
             freq (int): Dial frequency in Hz
             speed (str): Modem speed ('slow', 'normal', 'fast', 'turbo')
             profile (str): Configuration profile name
-            callback (func): Function to call when the schedule entry becomes active
 
         Returns:
             pyjs8call.schedulemonitor.ScheduleEntry: Constructed schedule entry
@@ -89,7 +89,6 @@ class ScheduleEntry:
         self.start = start
         self.freq = freq
         self.speed = speed
-        self.callback = callback
         self.active = False
         self.run = False
     
@@ -157,6 +156,14 @@ class ScheduleMonitor:
         self._enabled = False
         self._paused = False
 
+        config_schedules = self._client.config.get('Configuration', 'pyjs8callSchedule')
+
+        if config_schedules is not None:
+            config_schedules = json.loads(config_schedules)
+
+            for schedule in config_schedules:
+                self.add(*schedule)
+
     def enabled(self):
         '''Get enabled status.
 
@@ -218,7 +225,7 @@ class ScheduleMonitor:
         '''Resume schedule monitoring.'''
         self._paused = False
 
-    def add(self, start_time, freq=None, speed=None, profile=None, callback=None):
+    def add(self, start_time, freq=None, speed=None, profile=None):
         '''Add new schedule entry.
 
         Args:
@@ -226,7 +233,6 @@ class ScheduleMonitor:
             freq (int): Dial frequency in Hz, defaults to current frequency
             speed (str): Modem speed ('slow', 'normal', 'fast', 'turbo'), defaults to current speed
             profile (str): Configuration profile name, defaults to the current profile
-            callback (func): Function to call when the schedule entry becomes active, defaults to None
         '''
         start_time = datetime.datetime.strptime(start_time, '%H:%M').time()
         now = datetime.datetime.now().time()
@@ -240,7 +246,7 @@ class ScheduleMonitor:
         if profile is None:
             profile = self._client.settings.get_profile()
 
-        new_schedule = ScheduleEntry(start_time, freq, speed, profile, callback)
+        new_schedule = ScheduleEntry(start_time, int(freq), speed, profile, callback)
 
         # avoid running past schedule entry immediately after creation
         if new_schedule.start < now:
@@ -251,6 +257,8 @@ class ScheduleMonitor:
 
         with self._schedule_lock:
             self._schedule.append(new_schedule)
+
+        self._save_to_config()
 
     def remove(self, start_time=None, profile=None):
         '''Remove existing schedule entry.
@@ -275,6 +283,8 @@ class ScheduleMonitor:
                 ):
                     self._schedule.remove(schedule)
 
+        self._save_to_config()
+
     def get_schedule(self):
         '''Get all schedule entries.
 
@@ -289,6 +299,14 @@ class ScheduleMonitor:
         schedule.sort(key=lambda sch: sch.start)
         return schedule
 
+    def _save_to_config(self):
+        '''Save schedule to configuration file.'''
+        with self._schedule_lock:
+            schedule = [ [sch.time, sch.freq. sch.speed, sch.profile] for sch in self._schedule]
+            
+        schedule = json.dumps(schedule)
+        self._client.config.set('Configuration', 'pyjs8callSchedule', schedule)
+
     def _restart_required(self, schedule_a, schedule_b):
         '''Whether schedule changes require restart.'''
         if schedule_a is None or schedule_b is None:
@@ -300,11 +318,6 @@ class ScheduleMonitor:
 
     def _callback(self, schedule):
         '''Callback handling function.'''
-        if schedule.callback is not None:
-            thread = threading.Thread(target=schedule.callback, args=(schedule,))
-            thread.daemon = True
-            thread.start()
-            
         if self._client.callback.schedule is not None:
             thread = threading.Thread(target=self._client.callback.schedule, args=(schedule,))
             thread.daemon = True
