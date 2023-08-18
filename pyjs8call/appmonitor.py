@@ -304,6 +304,8 @@ class AppMonitor:
                     self._parent._client.restart()
                 
                 else:
+                    # write local config to file when application exits
+                    self._parent._client.config.write()
                     psutil.Process().terminate()
 
             time.sleep(1)

@@ -352,7 +352,11 @@ class Client:
         self.schedule.enable()
 
     def stop(self):
-        '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
+        '''Stop client, modules, and JS8Call application.
+
+        Write to the configuration file, stop all threads, close the TCP socket, and kill the JS8Call application.
+        '''
+        self.config.write()
         self.online = False
         
         try:
@@ -363,7 +367,7 @@ class Client:
     def restart(self):
         '''Stop and restart the JS8Call application and the associated TCP socket.
 
-        pyjs8call.js8call settings are preserved.
+        Settings, local state, and spots are preserved.
         '''
         self.restarting = True
 
