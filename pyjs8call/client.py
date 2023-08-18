@@ -552,9 +552,9 @@ class Client:
         space_after_cmd = message.find(' ', 1)
         cmd = message[0:space_after_cmd]
 
-        if msg.cmd is None and cmd in self.callback.commands:
+        if msg.cmd in (None, '', ' ') and cmd in self.callback.commands:
             msg.set('cmd', cmd)
-        
+
         # strip spaces and end-of-message symbol
         message = message.strip(' ' + Message.EOM)
 
