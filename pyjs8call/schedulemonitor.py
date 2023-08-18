@@ -53,8 +53,6 @@ class ScheduleEntry:
     Do not use this object to create a schedule entry directly. See ScheduleMonitor.add().
 
     This object is passed to the *client.callback.schedule* callback function when a schedule entry is activated.
-
-    This object is also passed to the *ScheduleEntry.callback* fallback function when that schedule entry is activated.
     
     String (str) format:
         {time}L | {state: <8} | {freq_mhz: <11} | {speed: <6} | {profile}
@@ -71,10 +69,8 @@ class ScheduleEntry:
             '<ScheduleEntry 10:00L : 14.078 MHz : fast : FT857>'
     '''
 
-    def __init__(self, start, freq, speed, profile, callback):
+    def __init__(self, start, freq, speed, profile):
         '''Initialize schedule entry.
-
-        *callback* signature: *func(schedule)* where *schedule* is the *ScheduleEntry* object being activated.
 
         Args:
             start (str): Start time as *datetime.time* object
@@ -196,7 +192,7 @@ class ScheduleMonitor:
             freq = self._client.settings.get_freq()
             speed = self._client.settings.get_speed()
 
-            self._active_schedule = ScheduleEntry(None, freq, speed, profile, None)
+            self._active_schedule = ScheduleEntry(None, freq, speed, profile)
 
         # prevent running past schedule entries when re-enabled
         with self._schedule_lock:
@@ -246,7 +242,7 @@ class ScheduleMonitor:
         if profile is None:
             profile = self._client.settings.get_profile()
 
-        new_schedule = ScheduleEntry(start_time, int(freq), speed, profile, callback)
+        new_schedule = ScheduleEntry(start_time, int(freq), speed, profile)
 
         # avoid running past schedule entry immediately after creation
         if new_schedule.start < now:
@@ -302,7 +298,7 @@ class ScheduleMonitor:
     def _save_to_config(self):
         '''Save schedule to configuration file.'''
         with self._schedule_lock:
-            schedule = [ [sch.time, sch.freq. sch.speed, sch.profile] for sch in self._schedule]
+            schedule = [ [sch.start.strftime('%H:%M'), sch.freq, sch.speed, sch.profile] for sch in self._schedule]
             
         schedule = json.dumps(schedule)
         self._client.config.set('Configuration', 'pyjs8callSchedule', schedule)
