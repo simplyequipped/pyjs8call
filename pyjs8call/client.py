@@ -173,7 +173,7 @@ class Client:
         Returns:
             tuple or str: (min_freq, max_freq) if band is known, otherwise *Client.OOB*
         '''
-        if freq is None:
+        if band is None:
             return Client.OOB
             
         band = band.lower()
