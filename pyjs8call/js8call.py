@@ -147,9 +147,10 @@ class JS8Call:
                 'last_update_request': 0,
                 'msg_type': Message.RIG_GET_FREQ
             },
+            # monitor for callsign changes on ui
             'callsign' : {
                 'value': None,
-                'update_frequency': None,
+                'update_frequency': -2,
                 'last_update': 0,
                 'last_update_request': 0,
                 'msg_type': Message.STATION_GET_CALLSIGN
