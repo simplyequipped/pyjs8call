@@ -96,6 +96,7 @@ class Client:
         heartbeat (pyjs8call.hbnetwork): Manages heartbeat outgoing messages
         schedule (pyjs8call.schedulemonitor): Monitors and activates schedule entries
         propagation (pyjs8call.propagation): Parse spots into propagation data
+        notifications (pyjs8call.notifications): Send email notifications via SMTP server
         callback (pyjs8call.client.Callbacks): Callback function reference object
         settings (pyjs8call.client.Settings): Configuration setting function reference object
         clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages, defaults to True
@@ -198,6 +199,7 @@ class Client:
         - config (pyjs8call.confighandler)
         - settings (pyjs8call.client.settings)
         - callback (pyjs8call.client.callbacks)
+        - notifications (pyjs8call.notifications)
 
         Args:
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
@@ -243,6 +245,7 @@ class Client:
         self.settings = Settings(self)
         self.callback = Callbacks()
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
+        self.notifications = pyjs8call.Notifications(self)
 
         # stop application and client at exit
         atexit.register(self.stop)

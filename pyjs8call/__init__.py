@@ -30,6 +30,7 @@ __version__ = '0.2.2-dev'
 
 
 from pyjs8call.confighandler import ConfigHandler
+from pyjs8call.notifications import Notifications
 from pyjs8call.schedulemonitor import ScheduleMonitor
 from pyjs8call.spotmonitor import SpotMonitor
 from pyjs8call.appmonitor import AppMonitor
