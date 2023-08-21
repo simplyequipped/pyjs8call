@@ -22,10 +22,7 @@
 
 '''Send email notifications.
 
-Email notifications can be sent using an existing SMTP server such as Gmail or Outlook. Notification can be used to send a regular email, or a text message. See the following carrier domain reference, or lookup other carrier domains.
-
-**Note*
-Gmail, Outlook, and other SMTP providers may require that the "less secure apps" setting be enabled to allow access via username and password. Allowing "less secure apps" is not available if 2-factor authentication is enabled on the account. If you do not feel confortable enabling this feature for your personal email account, consider making another email account specifically for notifications purposes.
+Email notifications can be sent using an existing SMTP server such as GMail or Outlook. Notification can be used to send a regular email, or a text message. See the following carrier domain reference, or search online for a list of SMS carrier domains if yours is not listed below.
 
 Common North America SMS carrier domains:
 XXXXXXXXXX@vtext.com (limited to 160 characters)
@@ -34,34 +31,23 @@ XXXXXXXXXX@tmomail.net
 XXXXXXXXXX@txt.bellmobility.com
 XXXXXXXXXX@pcs.rogers.com
 
+The current best practice for services like GMail is to use app passwords in place of your account password. App passwords which are passwords that are specific to a single 3rd part application. This makes it easier to control access to your account. Typically you have to enable two-factor authentication on your account before you can use app passwords. You can enable two-factor authentication on my GMail account by visiting [https://myaccount.google.com/security](https://myaccount.google.com/security). You can configure an app password for use with pyjs8call by visiting [https://myaccount.google.com/u/0/apppasswords](https://myaccount.google.com/u/0/apppasswords). Once the app password is generated, copy and paste it into your script in place of your password when calling *set_credentials()*.
+
+The default SSL context is used to establish a secure connection to the SMTP server.
+
 Example (default GMail SMTP server):
 
 ```
 import pyjs8call
-
-# directed message callback function
-def directed_msg_notify(msg):
-    # ignore standard and custom commands
-    ignore_commands = js8call.Message.COMMANDS
-    ignore_commands.extend(js8call.callback.commands.keys())
-    # do not ignore inbox messages
-    ignore_commands.remove(pyjs8call.Message.CMD_MSG')
-
-    # send notification if the incoming message is to the local station or configured groups
-    # ignore messages containing a JS8Call command
-    if js8call.is_directed_to_me(msg) and msg.cmd not in ignore_commands:
-        js8call.notifications.send(msg)
-
 js8call = pyjs8call.Client()
 js8call.start()
 
 # set SMTP server credentials
-js8call.notifications.set_smtp_credentials('email.address@gmail.com', 'Sup3rS3cur3Password123')
-# set destination email address to Verzion mobile number
+js8call.notifications.set_smtp_credentials('email.address@gmail.com', 'app_password')
+# set destination email address to a Verzion mobile number
 js8call.notifications.set_destination('0123456789@vtext.com')
-
-# register callback function for incoming *RX.DIRECTED* message types (default type)
-js8call.callback.register_incoming(directed_msg_notify)
+# enable automatic email notifications
+js8call.notifications.enable()
 ```
 '''
 
@@ -69,24 +55,60 @@ __docformat__ = 'google'
 
 
 import ssl
-import libsmtp
+import smtplib
 
 import pyjs8call
 
 
 class Notifications:
     '''Send email notifiations via SMTP server.'''
-    def __init__(self):
+    def __init__(self, client):
         '''Initialize notifications.
 
         Returns:
             pyjs8call.Notifications: Constructed notifications object
         '''
+        self._client = client
+        self._enabled = False
         self._smtp_server = 'smtp.gmail.com'
         self._smtp_port = 465
         self._smtp_email = None
         self.__smtp_password = None
         self._destination_email = None
+
+        self.commands = [pyjs8call.Message.CMD_MSG, pyjs8call.Message.CMD_FREETEXT]
+
+    def enabled(self):
+        '''Get enabled status.
+
+        Returns:
+            bool: True if enabled, False if disabled
+        '''
+        return self._enabled
+
+    def enable(self):
+        '''Enable automatic email notifications.
+
+        Incoming directed messages directed to the local station or configured groups will be emailed to the configured destination email (see *set_destination()*). Messages with a command are ignored unless the command is in *pyjs8call.notifications.commands*.
+        '''
+        if self._enabled:
+            return
+
+        self._enabled = True
+        self._client.callback.register_incoming(self.process_incoming)
+
+    def disable(self):
+        '''Disable automatic email notifiations.'''
+        self._enabled = False
+        self._client.callback.remove_incoming(self.process_incoming)
+
+    def process_incoming(self, msg):
+        '''Process incoming directed messages.
+
+        This function is used internally.
+        '''
+        if self._client.msg_is_to_me(msg) and (msg.cmd in (None, '') or msg.cmd in self.commands):
+            self.send(msg)
 
     def set_smtp_credentials(self, email, password):
         '''Set SMTP server credentials.
@@ -113,7 +135,10 @@ class Notifications:
             self._smtp_port = int(port)
     
     def set_destination(self, email):
-        '''
+        '''Set destination email address.
+
+        Args:
+            email (str): Destination (aka "to") email address
         '''
         self._destination_email = email
 
@@ -137,7 +162,10 @@ class Notifications:
             raise ValueError('Destination email must be set: see set_destination() or send()')
 
         if isinstance(message, pyjs8call.Message):
-            message = message.value
+            message = '{}: {}'.format(message.origin, message.text)
+            # remove utf-8 characters, replace with ascii
+            message = message.replace(pyjs8call.Message.EOM, '')
+            message = message.replace(pyjs8call.Message.ERR, '...')
 
         if destination_email is None:
             destination = self._destination_email
@@ -151,11 +179,11 @@ class Notifications:
 
         if subject is None:
             subject = ''
-        else:
-            subject = subject.strip() + '\n\n'
 
         context = ssl.create_default_context()
+        message = 'subject:{}\n\n{}'.format(subject, message)
         
         with smtplib.SMTP_SSL(self._smtp_server, port = self._smtp_port, context = context) as server:
             server.login(self._smtp_email, self.__smtp_password)
             server.sendmail(origin, destination, subject + message)
+
