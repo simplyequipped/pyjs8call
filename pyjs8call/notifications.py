@@ -158,4 +158,4 @@ class Notifications:
         
         with smtplib.SMTP_SSL(self._smtp_server, port = self._smtp_port, context = context) as server:
             server.login(self._smtp_email, self.__smtp_password)
-            server.sendmail(origin, destination, message)
+            server.sendmail(origin, destination, subject + message)
