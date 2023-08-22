@@ -84,13 +84,13 @@ class InboxMonitor:
         '''
         return self._paused
 
-    def enable(self, query=True, destination='@ALLCALL', interval=60):
+    def enable(self, query=False, destination='@ALLCALL', interval=60):
         '''Enable inbox monitoring.
 
         If *query* is True a message query will be sent to *destination* every *interval* minutes. Incoming directed messages are responded to whether *query* is True or not. See *process_incoming()* for more information on incoming directed message handling.
 
         Args:
-            query (bool): Transmit message queries periodically if True, defaults to True
+            query (bool): Transmit message queries periodically if True, defaults to False
             destination (str): Outgoing message query destination, defaults to '@ALLCALL'
             interval (int): Minutes between message queries, defaults to 60
         '''
