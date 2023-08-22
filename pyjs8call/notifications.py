@@ -45,7 +45,7 @@ js8call.start()
 # set SMTP server credentials
 js8call.notifications.set_smtp_credentials('email.address@gmail.com', 'app_password')
 # set destination email address to a Verzion mobile number
-js8call.notifications.set_destination('0123456789@vtext.com')
+js8call.notifications.set_email_destination('2018675309@vtext.com')
 # enable automatic email notifications
 js8call.notifications.enable()
 ```
@@ -55,7 +55,9 @@ __docformat__ = 'google'
 
 
 import ssl
+import email
 import smtplib
+import socket
 
 import pyjs8call
 
@@ -74,7 +76,8 @@ class Notifications:
         self._smtp_port = 465
         self._smtp_email = None
         self.__smtp_password = None
-        self._destination_email = None
+        self._email_destination = None
+        self._email_subject = None
 
         self.commands = [pyjs8call.Message.CMD_MSG, pyjs8call.Message.CMD_FREETEXT]
 
@@ -89,7 +92,7 @@ class Notifications:
     def enable(self):
         '''Enable automatic email notifications.
 
-        Incoming directed messages directed to the local station or configured groups will be emailed to the configured destination email (see *set_destination()*). Messages with a command are ignored unless the command is in *pyjs8call.notifications.commands*.
+        Incoming directed messages directed to the local station or configured groups will be emailed to the configured destination email (see *set_email_destination()*). Messages with a command are ignored unless the command is in *pyjs8call.notifications.commands*.
         '''
         if self._enabled:
             return
@@ -134,13 +137,21 @@ class Notifications:
         if port is not None:
             self._smtp_port = int(port)
     
-    def set_destination(self, email):
+    def set_email_destination(self, email):
         '''Set destination email address.
 
         Args:
             email (str): Destination (aka "to") email address
         '''
-        self._destination_email = email
+        self._email_destination = email
+
+    def set_email_subject(self, subject):
+        '''Set email subject.
+
+        Args:
+            subject (str): Email subject text
+        '''
+        self._email_subject = subject
 
     def send(self, message, destination_email=None, origin_email=None, subject=None):
         '''Send email notification.
@@ -151,39 +162,52 @@ class Notifications:
 
         Args:
             message (str or pyjs8call.Message): Message text or *pyjs8call.Message* to use as email body
-            destination_email (str): Destination (aka "to") email address, defaults to address set by *set_destination()*
+            destination_email (str): Destination (aka "to") email address, defaults to address set by *set_email_destination()*
             origin_email (str): Origin (aka "from") email address, defaults to SMTP address set by *set_smtp_credentials()*
             subject (str): Email subject, defaults to None
+
+        Raises:
+            OSError: Unable to connect to SMTP server
         '''
         if self._smtp_email is None or self.__smtp_password is None:
             raise ValueError('SMTP credentials must be set: see set_smtp_credentials()')
             
-        if self._destination_email is None and destination_email is None:
-            raise ValueError('Destination email must be set: see set_destination() or send()')
+        if self._email_destination is None and destination_email is None:
+            raise ValueError('Destination email must be set: see set_email_destination() or send()')
 
         if isinstance(message, pyjs8call.Message):
             message = '{}: {}'.format(message.origin, message.text)
-            # remove utf-8 characters, replace with ascii
+            # remove end-of-message character
             message = message.replace(pyjs8call.Message.EOM, '')
+            # replace error character
             message = message.replace(pyjs8call.Message.ERR, '...')
 
         if destination_email is None:
-            destination = self._destination_email
-        else:
-            destination = destination_email
+            destination_email = self._email_destination
 
         if origin_email is None:
-            origin = self._smtp_email
-        else:
-            origin = origin_email
+            origin_email = self._smtp_email
 
         if subject is None:
-            subject = ''
+            if self._email_subject is not None:
+                subject = self._email_subject
+            else:
+                subject = ''
+
+        # contruct email object
+        msg = email.message.EmailMessage()
+        msg.set_content(message)
+        msg['Subject'] = subject
+        msg['From'] = origin_email
+        msg['To'] = destination_email
 
         context = ssl.create_default_context()
-        message = 'subject:{}\n\n{}'.format(subject, message)
         
-        with smtplib.SMTP_SSL(self._smtp_server, port = self._smtp_port, context = context) as server:
-            server.login(self._smtp_email, self.__smtp_password)
-            server.sendmail(origin, destination, subject + message)
+        try:
+            with smtplib.SMTP_SSL(self._smtp_server, port = self._smtp_port, context = context) as server:
+                server.login(self._smtp_email, self.__smtp_password)
+                server.send_message(msg)
+
+        except (socket.herror, socket.gaierror, socket.timeout) as e:
+            raise OSError('Unable to connect to SMTP server') from e
 
