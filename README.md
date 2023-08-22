@@ -136,6 +136,12 @@ Monitors the local inbox. Notification of new messages is handled via callback f
 
 Monitors configured schedule entries and applies the necessary setting changes at the scheduled time. Settings that can be changed on a schedule include frequency, modem speed, and configuration profile.
 
+**Propagation** (pyjs8call.propagation)
+Parses stored spots into datasets of individual or median SNR values for grid squares or callsigns. This information can be used to infer general propagation conditions between the local station and a specific station, or the local station and a specific grid square.
+
+**Notifications** (pyjs8call.notifications)
+Send an email message (including email-to-text) via an existing SMTP server when a message directed to the local station is received.
+
 &nbsp;  
 
 ### Examples
@@ -416,6 +422,21 @@ js8call.start()
 # set custom command callback
 # note the leading space in the command string
 js8call.callback.register_command(' NEWS?', news_cmd)
+```
+
+Configuring email notifications:
+```
+import pyjs8call
+js8call = pyjs8call.Client()
+js8call.start()
+
+# set SMTP server credentials
+js8call.notifications.set_smtp_credentials('email.address@gmail.com', 'app_password')
+# set destination email address to a Verzion mobile number
+js8call.notifications.set_email_destination('2018675309@vtext.com')
+# enable automatic notifications for incoming directed messages
+js8call.notifications.enable()
+
 ```
 
 &nbsp;
