@@ -50,7 +50,6 @@ class JS8Call:
     Attributes:
         app (pyjs8call.appmonitor): Application monitor object
         connected (bool): Whether the JS8Call TCP socket is connected
-        max_spot_age (int): Maximum age (in seconds) of spots to store before dropping old spots, defaults to 7 days
         last_incoming (float): Timestamp of last incoming user message, defaults to 0 (zero)
         last_outgoing (float): Timestamp of last outgoing user message, defaults to 0 (zero)
         last_band_change (float): Timestamp of last frequency band change
@@ -96,7 +95,6 @@ class JS8Call:
         ]
 
         self._spots = []
-        self.max_spot_age = 7 * 24 * 60 * 60 # 7 days 
         self._recent_spots = []
         self._spots_lock = threading.Lock()
 
@@ -303,7 +301,6 @@ class JS8Call:
         settings = [
             '_state',
             '_spots',
-            'max_spot_age',
             '_tx_queue',
             '_debug',
             '_debug_all',
@@ -616,7 +613,7 @@ class JS8Call:
 
         The message is compared to a list of recent messages (heard within the last 10 seconds) to prevent duplicate spots from multiple JS8Call API messages associated with the same station event.
 
-        The list of stored messages is culled once the maximum age set by *max_spot_age* by dropping aged messages.
+        The list of stored messages is culled once the maximum age set by *client.max_spot_age* by dropping aged messages.
 
         See pyjs8call.spotmonitor to utilize spots.
 
@@ -632,7 +629,7 @@ class JS8Call:
                 self._spots.append(msg)
     
             # cull spots
-            while len(self._spots) > 0 and self._spots[0].age() > self.max_spot_age:
+            while len(self._spots) > 0 and self._spots[0].age() > self._client.max_spot_age:
                 self._spots.pop(0)
 
     def _log_msg(self, msg):
