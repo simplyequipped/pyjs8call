@@ -101,6 +101,7 @@ class Client:
         settings (pyjs8call.client.Settings): Configuration setting function reference object
         clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages, defaults to True
         monitor_outgoing (bool): Monitor outgoing message status (see pyjs8call.outgoingmonitor), defaults to True
+        max_spot_age (int): Maximum age (in seconds) of spots to store before dropping old spots, defaults to 7 days
         online (bool): Whether the JS8Call application and pyjs8call interface are online
         host (str): IP address matching JS8Call *TCP Server Hostname* setting
         port (int): Port number matching JS8Call *TCP Server Port* setting
@@ -220,7 +221,7 @@ class Client:
         self.process_outgoing = None
         self.clean_directed_text = True
         self.monitor_outgoing = True
-        self._custom_commands = []
+        self.max_spot_age = 7 * 24 * 60 * 60 # 7 days 
 
         self.js8call = None
         self.spots = None
@@ -246,6 +247,18 @@ class Client:
         self.callback = Callbacks()
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
         self.notifications = pyjs8call.Notifications(self)
+
+        config_clean_directed_text = self.config.get('Configuration', 'pyjs8callCleanDirectedText', bool)
+        if clean_directed_text is not None:
+            self.clean_directed_text = config_clean_directed_text
+
+        config_monitor_outgoing = self.config.get('Configuration', 'pyjs8callMonitorOutgoing', bool)
+        if config_monitor_outgoing is not None:
+            self.monitor_outgoing = config_monitor_outgoing
+
+        config_max_spot_age = self.config.get('Configuration', 'pyjs8callMaxSpotAge', bool)
+        if config_max_spot_age is not None:
+            self.max_spot_age = config_max_spot_age
 
         # stop application and client at exit
         atexit.register(self.stop)
@@ -353,14 +366,18 @@ class Client:
         self.offset.enable()
         self.outgoing.enable()
         self.schedule.enable()
-
+    
     def stop(self):
         '''Stop client, modules, and JS8Call application.
 
         Write to the configuration file, stop all threads, close the TCP socket, and kill the JS8Call application.
         '''
-        self.config.write()
         self.online = False
+        
+        self.config.set('pyjs8callCleanDirectedText', self.clean_directed_text)
+        self.config.set('pyjs8callMonitorOutgoing', self.monitor_outgoing)
+        self.config.set('pyjs8callMaxSpotAge', self.max_spot_age)
+        self.config.write()
         
         try:
             return self.js8call.stop()
