@@ -605,7 +605,6 @@ class Message:
         if exclude is None:
             exclude = [] 
 
-        #TODO make sure 'text' is not used since it is excluded by default
         exclude.extend(['id', 'destination', 'cmd', 'time', 'timestamp', 'from', 'origin', 'text', 'status', 'profile', 'error'])
 
         self.packed_dict = self.dict(exclude = exclude)
@@ -686,7 +685,6 @@ class Message:
                     'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))) # milliseconds to seconds
                 })
 
-        #TODO can this replace activity monitor?
         elif self.type == Message.RX_BAND_ACTIVITY:
             self.band_activity = []
             for key, value in msg['params'].items():
