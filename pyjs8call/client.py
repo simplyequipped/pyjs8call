@@ -256,7 +256,7 @@ class Client:
         if config_monitor_outgoing is not None:
             self.monitor_outgoing = config_monitor_outgoing
 
-        config_max_spot_age = self.config.get('Configuration', 'pyjs8callMaxSpotAge', bool)
+        config_max_spot_age = self.config.get('Configuration', 'pyjs8callMaxSpotAge', int)
         if config_max_spot_age is not None:
             self.max_spot_age = config_max_spot_age
 
@@ -367,17 +367,23 @@ class Client:
         self.outgoing.enable()
         self.schedule.enable()
     
+    def exit_tasks(self):
+        '''Perform application exit tasks.
+
+        This function is called automatically as needed.
+        '''
+        self.config.set('Configuration', 'pyjs8callCleanDirectedText', self.clean_directed_text)
+        self.config.set('Configuration', 'pyjs8callMonitorOutgoing', self.monitor_outgoing)
+        self.config.set('Configuration', 'pyjs8callMaxSpotAge', self.max_spot_age)
+        self.config.write()
+
     def stop(self):
         '''Stop client, modules, and JS8Call application.
 
         Write to the configuration file, stop all threads, close the TCP socket, and kill the JS8Call application.
         '''
         self.online = False
-        
-        self.config.set('Configuration', 'pyjs8callCleanDirectedText', self.clean_directed_text)
-        self.config.set('Configuration', 'pyjs8callMonitorOutgoing', self.monitor_outgoing)
-        self.config.set('Configuration', 'pyjs8callMaxSpotAge', self.max_spot_age)
-        self.config.write()
+        self.exit_tasks()
         
         try:
             return self.js8call.stop()

@@ -304,6 +304,7 @@ class AppMonitor:
                     self._parent._client.restart()
                 
                 else:
+                    self._parent._client.exit_tasks()
                     psutil.Process().terminate()
 
             time.sleep(1)
