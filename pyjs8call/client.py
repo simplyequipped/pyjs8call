@@ -320,7 +320,6 @@ class Client:
                 self.config.load_rig_config(rig_name)
 
         try:
-            #TODO test without these set automatically
             #self.settings.enable_autoreply_startup()
             #self.settings.disable_autoreply_confirmation()
             
@@ -1082,7 +1081,6 @@ class Client:
         self.js8call.send(msg)
         call_activity = self.js8call.watch('call_activity')
 
-        #TODO improve efficiency (heard_by calls hearing again)
         hearing = self.hearing(age)
         heard_by = self.heard_by(age , hearing)
         now = time.time()
@@ -1385,7 +1383,6 @@ class Client:
                 elif spot.destination != '@ALLCALL' and spot.destination not in hearing[spot.origin]:
                     hearing[spot.origin].append(spot.destination)
 
-        #TODO track spot snr for sorting
         return hearing
 
     def station_hearing(self, station=None, age=None):
