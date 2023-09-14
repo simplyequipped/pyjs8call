@@ -249,7 +249,7 @@ class Client:
         self.notifications = pyjs8call.Notifications(self)
 
         config_clean_directed_text = self.config.get('Configuration', 'pyjs8callCleanDirectedText', bool)
-        if clean_directed_text is not None:
+        if config_clean_directed_text is not None:
             self.clean_directed_text = config_clean_directed_text
 
         config_monitor_outgoing = self.config.get('Configuration', 'pyjs8callMonitorOutgoing', bool)
@@ -374,9 +374,9 @@ class Client:
         '''
         self.online = False
         
-        self.config.set('pyjs8callCleanDirectedText', self.clean_directed_text)
-        self.config.set('pyjs8callMonitorOutgoing', self.monitor_outgoing)
-        self.config.set('pyjs8callMaxSpotAge', self.max_spot_age)
+        self.config.set('Configuration', 'pyjs8callCleanDirectedText', self.clean_directed_text)
+        self.config.set('Configuration', 'pyjs8callMonitorOutgoing', self.monitor_outgoing)
+        self.config.set('Configuration', 'pyjs8callMaxSpotAge', self.max_spot_age)
         self.config.write()
         
         try:
@@ -1870,6 +1870,70 @@ class Settings:
 
         # set the profile as active
         self._client.config.change_profile(profile)
+
+    def get_primary_highlight_words(self):
+        '''Get primary highlight words via config file.
+
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        
+        Returns:
+            list: Words that should be highlighted on the JC8Call UI
+        '''
+        words = self._client.config.get('Configuration', 'PrimaryHighlightWords')
+
+        if words == '@Invalid()':
+            words = []
+        elif words is not None:
+            words = words.split(', ')
+
+        return words
+
+    def set_primary_highlight_words(self, words):
+        '''Set primary highlight words via config file.
+
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        
+        Args:
+            words (list): Words that should be highlighted on the JC8Call UI
+        '''
+        if len(words) == 0:
+            words = '@Invalid()'
+        else:
+            words = ', '.join(words)
+
+        self._client.config.set('Configuration', 'PrimaryHighlightWords', words)
+
+    def get_secondary_highlight_words(self):
+        '''Get secondary highlight words via config file.
+
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        
+        Returns:
+            list: Words that should be highlighted on the JC8Call UI
+        '''
+        words = self._client.config.get('Configuration', 'SecondaryHighlightWords')
+
+        if words == '@Invalid()':
+            words = []
+        elif words is not None:
+            words = words.split(', ')
+
+        return words
+
+    def set_secondary_highlight_words(self, words):
+        '''Set secondary highlight words via config file.
+
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        
+        Args:
+            words (list): Words that should be highlighted on the JC8Call UI
+        '''
+        if len(words) == 0:
+            words = '@Invalid()'
+        else:
+            words = ', '.join(words)
+
+        self._client.config.set('Configuration', 'SecondaryHighlightWords', words)
 
     def submode_to_speed(self, submode):
         '''Map submode *int* to speed *str*.
