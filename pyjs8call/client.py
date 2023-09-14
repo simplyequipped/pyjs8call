@@ -320,9 +320,10 @@ class Client:
                 self.config.load_rig_config(rig_name)
 
         try:
-            self.settings.enable_autoreply_startup()
-            self.settings.disable_autoreply_confirmation()
-            self.settings.enable_transmit()
+            #TODO test without these set automatically
+            #self.settings.enable_autoreply_startup()
+            #self.settings.disable_autoreply_confirmation()
+            
             # enable JS8Call TCP connection
             self.config.set('Configuration', 'TCPEnabled', 'true')
             self.config.set('Configuration', 'TCPServer', self.host)
