@@ -208,6 +208,9 @@ class Notifications:
                 server.login(self._smtp_email, self.__smtp_password)
                 server.send_message(msg)
 
-        except (socket.herror, socket.gaierror, socket.timeout) as e:
-            raise OSError('Unable to connect to SMTP server') from e
+        except (socket.herror, socket.gaierror, socket.timeout):
+            raise OSError('Unable to connect to SMTP server, check network connection')
+        except (smtplib.SMTPAuthenticationError):
+            raise OSError('Unable to connect to SMTP server, bad credentials')
+
 
