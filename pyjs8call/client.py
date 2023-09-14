@@ -1374,7 +1374,6 @@ class Client:
 
                 if isinstance(spot.path, list):
                     # handle relay path
-                    #TODO check if path list should be reversed
                     relay_path = Message.CMD_RELAY.join(spot.path)
 
                     if relay_path not in hearing[spot.origin]:
