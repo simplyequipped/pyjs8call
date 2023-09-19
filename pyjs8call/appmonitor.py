@@ -291,7 +291,7 @@ class AppMonitor:
 
     def _find_running_js8call_process(self):
         '''Find running JS8Call process.'''
-        js8call_procs = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() == 'js8call']
+        js8call_procs = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() in ('js8call', 'js8call.exe')]
         
         for proc in js8call_procs:
             if proc.status() == psutil.STATUS_ZOMBIE:
