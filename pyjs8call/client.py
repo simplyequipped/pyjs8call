@@ -53,7 +53,6 @@ from pyjs8call import Message
 class Client:
     '''JS8Call API client.
     
-    
     **Caution**: Custom processing of messages is an advanced feature that can break internal message handling if implemented incorrectly. Use this feature only if you understand what you are doing.
     **Note**: Any delay in *process_incoming* and *process_outgoing* functions will cause delays in internal incoming and outgoing message processing loops. Custom processing should be kept to a minimum to avoid cumulative delays.
     
@@ -81,7 +80,7 @@ class Client:
         - set the *msg.error* string, which will cause the message to be returned with a failed status (the message will not be sent)
     
     *process_outoing* function signature:
-        `func(pyjs8call.message) -> pyjs8call.message`
+        `func(pyjs8call.Message) -> pyjs8call.Message`
 
     Attributes:
         js8call (pyjs8call.js8call): Manages JS8Call application and TCP socket communication
@@ -208,7 +207,7 @@ class Client:
             config_path (str): Non-standard JS8Call.ini configuration file path, defaults to None
 
         Returns:
-            pyjs8call.client: Constructed client object
+            pyjs8call.Client: Constructed client object
 
         Raises:
             RuntimeError: JS8Call application not installed
