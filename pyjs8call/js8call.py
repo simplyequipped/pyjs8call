@@ -136,6 +136,13 @@ class JS8Call:
                 'last_update_request': 0,
                 'msg_type': Message.RIG_GET_FREQ
             },
+            'band' : {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.RIG_GET_FREQ
+            },
             # offset monitor: runs 1 sec before window transition
             # hb network:     runs 1 sec before window transition
             'offset' : {
@@ -908,6 +915,7 @@ class JS8Call:
             self._set_state('dial', msg.dial)
             self._set_state('freq', msg.freq)
             self._set_state('offset', msg.offset)
+            self._set_state('band', msg.band)
 
             self.process_freq_change(previous_freq)
 
