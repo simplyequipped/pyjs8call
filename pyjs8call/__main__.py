@@ -55,7 +55,8 @@ class HDLC:
 
 
 def _rns_write_stdout(msg):
-    data = bytes([HDLC.FLAG]) + HDLC.escape( bytes.fromhex(msg.text) ) + bytes([HDLC.FLAG])
+    msg_text = bytes.fromhex( msg.text.lower() )
+    data = bytes([HDLC.FLAG]) + HDLC.escape(msg_text) + bytes([HDLC.FLAG])
 
     try:
         sys.stdout.buffer.write(data)
@@ -86,7 +87,8 @@ def _rns_read_stdin():
 
         if in_frame and byte == HDLC.FLAG:
             in_frame = False
-            js8call.send_message( data_buffer.hex() )
+
+            js8call.send_directed_message('@RNS', data_buffer.hex())
 
         elif byte == HDLC.FLAG:
             in_frame = True
@@ -148,7 +150,7 @@ if __name__ == '__main__':
         headless = False
 
     #TODO remove debugging
-    js8call.start(headless = headless, debugging = True, logging = True)
+    js8call.start(headless = headless, debugging = True)
 
     if args.freq:
         js8call.settings.set_freq(args.freq)
@@ -159,8 +161,7 @@ if __name__ == '__main__':
     if args.heartbeat:
         js8call.heartbeat.enable()
     
-    #TODO determine message type for incoming freetext
-    js8call.callback.register_incoming(_rns_write_stdout, message_type='RX.DIRECTED')
+    js8call.callback.register_incoming(_rns_write_stdout)
 
     thread = threading.Thread(target=_rns_read_stdin)
     thread.daemon = True
