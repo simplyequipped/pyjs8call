@@ -915,7 +915,9 @@ class JS8Call:
             self._set_state('dial', msg.dial)
             self._set_state('freq', msg.freq)
             self._set_state('offset', msg.offset)
-            self._set_state('band', msg.band)
+
+            if msg.get('band') is not None:
+                self._set_state('band', msg.band)
 
             self.process_freq_change(previous_freq)
 
