@@ -85,13 +85,15 @@ class JS8Call:
         self._log_queue = ''
         self._log_queue_lock = threading.Lock()
         self._debug_log_type_blacklist = [
-            Message.TX_GET_TEXT,        # every second for outgoing monitor
-            Message.TX_TEXT,            # every second for outgoing monitor
-            Message.RIG_PTT,            # too frequent, not useful
-            Message.TX_FRAME,           # start of outgoing message, not useful
-            Message.STATION_STATUS,     # too frequent
-            Message.RIG_GET_FREQ,       # every window transition for offset monitor
-            Message.RIG_FREQ            # every window transition for offset monitor
+            Message.STATION_GET_CALLSIGN,   # every window transition, monitor changes from ui
+            Message.STATION_CALLSIGN,       # every window transition, monitor changes from ui
+            Message.TX_GET_TEXT,            # every second for outgoing monitor
+            Message.TX_TEXT,                # every second for outgoing monitor
+            Message.RIG_PTT,                # too frequent, not useful
+            Message.TX_FRAME,               # start of outgoing message, not useful
+            Message.STATION_STATUS,         # too frequent
+            Message.RIG_GET_FREQ,           # every window transition for offset monitor
+            Message.RIG_FREQ                # every window transition for offset monitor
         ]
 
         self._spots = []
