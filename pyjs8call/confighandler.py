@@ -385,7 +385,7 @@ class ConfigHandler:
             profile_options = self.get_profile_options(copy_profile)
 
             for section in profile_options:
-                for option, value in profile_options.items():
+                for option, value in profile_options[section].items():
                     new_profile_option = new_profile + '\\' + section + '\\' + option
                     self.config.set('MultiSettings', new_profile_option, str(value))
 
