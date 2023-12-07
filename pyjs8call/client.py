@@ -2537,8 +2537,8 @@ class Callbacks:
             if callback in callbacks:
                 self.commands[cmd].remove(callback)
 
-    def register_spot(self, callback):
-        '''Register spot callback.
+    def register_spots(self, callback):
+        '''Register spots callback.
 
         Args:
             callback (func): Callback function object
@@ -2548,8 +2548,8 @@ class Callbacks:
         if callback not in self.spots:
             self.spots.append(callback)
 
-    def remove_spot(self, callback):
-        '''Remove spot callback.
+    def remove_spots(self, callback):
+        '''Remove spots callback.
 
         Args:
             callback (func): Callback function object
