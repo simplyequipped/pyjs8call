@@ -17,6 +17,7 @@
 - Add spot get/set functions to *pyjs8call.js8call* to facilitate import/export
 - Change spot limit from quantity-based to time-based
 - Add grid, dial frequency, and frequency band spot filters to *pyjs8call.spotmonitor.filter*
+- Allow multiple callbacks for spots, station spots, and group spots in *pyjs8call.client.callback*
 - Add frequency/band conversion convenience functions to *pyjs8call.client*
 - Track frequency/band changes
 - Track last incoming/outgoing message timestamp by band
