@@ -31,7 +31,7 @@ XXXXXXXXXX@tmomail.net
 XXXXXXXXXX@txt.bellmobility.com
 XXXXXXXXXX@pcs.rogers.com
 
-The current best practice for services like GMail is to use app passwords in place of your account password. App passwords which are passwords that are specific to a single 3rd part application. This makes it easier to control access to your account. Typically you have to enable two-factor authentication on your account before you can use app passwords. You can enable two-factor authentication on my GMail account by visiting [https://myaccount.google.com/security](https://myaccount.google.com/security). You can configure an app password for use with pyjs8call by visiting [https://myaccount.google.com/u/0/apppasswords](https://myaccount.google.com/u/0/apppasswords). Once the app password is generated, copy and paste it into your script in place of your password when calling *set_credentials()*.
+The current best practice for services like GMail is to use app passwords in place of your account password. App passwords are passwords that are specific to a single 3rd party application. This makes it easier to control access to your account. Typically you have to enable two-factor authentication on your account before you can use app passwords. You can enable two-factor authentication on a Google account by visiting [https://myaccount.google.com/security](https://myaccount.google.com/security). You can configure an app password for use with pyjs8call by visiting [https://myaccount.google.com/u/0/apppasswords](https://myaccount.google.com/u/0/apppasswords). Once the app password is generated, copy and paste it into your script in place of your password when calling *set_credentials()*.
 
 The default SSL context is used to establish a secure connection to the SMTP server.
 
@@ -63,7 +63,14 @@ import pyjs8call
 
 
 class Notifications:
-    '''Send email notifiations via SMTP server.'''
+    '''Send email notifiations via SMTP server.
+    
+    Attributes:
+        incoming_enabled (bool): Process incoming directed messages if True, ignore otherwise, defaults to True
+        spots_enabled (bool): Process spots if True, ignore otherwise, defaults to False
+        station_spots_enabled (bool): Process watched station spot if True, ignore otherwise, defaults to False
+        group_spots_enabled (bool): Process watched group spot if True, ignore otherwise, defaults to False
+    '''
     def __init__(self, client):
         '''Initialize notifications.
 
@@ -78,6 +85,11 @@ class Notifications:
         self.__smtp_password = None
         self._email_destination = None
         self._email_subject = None
+
+        self.incoming_enabled = True
+        self.spots_enabled = False
+        self.station_spots_enabled = False
+        self.group_spots_enabled = False
 
         self.commands = [pyjs8call.Message.CMD_MSG, pyjs8call.Message.CMD_FREETEXT]
 
@@ -99,19 +111,62 @@ class Notifications:
 
         self._enabled = True
         self._client.callback.register_incoming(self.process_incoming)
+        self._client.callback.register_spots(self.process_spots)
+        self._client.callback.register_station_spots(self.process_station_spots)
+        self._client.callback.register_group_spots(self.process_group_spots)
 
     def disable(self):
         '''Disable automatic email notifiations.'''
         self._enabled = False
         self._client.callback.remove_incoming(self.process_incoming)
+        self._client.callback.remove_spots(self.process_spots)
+        self._client.callback.remove_station_spot(self.process_station_spots)
+        self._client.callback.remove_group_spot(self.process_group_spots)
 
     def process_incoming(self, msg):
         '''Process incoming directed messages.
 
         This function is used internally.
         '''
+        if not self.incoming_enabled:
+            return
+            
         if self._client.msg_is_to_me(msg) and (msg.cmd in (None, '') or msg.cmd in self.commands):
             self.send(msg)
+
+    def process_spots(self, spots):
+        '''Process spots.
+
+        This function is used internally.
+        '''
+        if not self.spots_enabled:
+            return
+
+        spots = [spot.origin for spot in spots]
+        text = 'Spotted {}'.format( ', '.join(spots) )
+        self.send(text)
+
+    def process_station_spots(self, spot):
+        '''Process watched station spots.
+
+        This function is used internally.
+        '''
+        if not self.station_spots_enabled:
+            return
+
+        text = 'Spotted watched station {}'.format(spot.origin)
+        self.send(text)
+
+    def process_group_spots(self, spot):
+        '''Process watched group spots.
+
+        This function is used internally.
+        '''
+        if not self.group_spots_enabled:
+            return
+
+        text = 'Spotted watched group {}'.format(spot.destination)
+        self.send(text)
 
     def set_smtp_credentials(self, email, password):
         '''Set SMTP server credentials.
