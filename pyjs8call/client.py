@@ -2381,27 +2381,30 @@ class Callbacks:
     Attributes:
         incoming (dict): Incoming message callback function lists organized by message type
         outgoing (func): Outgoing message status change callback function, defaults to None
-        spots (func): New spots callback funtion, defaults to None
-        station_spot (func): Watched station spot callback function, defaults to None
-        group_spot (func): Watched group spot callback function, defaults to None
+        spots (list): New spots callback funtions, defaults to empty list
+        station_spot (list): Watched station spot callback functions, defaults to empty list
+        group_spot (list): Watched group spot callback functions, defaults to empty list
         window (func): rx/tx window transition callback function, defaults to None
         inbox (func): New inbox message callback function, defaults to None
         schedule (func): Schedule entry activation callback function, defaults to None
 
     *incoming* structure: *{type: [callback, ...], ...}*
     - *type* is an incoming  message type (see pyjs8call.message for information on message types)
-    - *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+    - *callback* signature: *func(msg)* where *msg* is a pyjs8call.message object
 
     *outgoing* callback signature: *func(msg)* where *msg* is a pyjs8call.message object
     - Called by pyjs8call.txmonitor
 
-    *spots* callback signature: *func( list(msg, ...) )* where *msg* is a pyjs8call.message object
+    *spots* structure: *[callback, ...]*
+    - callback signature: *func( list(msg, ...) )* where *msg* is a pyjs8call.message object
     - Called by pyjs8call.spotmonitor
 
-    *station_spot* callback signature: *func(msg)* where *msg* is a pyjs8call.message object
+    *station_spot* structure: *[callback, ...]*
+    - callback signature: *func(msg)* where *msg* is a pyjs8call.message object
     - Called by pyjs8call.spotmonitor
 
-    *group_spot* callback signature: *func(msg)* where *msg* is a pyjs8call.message object
+    *group_spot* structure: *[callback, ...]*
+    - callback signature: *func(msg)* where *msg* is a pyjs8call.message object
     - Called by pyjs8call.spotmonitor
 
     *window* callback signature: *func()*
@@ -2423,9 +2426,9 @@ class Callbacks:
             pyjs8call.client.Callbacks: Constructed callback object
         '''
         self.outgoing = None
-        self.spots = None
-        self.station_spot = None
-        self.group_spot = None
+        self.spots = []
+        self.station_spot = []
+        self.group_spot = []
         self.window = None
         self.inbox = None
         self.schedule = None
@@ -2533,3 +2536,63 @@ class Callbacks:
         for cmd, callbacks in self.commands.items():
             if callback in callbacks:
                 self.commands[cmd].remove(callback)
+
+    def register_spot(self, callback):
+        '''Register spot callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        '''
+        if callback not in self.spots:
+            self.spots.append(callback)
+
+    def remove_spot(self, callback):
+        '''Remove spot callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.spots:
+            del self.spots[callback]
+
+    def register_station_spot(self, callback):
+        '''Register station spot callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        '''
+        if callback not in self.station_spot:
+            self.station_spot.append(callback)
+
+    def remove_station_spot(self, callback):
+        '''Remove station spot callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.station_spot:
+            del self.station_spot[callback]
+
+    def register_group_spot(self, callback):
+        '''Register group spot callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        '''
+        if callback not in self.group_spot:
+            self.group_spot.append(callback)
+
+    def remove_group_spot(self, callback):
+        '''Remove group spot callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.group_spot:
+            del self.group_spot[callback]
