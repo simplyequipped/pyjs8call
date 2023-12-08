@@ -37,7 +37,14 @@ import threading
 import pyjs8call
 
 
-#TODO
+# Byte map options:
+#    Number of characters per byte does not represent the transmitted number of characters, only displayed number of characters
+#
+#   - huffman character set (from js8call varicode.cpp) with most frequent characters as prefixes (1 or 2 characters per byte)
+#   - ascii and latin character set (from js8call docs) with specific characters as prefixes  (1 or 2 characters per byte)
+#   - hex representation (ex. byte_str.hex() ) (2 characters per byte)
+#   - jsc ( (s,c) dense coding from js8call jsc_list.cpp) symbols with 3 characters and lowest indices (i.e highest frequency, shortest code length) (3 characters per byte)
+
 byte_map_latin = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '.', '?', '+', '-', '`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(',
@@ -69,11 +76,47 @@ byte_map_huff = [
 ]
 byte_map_huff_prefix = [' ', 'E', 'T', 'A', 'O', 'I']
 
-byte_map = byte_map_latin
-byte_map_prefix = byte_map_latin_prefix
+# symbols are in order of least index value (87 to 849)
+byte_map_jsc = [
+'AGN', 'ACK', 'ABT', 'ANS', 'ANT', 'BEN', 'BTU', 'CBA', 'CFM', 'CLG', 'CLR', 'CPI', 'CPY', 'CUD', 'DIT', 'DSW', 'DWN', 'FER', 'FIN', 'GMT', 'GND', 'GUD', 'HAM', 'HNY',
+'HPE', 'HVY', 'HXA', 'HXB', 'HXC', 'HXD', 'HXE', 'HXF', 'HXG', 'INV', 'JMP', 'KNW', 'LID', 'LSB', 'MIL', 'MHZ', 'MGR', 'MNI', 'MSG', 'NIL', 'OPR', 'PSE', 'PWR', 'PFX',
+'RIG', 'SDR', 'SIG', 'SNR', 'SNW', 'SRI', 'STD', 'STN', 'SWL', 'TFC', 'TIL', 'TKS', 'THX', 'TNX', 'UFB', 'URS', 'USB', 'UTC', 'VEE', 'VFO', 'WID', 'WKD', 'WKG', 'WPM',
+'WRK', 'WUD', 'XYL', 'YRS', 'TGZ', 'ZIP', 'DOC', 'TXT', 'QSO', 'QSL', 'QRM', 'QRN', 'QTH', 'QRP', 'QRO', 'QSB', 'QRZ', 'QRL', 'QRQ', 'QRV', 'ONE', 'TWO', 'SIX', 'TEN',
+'QRS', 'QRT', 'QRU', 'QRX', 'QSK', 'QST', 'QSX', 'QSY', 'QRA', 'QRB', 'QRG', 'QRH', 'QRI', 'QRK', 'QRW', 'QSA', 'QSD', 'QSG', 'QSM', 'QSN', 'QSP', 'QSU', 'QSV', 'QSW',
+'QSZ', 'QTA', 'QTB', 'QTC', 'QTR', 'AND', 'FOR', 'FUN', 'ILL', 'LET', 'NOT', 'NOW', 'OUR', 'WAY', 'LYI', 'YFO', 'YWI', 'YWA', 'RYI', 'LYW', 'LYB', 'YWE', 'YWH', 'SAY',
+'ONV', 'NJU', 'YSH', 'BUT', 'LBU', 'TYI', 'YWO', 'YFR', 'FYO', 'OUB', 'WAS', 'WNE', 'RBU', 'YLO', 'YDO', 'AYW', 'YBU', 'OJE', 'YBO', 'LYL', 'EYR', 'YLA', 'RYB', 'TBY',
+'YHI', 'CAN', 'TYW', 'WHO', 'GET', 'EYD', 'EYT', 'HER', 'YFI', 'RYF', 'RYP', 'EOV', 'DJU', 'AYH', 'YHO', 'ALL', 'IQU', 'DQU', 'YFA', 'LYG', 'OUW', 'LKI', 'NGY', 'BYH',
+'NYW', 'TJU', 'RYH', 'YEX', 'OUH', 'HEQ', 'AYL', 'YBR', 'OUT', 'HIM', 'YPI', 'EYM', 'NQU', 'YRI', 'EYF', 'OMW', 'YGR', 'YGE', 'YSW', 'TYB', 'YBY', 'TYH', 'EYI', 'YDR',
+'FHO', 'FNE', 'EYL', 'IXT', 'YNI', 'YFE', 'NMY', 'TJO', 'YMU', 'YCR', 'YYE', 'BYF', 'TQU', 'ISJ', 'NIQ', 'BYI', 'UEO', 'DYT', 'RQU', 'URH', 'FGO', 'EEY', 'HAD', 'YGA',
+'ORJ', 'VEU', 'YYO', 'DAY', 'IXE', 'RYG', 'AYD', 'OGU', 'YJU', 'MAN', 'WNB', 'UBJ', 'OEV', 'EYG', 'YVI', 'YCE'
+]
 
 
-def map_from_bytes(data):
+def map_bytes_to_text_jsc(byte_str):
+    text = ''
+    for b in byte_str:
+        text += byte_map[b]
+        
+        # add a space every 30 text characters (10 bytes)
+        #if len(text) % 10 == 0:
+        #    text += ' '
+
+    return text
+
+def map_text_to_bytes_jsc(text):
+    # remove spaces
+    #text = text.replace(' ', '')
+    
+    indices = []
+    for i in range(0, len(text), 3):
+        b = byte_map.index( text_str[i:i+3] )
+        indices.append(b)
+    
+    return bytes(indices)
+
+
+
+def map_bytes_to_text_prefix(data):
     text = ''
 
     for byte in data:
@@ -83,7 +126,7 @@ def map_from_bytes(data):
 
     return text
 
-def map_to_bytes(text):
+def map_text_to_bytes_prefix(text):
     data = b''
 
     for i in range(len(text)):
@@ -100,6 +143,16 @@ def map_to_bytes(text):
     return data
 
 
+
+
+#byte_map = byte_map_huff
+#byte_map_prefix = byte_map_huff_prefix
+#map_bytes_to_text = map_bytes_to_text_prefix
+#map_text_to_bytes = map_text_to_bytes_prefix
+
+byte_map = byte_map_jsc
+map_bytes_to_text = map_bytes_to_text_jsc
+map_text_to_bytes = map_text_to_bytes_jsc
 
 # see Reticulum
 MTU = 500
@@ -152,7 +205,7 @@ def _rns_read_stdin():
         if in_frame and byte == HDLC.FLAG:
             in_frame = False
 
-            js8call.send_directed_message('@RNS', data_buffer.hex())
+            #js8call.send_directed_message('@RNS', data_buffer.hex())
 
         elif byte == HDLC.FLAG:
             in_frame = True
