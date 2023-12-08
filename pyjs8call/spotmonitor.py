@@ -222,27 +222,30 @@ class SpotMonitor:
         Args:
             spots (list): Spotted message objects
         '''
-        if self._client.callback.spots is not None:
-            thread = threading.Thread(target=self._client.callback.spots, args=(spots,))
-            thread.daemon = True
-            thread.start()
+        if len(self._client.callback.spots) > 0:
+            for callback in self._client.callback.spots:
+                thread = threading.Thread(target=callback, args=(spots,))
+                thread.daemon = True
+                thread.start()
 
             for spot in spots:
                 if (
-                    self._client.callback.station_spot is not None and
+                    len(self._client.callback.station_spot) > 0 and
                     spot.origin in self._station_watch_list
                 ):
-                    thread = threading.Thread(target=self._client.callback.station_spot, args=(spot,))
-                    thread.daemon = True
-                    thread.start()
+                    for callback in self._client.callback.station_spot:
+                        thread = threading.Thread(target=callback, args=(spot,))
+                        thread.daemon = True
+                        thread.start()
 
                 if (
-                    self._client.callback.group_spot is not None and
+                    len(self._client.callback.group_spot) > 0 and
                     spot.destination in self._group_watch_list
                 ):
-                    thread = threading.Thread(target=self._client.callback.group_spot, args=(spot,))
-                    thread.daemon = True
-                    thread.start()
+                    for callback in self._client.callback.group_spot:
+                        thread = threading.Thread(target=callback, args=(spot,))
+                        thread.daemon = True
+                        thread.start()
 
     def _monitor(self):
         '''Spot monitor thread.
