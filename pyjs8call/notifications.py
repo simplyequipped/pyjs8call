@@ -112,8 +112,8 @@ class Notifications:
         self._enabled = True
         self._client.callback.register_incoming(self.process_incoming)
         self._client.callback.register_spots(self.process_spots)
-        self._client.callback.register_station_spots(self.process_station_spots)
-        self._client.callback.register_group_spots(self.process_group_spots)
+        self._client.callback.register_station_spot(self.process_station_spots)
+        self._client.callback.register_group_spot(self.process_group_spots)
 
     def disable(self):
         '''Disable automatic email notifiations.'''
