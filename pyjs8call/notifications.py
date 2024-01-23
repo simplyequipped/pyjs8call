@@ -31,7 +31,7 @@ XXXXXXXXXX@tmomail.net
 XXXXXXXXXX@txt.bellmobility.com
 XXXXXXXXXX@pcs.rogers.com
 
-The current best practice for services like GMail is to use app passwords in place of your account password. App passwords are passwords that are specific to a single 3rd party application. This makes it easier to control access to your account. Typically you have to enable two-factor authentication on your account before you can use app passwords. You can enable two-factor authentication on a Google account by visiting [https://myaccount.google.com/security](https://myaccount.google.com/security). You can configure an app password for use with pyjs8call by visiting [https://myaccount.google.com/u/0/apppasswords](https://myaccount.google.com/u/0/apppasswords). Once the app password is generated, copy and paste it into your script in place of your password when calling *set_credentials()*.
+The current best practice for services like GMail is to use app passwords in place of your account password. App passwords are passwords that are specific to a single 3rd party application. This makes it easier to control access to your account. Typically you have to enable two-factor authentication on your account before you can use app passwords. You can enable two-factor authentication on a Google account by visiting [https://myaccount.google.com/security](https://myaccount.google.com/security). You can configure an app password for use with pyjs8call by visiting [https://myaccount.google.com/u/0/apppasswords](https://myaccount.google.com/u/0/apppasswords). Once the app password is generated, copy and paste it into your script in place of your password when calling *set_smtp_credentials()*.
 
 The default SSL context is used to establish a secure connection to the SMTP server.
 
