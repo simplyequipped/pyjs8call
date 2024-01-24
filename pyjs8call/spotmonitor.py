@@ -22,11 +22,11 @@
 
 '''Monitor recent station spots.
 
-Set `client.callback.spots` to receive all new activity.
+Add callback using `client.callback.register_spots()` to receive all new activity.
 
-Set `client.callback.station_spot` to receive new activity for a specific station.
+Add callback using `client.callback.register_station_spot()` to receive new activity for a specific station.
 
-Set `client.callback.group_spot` to receive new activity for a specific group.
+Add callback using `client.callback.register_group_spot()` to receive new activity for a specific group.
 
 See pyjs8call.client.Callbacks for callback function details.
 
@@ -217,7 +217,7 @@ class SpotMonitor:
     def _callback(self, spots):
         '''New spots callback function handling.
 
-        Calls the *pyjs8call.client.callback.spots*, *pyjs8call.client.callback.station_spot*, and *pyjs8call.client.callback.group_spot* callback functions using *threading.Thread*.
+        Calls each callback function in *pyjs8call.client.callback.spots*, *pyjs8call.client.callback.station_spot*, and *pyjs8call.client.callback.group_spot* using *threading.Thread*.
 
         Args:
             spots (list): Spotted message objects
