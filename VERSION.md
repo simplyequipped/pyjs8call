@@ -1,5 +1,33 @@
 ### Versions
 
+**0.2.2**
+- Add *pyjs8call.propagation* module
+- Add *pyjs8call.notifications* module
+- Fix bug when JS8Call is running before pyjs8call is started on Windows (see discussion #1)
+- Fix intermittent transmission of heartbeat messages outside of sub-band
+- Improve pyjs8call heartbeat interval timing and utilize config file heartbeat interval
+- Prevent pyjs8call heartbeat networking in turbo mode and when a callsign is selected on the JS8Call UI
+- Add additional configuration management functions to *pyjs8call.client.settings*
+- Write configuration to file on *pyjs8call.client* stop, including JS8Call application exit
+- Read/write persistent *pyjs8call.client* attributes to/from configuration on init/stop
+- Update *pyjs8call.message* autoreply commands
+- Detect JS8Call autoreplies as outgoing activity
+- Prevent past schedule entries running when *pyjs8call.client.schedule* re-enabled
+- Store schedule changes in configuration file and load on init
+- Improve rx text box message processing in *pyjs8call.client.get_rx_messages*
+- Add spot get/set functions to *pyjs8call.js8call* to facilitate import/export
+- Change spot limit from quantity-based to time-based
+- Add grid, dial frequency, and frequency band spot filters to *pyjs8call.spotmonitor.filter*
+- Allow multiple callbacks for spots, station spots, and group spots in *pyjs8call.client.callback*
+- Add frequency/band conversion convenience functions to *pyjs8call.client*
+- Track frequency/band changes
+- Track last incoming/outgoing message timestamp by band
+- Add *pyjs8call.client.station_hearing* and *pyjs8call.client.station_heard_by* functions
+- Manage periodic local state updates in *pyjs8call.js8call* instead of individual modules
+- Stability improvements
+- Minor bug fixes
+- Minor documentation improvements
+
 **0.2.1**
 - Fix *pyjs8call.Message.text* being overwritten during object initialization
 - Fix intermittent *NoneType* error in *pyjs8call.js8call* transmit function

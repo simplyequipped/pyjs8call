@@ -26,21 +26,26 @@
 '''
 
 __docformat__ = 'google'
+__version__ = '0.2.2'
 
 
-from pyjs8call.offsetmonitor import OffsetMonitor
 from pyjs8call.confighandler import ConfigHandler
-from pyjs8call.hbnetwork import HeartbeatNetworking
+from pyjs8call.notifications import Notifications
 from pyjs8call.schedulemonitor import ScheduleMonitor
 from pyjs8call.spotmonitor import SpotMonitor
 from pyjs8call.appmonitor import AppMonitor
 from pyjs8call.message import Message
 # modules importing message module
+from pyjs8call.propagation import Propagation
+from pyjs8call.offsetmonitor import OffsetMonitor
 from pyjs8call.windowmonitor import WindowMonitor
 from pyjs8call.inboxmonitor import InboxMonitor
 from pyjs8call.timemonitor import DriftMonitor
 from pyjs8call.timemonitor import TimeMaster
 from pyjs8call.outgoingmonitor import OutgoingMonitor
+from pyjs8call.hbnetwork import HeartbeatNetworking
 from pyjs8call.js8call import JS8Call
 from pyjs8call.client import Client
+from pyjs8call.client import Settings
+from pyjs8call.client import Callbacks
 

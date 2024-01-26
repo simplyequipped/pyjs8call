@@ -90,15 +90,10 @@ else:
 js8call = pyjs8call.Client()
 # set callback functions
 js8call.callback.register_incoming(rx_message)
-js8call.callback.spots = new_spots
+js8call.callback.register_spots(new_spots)
 js8call.callback.outgoing = tx_status
 js8call.callback.inbox = new_inbox_msg
 js8call.start(headless = headless)
-
-# enable local inbox monitoring and periodic remote inbox message query
-# WARNING: enabling the inbox monitor will cause JS8Call to transmit almost immediately
-# ensure configured radio and antenna are set properly for the transmit frequency
-#js8call.inbox.enable()
 
 # read current configuration values
 freq = js8call.settings.get_freq() / 1000000

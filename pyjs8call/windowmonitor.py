@@ -44,8 +44,7 @@ class WindowMonitor:
 
     JS8Call API messages for incoming messages or other activity are sent approximately two seconds before the end of the transmit window. The timestamp of the received message is used to calculate the end of the current rx/tx window. Messages of type RX_DIRECTED and RX_ACTIVITY are monitored.
 
-    JS8Call API tx frames for outgoing messages are sent immediately at the beginning of the transmit window. The timestamp of the tx frame message is used to calculate the beginning of the current rx/tx window. Note that JS8Call allows an outgoing message to be transmitted if sent within one second of the beginning of the rx/tx window, which may result in a tx frame that is not aligned with the beginning of the rx/tx window and a window transition calculation that is temporarily incorrect by a maximum of one second. The calculation will be corrected automatically once the next message is sent or received normally.
-
+    JS8Call API PTT for outgoing messages are sent immediately at the beginning of the transmit window. The timestamp of the PTT message is used to calculate the beginning of the current rx/tx window. Note that JS8Call allows an outgoing message to be transmitted if sent within one second of the beginning of the rx/tx window, which may result in a PTT message is not aligned with the beginning of the rx/tx window and a window transition calculation that is temporarily incorrect by a maximum of one second. The calculation will be corrected automatically once the next message is sent or received normally.
 
     Note that the rx/tx window transition cannot be calculated until a message is sent or received.
     '''

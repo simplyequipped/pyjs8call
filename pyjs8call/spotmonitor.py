@@ -22,11 +22,11 @@
 
 '''Monitor recent station spots.
 
-Set `client.callback.spots` to receive all new activity.
+Add callback using `client.callback.register_spots()` to receive all new activity.
 
-Set `client.callback.station_spot` to receive new activity for a specific station.
+Add callback using `client.callback.register_station_spot()` to receive new activity for a specific station.
 
-Set `client.callback.group_spot` to receive new activity for a specific group.
+Add callback using `client.callback.register_group_spot()` to receive new activity for a specific group.
 
 See pyjs8call.client.Callbacks for callback function details.
 
@@ -98,38 +98,45 @@ class SpotMonitor:
 
     def all(self):
         '''Get all stored spot messages.'''
-        with self._client.js8call._spots_lock:
-            return self._client.js8call.get_spots()
+        return self._client.js8call.get_spots()
 
-    def filter(self, origin=None, destination=None, distance=0, age=0, count=0, profile=None):
+    def filter(self, origin=None, destination=None, grid=None, distance=0, age=0, count=0, profile=None, dial_freq=None, band=None):
         '''Get filtered spot messages.
 
-        Spots are *pyjs8call.message* objects. Specified *origin* and *destination* strings are converted to uppercase.
+        Spots are *pyjs8call.message* objects. Specified *origin*, *destination*, and *grid* strings are converted to uppercase. *band* strings are converted to lowercase.
 
         When *distance*, *age*, or *count* are 0 (zero) they are ignored.
 
+        See *pyjs8call.client.freq_to_band* for frequency band information.
+
         Args:
-            origin (str): Message origin callsign to match
-            destination (str): Message destination callsign or group designator to match
+            origin (str): Message origin callsign to match, defaults to None
+            destination (str): Message destination callsign or group designator to match, defaults to None
+            grid (str): Message grid square to match, defaults to None
             distance (int): Maximum message grid square distance, defaults to 0 (zero)
             age (int): Maximum message age in seconds, defaults to 0 (zero)
             count (int): Number of most recent spot messages to return, defaults to 0 (zero)
             profile (str): Configuration profile at the time spot was sent or received, defaults to None
+            dial_freq (int): Dial frequency in Hz to match, defaults to None
+            band (str): Frequency band (ex. \'40m\') to match, defaults to None
 
         Returns:
             list: Spot messages matching specified filter criteria
         '''
         spots = []
-        with self._client.js8call._spots_lock:
-            for spot in self._client.js8call.get_spots():
-                if (
-                    (age == 0 or spot.age() <= age) and
-                    (distance == 0 or (spot.distance is not None and spot.distance <= distance)) and
-                    (origin is None or origin.upper() == spot.origin) and 
-                    (destination is None or destination.upper() == spot.destination) and
-                    (profile is None or profile == spot.profile)
-                ):
-                    spots.append(spot)
+        
+        for spot in self._client.js8call.get_spots():
+            if (
+                (age == 0 or spot.age() <= age) and
+                (grid is None or grid.upper() == spot.grid) and
+                (distance == 0 or (spot.distance is not None and spot.distance <= distance)) and
+                (origin is None or origin.upper() == spot.origin) and 
+                (destination is None or destination.upper() == spot.destination) and
+                (profile is None or profile == spot.profile) and
+                (dial_freq is None or dial_freq == spot.dial) and
+                (band is None or band.lower() == self._client.freq_to_band(spot.freq).lower())
+            ):
+                spots.append(spot)
 
         if 0 < count < len(spots):
             count *= -1
@@ -147,8 +154,7 @@ class SpotMonitor:
             list: Last *count* spot messages received
         '''
         count *= -1
-        with self._client.js8call._spots_lock:
-            return self._client.js8call.get_spots()[count:]
+        return self._client.js8call.get_spots()[count:]
 
     def add_station_watch(self, station):
         '''Add watched station.
@@ -211,32 +217,35 @@ class SpotMonitor:
     def _callback(self, spots):
         '''New spots callback function handling.
 
-        Calls the *pyjs8call.client.callback.spots*, *pyjs8call.client.callback.station_spot*, and *pyjs8call.client.callback.group_spot* callback functions using *threading.Thread*.
+        Calls each callback function in *pyjs8call.client.callback.spots*, *pyjs8call.client.callback.station_spot*, and *pyjs8call.client.callback.group_spot* using *threading.Thread*.
 
         Args:
             spots (list): Spotted message objects
         '''
-        if self._client.callback.spots is not None:
-            thread = threading.Thread(target=self._client.callback.spots, args=(spots,))
-            thread.daemon = True
-            thread.start()
+        if len(self._client.callback.spots) > 0:
+            for callback in self._client.callback.spots:
+                thread = threading.Thread(target=callback, args=(spots,))
+                thread.daemon = True
+                thread.start()
 
             for spot in spots:
                 if (
-                    self._client.callback.station_spot is not None and
+                    len(self._client.callback.station_spot) > 0 and
                     spot.origin in self._station_watch_list
                 ):
-                    thread = threading.Thread(target=self._client.callback.station_spot, args=(spot,))
-                    thread.daemon = True
-                    thread.start()
+                    for callback in self._client.callback.station_spot:
+                        thread = threading.Thread(target=callback, args=(spot,))
+                        thread.daemon = True
+                        thread.start()
 
                 if (
-                    self._client.callback.group_spot is not None and
+                    len(self._client.callback.group_spot) > 0 and
                     spot.destination in self._group_watch_list
                 ):
-                    thread = threading.Thread(target=self._client.callback.group_spot, args=(spot,))
-                    thread.daemon = True
-                    thread.start()
+                    for callback in self._client.callback.group_spot:
+                        thread = threading.Thread(target=callback, args=(spot,))
+                        thread.daemon = True
+                        thread.start()
 
     def _monitor(self):
         '''Spot monitor thread.

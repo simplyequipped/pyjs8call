@@ -53,7 +53,6 @@ from pyjs8call import Message
 class Client:
     '''JS8Call API client.
     
-    
     **Caution**: Custom processing of messages is an advanced feature that can break internal message handling if implemented incorrectly. Use this feature only if you understand what you are doing.
     **Note**: Any delay in *process_incoming* and *process_outgoing* functions will cause delays in internal incoming and outgoing message processing loops. Custom processing should be kept to a minimum to avoid cumulative delays.
     
@@ -81,8 +80,7 @@ class Client:
         - set the *msg.error* string, which will cause the message to be returned with a failed status (the message will not be sent)
     
     *process_outoing* function signature:
-        `func(pyjs8call.message) -> pyjs8call.message`
-    
+        `func(pyjs8call.Message) -> pyjs8call.Message`
 
     Attributes:
         js8call (pyjs8call.js8call): Manages JS8Call application and TCP socket communication
@@ -96,16 +94,95 @@ class Client:
         config (pyjs8call.confighandler): Manages JS8Call configuration file
         heartbeat (pyjs8call.hbnetwork): Manages heartbeat outgoing messages
         schedule (pyjs8call.schedulemonitor): Monitors and activates schedule entries
+        propagation (pyjs8call.propagation): Parse spots into propagation data
+        notifications (pyjs8call.notifications): Send email notifications via SMTP server
         callback (pyjs8call.client.Callbacks): Callback function reference object
         settings (pyjs8call.client.Settings): Configuration setting function reference object
         clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages, defaults to True
         monitor_outgoing (bool): Monitor outgoing message status (see pyjs8call.outgoingmonitor), defaults to True
+        max_spot_age (int): Maximum age (in seconds) of spots to store before dropping old spots, defaults to 7 days
         online (bool): Whether the JS8Call application and pyjs8call interface are online
         host (str): IP address matching JS8Call *TCP Server Hostname* setting
         port (int): Port number matching JS8Call *TCP Server Port* setting
         process_incoming (func): Function to call for custom processing of incoming messages, defaults to None
         process_outgoing (func): Function to call for custom processing of outgoing messages, defaults to None
+        BANDS (dict): mapping of frequency bands to minimum and maximum frequencies
+        OOB (str): out-of-band designator
     '''
+
+    BANDS = {
+        '2190m':  (136000,       137000),
+        '630m':   (472000,       479000),
+        '560m':   (501000,       504000),
+        '160m':   (1800000,      2000000),
+        '80m':    (3500000,      4000000),
+        '60m':    (5060000,      5450000),
+        '40m':    (7000000,      7300000),
+        '30m':    (10000000,     10150000),
+        '20m':    (14000000,     14350000),
+        '17m':    (18068000,     18168000),
+        '15m':    (21000000,     21450000),
+        '12m':    (24890000,     24990000),
+        '10m':    (28000000,     29700000),
+        '6m':     (50000000,     54000000),
+        '4m':     (70000000,     71000000),
+        '2m':     (144000000,    148000000),
+        '1.25m':  (222000000,    225000000),
+        '70cm':   (420000000,    450000000),
+        '33cm':   (902000000,    928000000),
+        '23cm':   (1240000000,   1300000000),
+        '13cm':   (2300000000,   2450000000),
+        '9cm':    (3300000000,   3500000000),
+        '6cm':    (5650000000,   5925000000),
+        '3cm':    (10000000000,  10500000000),
+        '1.25cm': (24000000000,  24250000000),
+        '6mm':    (47000000000,  47200000000),
+        '4mm':    (75500000000,  81000000000),
+        '2.5mm':  (119980000000, 120020000000),
+        '2mm':    (142000000000, 149000000000),
+        '1mm':    (241000000000, 250000000000)
+    }
+    
+    OOB = 'OOB'
+    
+    @staticmethod
+    def freq_to_band(freq):
+        '''Get band for specified frequency.
+
+        Args:
+            freq (int): Frequency in Hz
+
+        Returns:
+            str: Band designator like \'40m\' if frequency is in a known band, otherwise *Client.OOB*
+        '''
+        if freq is None:
+            return Client.OOB
+            
+        for band, freqs in Client.BANDS.items():
+            if freqs[0] <= freq <= freqs[1]:
+                return band
+
+        return Client.OOB
+
+    @staticmethod
+    def band_freq_range(band):
+        '''Get frequency range for specified band.
+
+        Args:
+            band (str): Band designator like \'40m\'
+
+        Returns:
+            tuple or str: (min_freq, max_freq) if band is known, otherwise *Client.OOB*
+        '''
+        if band is None:
+            return Client.OOB
+            
+        band = band.lower()
+        
+        if band in Client.BANDS:
+            return Client.BANDS[band]
+        
+        return Client.OOB
 
     def __init__(self, host='127.0.0.1', port=2442, config_path=None):
         '''Initialize JS8Call API client.
@@ -122,6 +199,7 @@ class Client:
         - config (pyjs8call.confighandler)
         - settings (pyjs8call.client.settings)
         - callback (pyjs8call.client.callbacks)
+        - notifications (pyjs8call.notifications)
 
         Args:
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
@@ -129,7 +207,7 @@ class Client:
             config_path (str): Non-standard JS8Call.ini configuration file path, defaults to None
 
         Returns:
-            pyjs8call.client: Constructed client object
+            pyjs8call.Client: Constructed client object
 
         Raises:
             RuntimeError: JS8Call application not installed
@@ -142,6 +220,7 @@ class Client:
         self.process_outgoing = None
         self.clean_directed_text = True
         self.monitor_outgoing = True
+        self.max_spot_age = 7 * 24 * 60 * 60 # 7 days 
 
         self.js8call = None
         self.spots = None
@@ -153,6 +232,7 @@ class Client:
         self.inbox = None
         self.heartbeat = None
         self.schedule = None
+        self.propagation = None
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
@@ -165,6 +245,19 @@ class Client:
         self.settings = Settings(self)
         self.callback = Callbacks()
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
+        self.notifications = pyjs8call.Notifications(self)
+
+        config_clean_directed_text = self.config.get('Configuration', 'pyjs8callCleanDirectedText', bool)
+        if config_clean_directed_text is not None:
+            self.clean_directed_text = config_clean_directed_text
+
+        config_monitor_outgoing = self.config.get('Configuration', 'pyjs8callMonitorOutgoing', bool)
+        if config_monitor_outgoing is not None:
+            self.monitor_outgoing = config_monitor_outgoing
+
+        config_max_spot_age = self.config.get('Configuration', 'pyjs8callMaxSpotAge', int)
+        if config_max_spot_age is not None:
+            self.max_spot_age = config_max_spot_age
 
         # stop application and client at exit
         atexit.register(self.stop)
@@ -172,7 +265,7 @@ class Client:
     def start(self, headless=False, args=None, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
 
-        Initializes sub-module objects:
+        Initializes module objects:
         - Spot monitor (see pyjs8call.spotmonitor)
         - Window monitor (see pyjs8call.windowmonitor)
         - Offset monitor (see pyjs8call.offsetmonitor)
@@ -182,6 +275,14 @@ class Client:
         - Heartbeat networking (see pyjs8call.hbnetwork)
         - Inbox monitor (see pyjs8call.inboxmonitor)
         - Schedule monitor (see pyjs8call.schedulemonitor)
+        - Propagation (see pyjs8call.propagation)
+
+        Enables modules:
+        - window
+        - spots
+        - offset
+        - outgoing
+        - schedule
 
         Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
 
@@ -218,9 +319,6 @@ class Client:
                 self.config.load_rig_config(rig_name)
 
         try:
-            self.settings.enable_autoreply_startup()
-            self.settings.disable_autoreply_confirmation()
-            self.settings.enable_transmit()
             # enable JS8Call TCP connection
             self.config.set('Configuration', 'TCPEnabled', 'true')
             self.config.set('Configuration', 'TCPServer', self.host)
@@ -257,16 +355,31 @@ class Client:
         self.heartbeat = pyjs8call.HeartbeatNetworking(self)
         self.inbox = pyjs8call.InboxMonitor(self)
         self.schedule = pyjs8call.ScheduleMonitor(self)
+        self.propagation = pyjs8call.Propagation(self)
         
         self.window.enable()
         self.spots.enable()
         self.offset.enable()
         self.outgoing.enable()
         self.schedule.enable()
+    
+    def exit_tasks(self):
+        '''Perform application exit tasks.
+
+        This function is called automatically as needed.
+        '''
+        self.config.set('Configuration', 'pyjs8callCleanDirectedText', self.clean_directed_text)
+        self.config.set('Configuration', 'pyjs8callMonitorOutgoing', self.monitor_outgoing)
+        self.config.set('Configuration', 'pyjs8callMaxSpotAge', self.max_spot_age)
+        self.config.write()
 
     def stop(self):
-        '''Stop all threads, close the TCP socket, and kill the JS8Call application.'''
+        '''Stop client, modules, and JS8Call application.
+
+        Write to the configuration file, stop all threads, close the TCP socket, and kill the JS8Call application.
+        '''
         self.online = False
+        self.exit_tasks()
         
         try:
             return self.js8call.stop()
@@ -276,7 +389,7 @@ class Client:
     def restart(self):
         '''Stop and restart the JS8Call application and the associated TCP socket.
 
-        pyjs8call.js8call settings are preserved.
+        Settings, local state, and spots are preserved.
         '''
         self.restarting = True
 
@@ -293,7 +406,7 @@ class Client:
         ]
 
         paused_modules = []
-
+        
         for module in modules:
             if module.enabled() and not module.paused():
                 module.pause()
@@ -367,10 +480,18 @@ class Client:
             msg = self.js8call.get_next_message()
 
             if msg is not None:
+                # incoming type callback
                 for callback in self.callback.incoming_type(msg.type):
                     thread = threading.Thread(target=callback, args=[msg])
                     thread.daemon = True
                     thread.start()
+
+                # custom command callback
+                if msg.cmd is not None and msg.cmd in self.callback.commands:
+                    for callback in self.callback.commands[msg.cmd]:
+                        thread = threading.Thread(target=callback, args=[msg])
+                        thread.daemon = True
+                        thread.start()
 
             time.sleep(0.1)
 
@@ -419,6 +540,8 @@ class Client:
         
         The *pyjs8call.message.text* attribute stores the cleaned text while the *pyjs8call.message.value* attribute is unchanged.
 
+        Custom commands are also parsed out of message text. If a custom command is found, *pyjs8call.message.cmd* is set in the returned message.
+
         Args:
             message (pyjs8call.message): Message object to clean
 
@@ -450,8 +573,15 @@ class Client:
         else:
             # remove destination callsign or group
             message = ' '.join(message.split(' ')[1:])
-        
-        # strip remaining spaces and end-of-message symbol
+
+        # parse out custom commands
+        space_after_cmd = message.find(' ', 1)
+        cmd = message[0:space_after_cmd]
+
+        if msg.cmd in (None, '', ' ') and cmd in self.callback.commands:
+            msg.set('cmd', cmd)
+
+        # strip spaces and end-of-message symbol
         message = message.strip(' ' + Message.EOM)
 
         msg.set('text', message)
@@ -473,7 +603,7 @@ class Client:
             pyjs8call.message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
-        msg = Message(value = message)
+        msg = Message(value = message, origin = self.settings.get_station_callsign())
         
         # custom processing of outgoing messages
         if self.process_outgoing is not None:
@@ -506,7 +636,7 @@ class Client:
             message (str): Message text to send, defaults to None
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
-        msg = Message(destination, command, message)
+        msg = Message(destination, command, message, self.settings.get_station_callsign())
         
         # custom processing of outgoing messages
         if self.process_outgoing is not None:
@@ -541,7 +671,7 @@ class Client:
             pyjs8call.message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
-        msg = Message(destination = destination, value = message)
+        msg = Message(destination, value = message, origin = self.settings.get_station_callsign())
         
         # custom processing of outgoing messages
         if self.process_outgoing is not None:
@@ -818,8 +948,7 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
-        cmd = Message.CMD_QUERY + Message.CMD_MSG
-        return self.send_directed_command_message(destination, cmd, str(msg_id))
+        return self.send_directed_command_message(destination, Message.CMD_QUERY, 'MSG {}'.format(msg_id))
 
     def query_hearing(self, destination):
         '''Send JS8Call hearing query.
@@ -948,7 +1077,6 @@ class Client:
         self.js8call.send(msg)
         call_activity = self.js8call.watch('call_activity')
 
-        #TODO improve efficiency (heard_by calls hearing again)
         hearing = self.hearing(age)
         heard_by = self.heard_by(age , hearing)
         now = time.time()
@@ -1047,11 +1175,16 @@ class Client:
 
         Returns:
             str: Callsign selected on the JS8Call user interface
+            None: No callsign selected
         '''
         msg = Message()
         msg.type = Message.RX_GET_SELECTED_CALL
         self.js8call.send(msg)
         selected_call = self.js8call.watch('selected_call')
+
+        if selected_call == '':
+            selected_call = None
+
         return selected_call
 
     def get_rx_text(self):
@@ -1066,12 +1199,18 @@ class Client:
         rx_text = self.js8call.watch('rx_text')
         return rx_text
         
-    def get_tx_text(self):
+    def get_tx_text(self, update=False):
         '''Get JS8Call tx text.
 
+        Args:
+            update (bool): Update tx text if True or use local state if False, defaults to False
+            
         Returns:
             str: Text from the JS8Call tx text field
         '''
+        if not update:
+            return self.js8call.get_state('tx_text')
+            
         msg = Message()
         msg.set('type', Message.TX_GET_TEXT)
         self.js8call.send(msg)
@@ -1117,45 +1256,71 @@ class Client:
         Returns:
             list: Messages from the rx text field
         '''
-        #TODO is command handling required?
+        # rx message structure:
+        # hh:mm:ss - (offset) - text
+        #   [0]        [1]      [2]
+        #    ^ index when split on '-'
 
         rx_text = self.get_rx_text()
         callsign = self.settings.get_station_callsign()
         msgs = rx_text.split('\n\n')
-        msgs = [m.strip(' ' + Message.EOM) for m in msgs if len(m.strip()) > 0]
+        msgs = [msg.strip(' ' + Message.EOM) for msg in msgs if len(msg.strip()) > 0]
 
         rx_messages = []
         for msg in msgs:
-            if '-' not in msg:
+            # check for first dash and opening offset parenthesis to avoid processing malformed text 
+            # this string avoids finding negative SNR values in message text
+            if ' - (' not in msg:
                 continue
 
-            #TODO
-            print(msg)
-
             parts = msg.split('-')
+            # handle dash/hyphen/negative in message text
+            if len(parts) > 3:
+                parts[2] = '-'.join(parts[2:])
+                parts = parts[:3]
+
             data = {}
 
             data['time'] = parts[0].strip()
             data['offset'] = int(parts[1].strip(' \n()'))
+            data['text'] = parts[2].strip()
+            data['origin'] = None
+            data['destination'] = None
 
-            if ':' not in parts[2]:
-                data['origin'] = None
-                data['destination'] = None
-                data['text'] = parts[2].strip()
-            else:
-                if '  ' in parts[2]:
-                    callsigns = parts[2].split('  ')[0].split(':')
-                    data['origin'] = callsigns[0].strip()
-                    data['destination'] = callsigns[1].strip()
-                    data['text'] = parts[2].split('  ')[1].strip()
-                elif '@HB' in parts[2]:
-                    data['origin'] = parts[2].split(':')[0].strip()
-                    data['destination'] = '@HB'
-                    data['text'] = parts[2].split('@HB')[1].strip()
-                else:
-                    data['origin'] = parts[2].split(':')[0].strip()
-                    data['destination'] = None
-                    data['text'] = parts[2].split(':')[1].strip()
+            if ':' in data['text']:
+                # directed message structure
+                #   origin: destination[ command] text
+                #   note: directed message without command has double space after destination
+                #
+                # free text with only origin falls through with no further processing
+
+                directed_parts = data['text'].split(':')
+                data['origin'] = directed_parts[0].strip()
+                data['text'] = directed_parts[1].strip()
+                first_space = data['text'].find(' ')
+
+                # double space
+                if '  ' in data['text']:
+                    # directed message without command
+                    directed_parts = data['text'].split('  ')
+                    data['destination'] = directed_parts[0].strip()
+                    data['text'] = directed_parts[1].strip()
+
+                elif first_space > 0:
+                    # directed message with command
+                    destination = data['text'][:first_space].strip()
+                    # do not strip whitespace here, this removes leading space in command string
+                    text = data['text'][first_space:]
+
+                    # look for command at begining of text to confirm destination/text split is correct
+                    commands = Message.COMMANDS.copy()
+                    commands.remove(Message.CMD_FREETEXT)
+                    commands.remove(Message.CMD_FREETEXT_2)
+
+                    for cmd in commands:
+                        if text.find(cmd) == 0:
+                            data['destination'] = destination
+                            data['text'] = text
 
             if not own and data['origin'] == callsign:
                 continue
@@ -1199,13 +1364,12 @@ class Client:
                     spot_hearing = [station for station in spot.hearing if station not in hearing[spot.origin]]
                     hearing[spot.origin].extend(spot_hearing)
             
-            if spot.cmd in Message.COMMAND_RESPONSES:
+            if spot.cmd in Message.AUTOREPLY_COMMANDS:
                 if spot.origin not in hearing:
                     hearing[spot.origin] = []
 
                 if isinstance(spot.path, list):
                     # handle relay path
-                    #TODO review if path list should be reversed
                     relay_path = Message.CMD_RELAY.join(spot.path)
 
                     if relay_path not in hearing[spot.origin]:
@@ -1214,12 +1378,32 @@ class Client:
                 elif spot.destination != '@ALLCALL' and spot.destination not in hearing[spot.origin]:
                     hearing[spot.origin].append(spot.destination)
 
-        #TODO track spot snr for sorting
-        #return {callsign:stations.sort(lambda station: station['snr'], decending) for callsign, stations in hearing.items()}
         return hearing
 
+    def station_hearing(self, station=None, age=None):
+        '''Which stations the specified station is hearing.
+        
+        See *client.hearing()* for more information.
+
+        Args:
+            station (str): Station callsign to get hearing data for, defaults to local station callsign
+            age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
+
+        Returns:
+            list: Station callsigns the specified station is hearing
+        '''
+        hearing = self.hearing(age)
+
+        if station is None:
+            station = self.settings.get_station_callsign()
+
+        if station in hearing:
+            return hearing[station]
+        else:
+            return []
+    
     def heard_by(self, age=None, hearing=None):
-        '''Which stations are heard by other stations.
+        '''Which stations are hearing other station.
 
         *client.heard_by()* is the inverse of *client.hearing()*.
 
@@ -1250,6 +1434,29 @@ class Client:
 
         return heard_by
 
+    def station_heard_by(self, station=None, age=None, hearing=None):
+        '''Which stations are hearing the specified station.
+
+        See *client.heard_by()* for more information.
+        
+        Args:
+            station (str): Station callsign to get heard by data for, defaults to local station callsign
+            age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
+            hearing (dict): Result of *client.hearing()*, defaults to result of *client.hearing()*
+
+        Returns:
+            list: Station callsigns heard by the specified station
+        '''
+        heard_by = self.heard_by(age, hearing)
+
+        if station is None:
+            station = self.settings.get_station_callsign()
+
+        if station in heard_by:
+            return heard_by[station]
+        else:
+            return []
+
 #    def discover_path(self, destination, age=60):
 #        '''
 #        '''
@@ -1268,7 +1475,7 @@ class Client:
     def grid_distance(self, grid_a, grid_b=None):
         '''Calculate great circle distance and bearing between grid squares.
 
-        If *grid_b* is *None* the JS8Call grid square is used.
+        If *grid_b* is *None*, the JS8Call grid square is used.
 
         Bearing is calculated from *grid_b* to *grid_a*.
 
@@ -1295,7 +1502,7 @@ class Client:
             grid_b = self.settings.get_station_grid()
 
         if grid_b in (None, ''):
-            raise ValueError('Second grid square required and JS8Call grid square not set.')
+            raise ValueError('Second grid square required, JS8Call grid square not set.')
 
         lat_a, lon_a = self.grid_to_lat_lon(grid_a)
         lat_b, lon_b = self.grid_to_lat_lon(grid_b)
@@ -1385,7 +1592,6 @@ class Client:
         return (lat, lon)
 
 
-
 class Settings:
     '''Settings function container.
     
@@ -1418,6 +1624,35 @@ class Settings:
         '''
         self._client.config.set('Common', 'SubModeHB', 'false')
 
+    def heartbeat_networking_enabled(self):
+        '''Whether heartbeat networking enabled in config file.
+        
+        Returns:
+            bool: True if heartbeat networking enabled, False otherwise
+        '''
+        return self._client.config.get('Common', 'SubModeHB', bool)
+
+    def get_heartbeat_interval(self):
+        '''Get heartbeat networking interval.
+        
+        Returns:
+            int: Heartbeat networking time interval in minutes
+        '''
+        return self._client.config.get('Common', 'HBInterval', int)
+        
+    def set_heartbeat_interval(self, interval):
+        '''Set the heartbeat networking interval.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+
+        Args:
+            interval (int): New heartbeat networking time interval in minutes
+        
+        Returns:
+            int: Current heartbeat networking time interval in minutes
+        '''
+        return self._client.config.set('Common', 'HBInterval', interval)
+        
     def enable_heartbeat_acknowledgements(self):
         '''Enable heartbeat acknowledgements via config file.
         
@@ -1431,6 +1666,36 @@ class Settings:
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Common', 'SubModeHBAck', 'false')
+
+    def heartbeat_acknowledgements_enabled(self):
+        '''Whether heartbeat acknowledgements enabled in config file.
+        
+        Returns:
+            bool: True if heartbeat acknowledgements enabled, False otherwise
+        '''
+        return self._client.config.get('Common', 'SubModeHBAck', bool)
+        
+    def pause_heartbeat_during_qso(self):
+        '''Pause heartbeat messages during QSO via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
+        self._client.config.set('Configuration', 'HeartbeatQSOPause', 'true')
+
+    def allow_heartbeat_during_qso(self):
+        '''Allow heartbeat messages during QSO via config file.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        '''
+        self._client.config.set('Configuration', 'HeartbeatQSOPause', 'false')
+
+    def heartbeat_during_qso_paused(self):
+        '''Whether heartbeat messages paused during QSO in config file.
+        
+        Returns:
+            bool: True if heartbeat messages paused during QSO, False otherwise
+        '''
+        return self._client.config.get('Configuration', 'HeartbeatQSOPause', bool)
 
     def enable_multi_decode(self):
         '''Enable multi-speed decoding via config file.
@@ -1446,6 +1711,14 @@ class Settings:
         '''
         self._client.config.set('Common', 'SubModeMultiDecode', 'false')
 
+    def multi_decode_enabled(self):
+        '''Whether multi-decode enabled in config file.
+        
+        Returns:
+            bool: True if multi-decode enabled, False otherwise
+        '''
+        return self._client.config.get('Common', 'SubModeMultiDecode', bool)
+
     def enable_autoreply_startup(self):
         '''Enable autoreply on start-up via config file.
         
@@ -1459,6 +1732,14 @@ class Settings:
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Configuration', 'AutoreplyOnAtStartup', 'false')
+
+    def autoreply_startup_enabled(self):
+        '''Whether autoreply enabled at start-up in config file.
+        
+        Returns:
+            bool: True if autoreply is enabled at start-up, False otherwise
+        '''
+        return self._client.config.get('Configuration', 'AutoreplyOnAtStartup', bool)
 
     def enable_autoreply_confirmation(self):
         '''Enable autoreply confirmation via config file.
@@ -1476,6 +1757,14 @@ class Settings:
         '''
         self._client.config.set('Configuration', 'AutoreplyConfirmation', 'false')
 
+    def autoreply_confirmation_enabled(self):
+        '''Whether autoreply confirmation enabled in config file.
+        
+        Returns:
+            bool: True if autoreply confirmation enabled, False otherwise
+        '''
+        return self._client.config.get('Configuration', 'AutoreplyConfirmation', bool)
+
     def enable_allcall(self):
         '''Enable @ALLCALL participation via config file.
         
@@ -1489,6 +1778,14 @@ class Settings:
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Configuration', 'AvoidAllcall', 'true')
+
+    def allcall_enabled(self):
+        '''Whether @ALLCALL participation enabled in config file.
+        
+        Returns:
+            bool: True if @ALLCALL participation enabled, False otherwise
+        '''
+        return not self._client.config.get('Configuration', 'AvoidAllcall', bool)
 
     def enable_reporting(self):
         '''Enable PSKReporter reporting via config file.
@@ -1504,19 +1801,35 @@ class Settings:
         '''
         self._client.config.set('Configuration', 'PSKReporter', 'false')
 
+    def reporting_enabled(self):
+        '''Whether PSKReporter reporting enabled in config file.
+        
+        Returns:
+            bool: True if reporting enabled, False otherwise
+        '''
+        return self._client.config.get('Configuration', 'PSKReporter', bool)
+
     def enable_transmit(self):
-        '''Enable transmitting via config file.
+        '''Enable JS8Call transmitting via config file.
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Configuration', 'TransmitOFF', 'false')
 
     def disable_transmit(self):
-        '''Disable transmitting via config file.
+        '''Disable JS8Call transmitting via config file.
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         '''
         self._client.config.set('Configuration', 'TransmitOFF', 'true')
+
+    def transmit_enabled(self):
+        '''Whether JS8Call transmitting enabled in config file.
+        
+        Returns:
+            bool: True if transmitting enabled, False otherwise
+        '''
+        return not self._client.config.get('Configuration', 'TransmitOFF', bool)
 
     def get_profile(self):
         '''Get active JS8call configuration profile via config file.
@@ -1556,6 +1869,70 @@ class Settings:
 
         # set the profile as active
         self._client.config.change_profile(profile)
+
+    def get_primary_highlight_words(self):
+        '''Get primary highlight words via config file.
+
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        
+        Returns:
+            list: Words that should be highlighted on the JC8Call UI
+        '''
+        words = self._client.config.get('Configuration', 'PrimaryHighlightWords')
+
+        if words == '@Invalid()':
+            words = []
+        elif words is not None:
+            words = words.split(', ')
+
+        return words
+
+    def set_primary_highlight_words(self, words):
+        '''Set primary highlight words via config file.
+
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        
+        Args:
+            words (list): Words that should be highlighted on the JC8Call UI
+        '''
+        if len(words) == 0:
+            words = '@Invalid()'
+        else:
+            words = ', '.join(words)
+
+        self._client.config.set('Configuration', 'PrimaryHighlightWords', words)
+
+    def get_secondary_highlight_words(self):
+        '''Get secondary highlight words via config file.
+
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        
+        Returns:
+            list: Words that should be highlighted on the JC8Call UI
+        '''
+        words = self._client.config.get('Configuration', 'SecondaryHighlightWords')
+
+        if words == '@Invalid()':
+            words = []
+        elif words is not None:
+            words = words.split(', ')
+
+        return words
+
+    def set_secondary_highlight_words(self, words):
+        '''Set secondary highlight words via config file.
+
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+        
+        Args:
+            words (list): Words that should be highlighted on the JC8Call UI
+        '''
+        if len(words) == 0:
+            words = '@Invalid()'
+        else:
+            words = ', '.join(words)
+
+        self._client.config.set('Configuration', 'SecondaryHighlightWords', words)
 
     def submode_to_speed(self, submode):
         '''Map submode *int* to speed *str*.
@@ -1674,10 +2051,18 @@ class Settings:
         '''
         msg = Message()
         msg.set('type', Message.RIG_SET_FREQ)
-        msg.set('params', {'DIAL': freq, 'OFFSET': self._client.js8call.state['offset']})
+        msg.set('params', {'DIAL': freq, 'OFFSET': self._client.js8call.get_state('offset')})
         self._client.js8call.send(msg)
         time.sleep(self._client._set_get_delay)
         return self.get_freq(update = True)
+
+    def get_band(self):
+        '''Get frequency band designation.
+
+        Returns:
+            str: Band designator like \'40m\' or Client.OOB (out-of-band)
+        '''
+        return Client.freq_to_band(self.get_freq())
 
     def get_offset(self, update=False):
         '''Get JS8Call offset frequency.
@@ -1709,7 +2094,7 @@ class Settings:
         '''
         msg = Message()
         msg.set('type', Message.RIG_SET_FREQ)
-        msg.set('params', {'DIAL': self._client.js8call.state['dial'], 'OFFSET': offset})
+        msg.set('params', {'DIAL': self._client.js8call.get_state('dial'), 'OFFSET': offset})
         self._client.js8call.send(msg)
         time.sleep(self._client._set_get_delay)
         return self.get_offset(update = True)
@@ -1764,7 +2149,7 @@ class Settings:
     def set_idle_timeout(self, timeout):
         '''Set JS8Call idle timeout.
 
-        If the JS8Call idle timeout is less than 5 minutes, JS8Call will force it to 5 minutes on the next application start or exit.
+        If the JS8Call idle timeout is between 1 and 5 minutes, JS8Call will force the idle timeout to 5 minutes on the next application start or exit.
 
         The maximum idle timeout is 1440 minutes (24 hours).
 
@@ -1793,7 +2178,7 @@ class Settings:
         Returns:
             bool: True if distance units are set to miles, False if km
         '''
-        return self._client.config.get('Configuration', 'Miles', value_type=bool)
+        return self._client.config.get('Configuration', 'Miles', bool)
         
     def set_distance_units_miles(self, units_miles):
         '''Set JS8Call distance unit setting.
@@ -1907,6 +2292,27 @@ class Settings:
         time.sleep(self._client._set_get_delay)
         return self.get_station_info(update = True)
 
+    def append_pyjs8call_to_station_info(self):
+        '''Append pyjs8call info to station info
+
+        A string like ', PYJS8CALL V0.0.0' is appended to the current station info.
+        Example: 'QRPLABS QDX, 40M DIPOLE 33FT, PYJS8CALL V0.2.2'
+
+        If a string like ', PYJS8CALL' or ',PYJS8CALL' is found in the current station info, that substring (and everything after it) is dropped before appending the new pyjs8call info.
+
+        Returns:
+            str: JS8Call configured station information
+        '''
+        info = self.get_station_info().upper()
+        
+        if ', PYJS8CALL' in info:
+            info = info.split(', PYJS8CALL')[0]
+        elif ',PYJS8CALL' in info:
+            info = info.split(',PYJS8CALL')[0]
+            
+        info = '{}, PYJS8CALL {}'.format(info, pyjs8call.__version__)
+        return self.set_station_info(info)
+
     def get_bandwidth(self, speed=None):
         '''Get JS8Call signal bandwidth based on modem speed.
 
@@ -1975,27 +2381,30 @@ class Callbacks:
     Attributes:
         incoming (dict): Incoming message callback function lists organized by message type
         outgoing (func): Outgoing message status change callback function, defaults to None
-        spots (func): New spots callback funtion, defaults to None
-        station_spot (func): Watched station spot callback function, defaults to None
-        group_spot (func): Watched group spot callback function, defaults to None
+        spots (list): New spots callback funtions, defaults to empty list
+        station_spot (list): Watched station spot callback functions, defaults to empty list
+        group_spot (list): Watched group spot callback functions, defaults to empty list
         window (func): rx/tx window transition callback function, defaults to None
         inbox (func): New inbox message callback function, defaults to None
         schedule (func): Schedule entry activation callback function, defaults to None
 
     *incoming* structure: *{type: [callback, ...], ...}*
     - *type* is an incoming  message type (see pyjs8call.message for information on message types)
-    - *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+    - *callback* signature: *func(msg)* where *msg* is a pyjs8call.message object
 
     *outgoing* callback signature: *func(msg)* where *msg* is a pyjs8call.message object
     - Called by pyjs8call.txmonitor
 
-    *spots* callback signature: *func( list(msg, ...) )* where *msg* is a pyjs8call.message object
+    *spots* structure: *[callback, ...]*
+    - callback signature: *func( list(msg, ...) )* where *msg* is a pyjs8call.message object
     - Called by pyjs8call.spotmonitor
 
-    *station_spot* callback signature: *func(msg)* where *msg* is a pyjs8call.message object
+    *station_spot* structure: *[callback, ...]*
+    - callback signature: *func(msg)* where *msg* is a pyjs8call.message object
     - Called by pyjs8call.spotmonitor
 
-    *group_spot* callback signature: *func(msg)* where *msg* is a pyjs8call.message object
+    *group_spot* structure: *[callback, ...]*
+    - callback signature: *func(msg)* where *msg* is a pyjs8call.message object
     - Called by pyjs8call.spotmonitor
 
     *window* callback signature: *func()*
@@ -2017,22 +2426,23 @@ class Callbacks:
             pyjs8call.client.Callbacks: Constructed callback object
         '''
         self.outgoing = None
-        self.spots = None
-        self.station_spot = None
-        self.group_spot = None
+        self.spots = []
+        self.station_spot = []
+        self.group_spot = []
         self.window = None
         self.inbox = None
         self.schedule = None
         self.incoming = {
             Message.RX_DIRECTED: [],
         }
+        self.commands = {}
 
     def register_incoming(self, callback, message_type=Message.RX_DIRECTED):
         '''Register incoming message callback function.
 
         Incoming message callback functions are associated with specific message types. The directed message type is assumed unless otherwise specified. See pyjs8call.message for more information on message types.
 
-        Note that pyjs8call internal modules may register callback functions for specific message type handling.
+        Note that pyjs8call internal modules may register callback functions for specific message type handling. Keep this in mind if minipulating registered callback functions directly.
 
         Args:
             callback (func): Callback function object
@@ -2080,3 +2490,109 @@ class Callbacks:
         else:
             return []
 
+    def register_command(self, cmd, callback):
+        '''Register command callback function.
+
+        Note: All JS8Call commands must have a leading space. Custom command strings also require a leading space for consistent internal handling.
+
+        Note: Custom commands are only processed for directed messages.
+
+        Args:
+            cmd (str): Command string (with leading space)
+            callback (func): Callback function object
+
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+
+        Raises:
+            ValueError: Specified command string is an exsiting JS8Call command
+            ValueError: Specified command string does not have a leading space
+        '''
+        if cmd in Message.COMMANDS:
+            raise ValueError('\'' + cmd + '\' is an existing JS8Call command')
+
+        if cmd[0] != ' ':
+            raise ValueError('All JS8Call commands must have a leading space')
+
+        if cmd not in self.commands:
+            self.commands[cmd] = []
+
+        self.commands[cmd].append(callback)
+        
+    def remove_command(self, cmd):
+        '''Remove command and callback functions.
+
+        Args:
+            cmd (str): Command to remove
+        '''
+        if cmd in self.commands:
+            del self.commands[cmd]
+
+    def remove_command_callback(self, callback):
+        '''Remove command callback function.
+
+        Args:
+            callback (func): Function to remove
+        '''
+        for cmd, callbacks in self.commands.items():
+            if callback in callbacks:
+                self.commands[cmd].remove(callback)
+
+    def register_spots(self, callback):
+        '''Register spots callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        '''
+        if callback not in self.spots:
+            self.spots.append(callback)
+
+    def remove_spots(self, callback):
+        '''Remove spots callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.spots:
+            del self.spots[callback]
+
+    def register_station_spot(self, callback):
+        '''Register station spot callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        '''
+        if callback not in self.station_spot:
+            self.station_spot.append(callback)
+
+    def remove_station_spot(self, callback):
+        '''Remove station spot callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.station_spot:
+            del self.station_spot[callback]
+
+    def register_group_spot(self, callback):
+        '''Register group spot callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        '''
+        if callback not in self.group_spot:
+            self.group_spot.append(callback)
+
+    def remove_group_spot(self, callback):
+        '''Remove group spot callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.group_spot:
+            del self.group_spot[callback]

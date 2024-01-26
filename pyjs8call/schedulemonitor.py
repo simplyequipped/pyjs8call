@@ -44,6 +44,7 @@ __docformat__ = 'google'
 import time
 import datetime
 import threading
+import json
 
 
 class ScheduleEntry:
@@ -86,15 +87,6 @@ class ScheduleEntry:
         self.speed = speed
         self.active = False
         self.run = False
-
-    def __eq__(self, schedule):
-        '''Equality test.'''
-        return bool(
-            self.profile == schedule.profile and
-            self.start == schedule.start and
-            self.freq == schedule.freq and
-            self.speed == schedule.speed
-        )
     
     def dict(self):
         '''Get dictionary representation of shedule entry.
@@ -122,6 +114,15 @@ class ScheduleEntry:
             'state': 'active' if self.active else 'inactive',
             'run': self.run
         }
+
+    def __eq__(self, schedule):
+        '''Equality test.'''
+        return bool(
+            self.profile == schedule.profile and
+            self.start == schedule.start and
+            self.freq == schedule.freq and
+            self.speed == schedule.speed
+        )
     
     def __repr__(self):
         '''Get schedule entry object representation.'''
@@ -151,6 +152,14 @@ class ScheduleMonitor:
         self._enabled = False
         self._paused = False
 
+        config_schedules = self._client.config.get('Configuration', 'pyjs8callSchedule')
+
+        if config_schedules is not None:
+            config_schedules = json.loads(config_schedules)
+
+            for schedule in config_schedules:
+                self.add(*schedule)
+
     def enabled(self):
         '''Get enabled status.
 
@@ -168,7 +177,10 @@ class ScheduleMonitor:
         return self._paused
 
     def enable(self):
-        '''Enable schedule monitoring.'''
+        '''Enable schedule monitoring.
+
+        Past schedule entries are marked as run to prevent them from running when enabled. The last past schedule entry is not marked as run (to get back on schedule).
+        '''
         if self._enabled:
             return
 
@@ -182,6 +194,17 @@ class ScheduleMonitor:
 
             self._active_schedule = ScheduleEntry(None, freq, speed, profile)
 
+        # prevent running past schedule entries when re-enabled
+        with self._schedule_lock:
+            self._schedule.sort(key=lambda sch: sch.start)
+            now = datetime.datetime.now().time()
+            
+            for i in range(len(self._schedule)):
+                # set past schedule entries as run, except the last past schedule entry
+                # let the last past schedule entry run to get back on schedule
+                if i < (len(self._schedule) - 1) and self._schedule[i + 1].start < now:
+                    self._schedule[i].run = True
+            
         thread = threading.Thread(target=self._monitor)
         thread.daemon = True
         thread.start()
@@ -202,7 +225,7 @@ class ScheduleMonitor:
         '''Add new schedule entry.
 
         Args:
-            start_time (str): Start time in 24-hour format (ex. '18:30')
+            start_time (str): Local start time in 24-hour format (ex. '18:30')
             freq (int): Dial frequency in Hz, defaults to current frequency
             speed (str): Modem speed ('slow', 'normal', 'fast', 'turbo'), defaults to current speed
             profile (str): Configuration profile name, defaults to the current profile
@@ -219,7 +242,7 @@ class ScheduleMonitor:
         if profile is None:
             profile = self._client.settings.get_profile()
 
-        new_schedule = ScheduleEntry(start_time, freq, speed, profile)
+        new_schedule = ScheduleEntry(start_time, int(freq), speed, profile)
 
         # avoid running past schedule entry immediately after creation
         if new_schedule.start < now:
@@ -231,6 +254,8 @@ class ScheduleMonitor:
         with self._schedule_lock:
             self._schedule.append(new_schedule)
 
+        self._save_to_config()
+
     def remove(self, start_time=None, profile=None):
         '''Remove existing schedule entry.
 
@@ -239,7 +264,7 @@ class ScheduleMonitor:
         if *profile* is not given, all schedule entries with start time *start_time* are removed.
 
         Args:
-            start_time (str): Start time in 24-hour format (ex. '18:30'), defaults to None
+            start_time (str): Local start time in 24-hour format (ex. '18:30'), defaults to None
             profile (str): Configuration profile name, defaults to None
         '''
         if start_time is not None:
@@ -253,6 +278,8 @@ class ScheduleMonitor:
                     (profile == schedule.profile and start_time == schedule.start)
                 ):
                     self._schedule.remove(schedule)
+
+        self._save_to_config()
 
     def get_schedule(self):
         '''Get all schedule entries.
@@ -268,6 +295,14 @@ class ScheduleMonitor:
         schedule.sort(key=lambda sch: sch.start)
         return schedule
 
+    def _save_to_config(self):
+        '''Save schedule to configuration file.'''
+        with self._schedule_lock:
+            schedule = [ [sch.start.strftime('%H:%M'), sch.freq, sch.speed, sch.profile] for sch in self._schedule]
+            
+        schedule = json.dumps(schedule)
+        self._client.config.set('Configuration', 'pyjs8callSchedule', schedule)
+
     def _restart_required(self, schedule_a, schedule_b):
         '''Whether schedule changes require restart.'''
         if schedule_a is None or schedule_b is None:
@@ -279,12 +314,10 @@ class ScheduleMonitor:
 
     def _callback(self, schedule):
         '''Callback handling function.'''
-        if self._client.callback.schedule is None:
-            return
-
-        thread = threading.Thread(target=self._client.callback.schedule, args=(schedule,))
-        thread.daemon = True
-        thread.start()
+        if self._client.callback.schedule is not None:
+            thread = threading.Thread(target=self._client.callback.schedule, args=(schedule,))
+            thread.daemon = True
+            thread.start()
 
     def _monitor(self):
         '''Schedule monitor loop.'''
@@ -325,12 +358,14 @@ class ScheduleMonitor:
 
                     if not schedule.run and not schedule.active and schedule.start < now:
                         if self._restart_required(schedule, self._active_schedule):
-    
+                            # window duration based on current speed setting
+                            window = self._client.settings.get_window_duration()
+                            
                             # change config file settings
                             self._client.settings.set_profile(schedule.profile)
                             self._client.settings.set_speed(schedule.speed)
                             # restart when inactive
-                            self._client.js8call.block_until_inactive(age = 7)
+                            self._client.js8call.block_until_inactive(age = window * 2)
                             self._client.restart()
 
                         # set dial freq
@@ -342,4 +377,3 @@ class ScheduleMonitor:
                         self._callback(schedule)
 
             reset_run = False
-

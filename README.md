@@ -14,7 +14,7 @@ This software is currently in a beta state. This means that the software will li
 
 ### Responsibility
 
-It is the station operator's reponsibility to ensure they are complying with locally applicable laws.
+It is the station operator's reponsibility to ensure compliance with local laws.
 
 &nbsp;
 
@@ -137,6 +137,12 @@ Monitors the local inbox. Notification of new messages is handled via callback f
 
 Monitors configured schedule entries and applies the necessary setting changes at the scheduled time. Settings that can be changed on a schedule include frequency, modem speed, and configuration profile.
 
+**Propagation** (pyjs8call.propagation)
+Parses stored spots into datasets of individual or median SNR values for grid squares or callsigns. This information can be used to infer general propagation conditions between the local station and a specific station, or the local station and a specific grid square.
+
+**Notifications** (pyjs8call.notifications)
+Send an email message (including email-to-text) via an existing SMTP server when a message directed to the local station is received.
+
 &nbsp;  
 
 ### Examples
@@ -163,8 +169,14 @@ for message in inbox:
 # send a directed message
 js8call.send_directed_message('N0GQ', 'Thanks for your work on js8net')
 
-# see who is hearing who in the last hour
+# who is hearing who
 js8call.hearing()
+
+# who is hearing a specific station
+js8call.station_heard_by('KI6NAZ')
+
+# who a specific station is hearing
+js8call.station_hearing('KT7RUN')
 
 # get a list of spot messages from a specific station
 js8call.spots.filter(origin = 'OH8STN')
@@ -179,6 +191,9 @@ js8call.spots.filter(distance = 1000)
 # get a list of spot messages in the last 15 minutes
 max_age = 15 * 60 # convert minutes to seconds
 js8call.spots.filter(age = max_age)
+
+# get a list of the 10 most recent spot messages from regional stations in the last hour on the 40m band
+js8call.spots.filter(distance = 500, band = '40m', count = 10)
 ```
 
 Run multiple JS8Call instances:
@@ -206,15 +221,15 @@ import pyjs8call
 # callback function for all new spots
 def new_spots(spots):
     for spot in spots:
-        print('Spotted ' + spot.origin + ' with a ' + str(spot.snr) + 'dB SNR')
+        print('Spotted {} with a {}db SNR'.format(spot.origin, spot.snr))
     
 # callback function for watched station spots
 def station_spotted(spot):
-    print(spot.origin + ' spotted!')
+    print('{} spotted!'.format(spot.origin))
 
 # callback function for watched group spots
 def group_spotted(spot):
-    print(spot.destination + ' spotted!')
+    print('{} spotted!'.format(spot.destination))
     
 js8call = pyjs8call.Client()
 # set spot monitor callback
@@ -260,7 +275,7 @@ import pyjs8call
 
 # callback function for message status change
 def tx_status(msg):
-    print('Message ' + msg.id + ' status: ' + msg.status)
+    print('Message {} status: {}'.format(msg.id, msg.status))
     
 js8call = pyjs8call.Client()
 # set outgoing monitor callback
@@ -283,7 +298,7 @@ import pyjs8call
 js8call = pyjs8call.Client()
 js8call.start()
 
-# use default 10 minute interval
+# interval based on JS8Call settings
 js8call.heartbeat.enable()
 ```
 
@@ -293,7 +308,7 @@ import pyjs8call
 
 # callback function for schedule entry activation
 def schedule_activation(schedule_entry):
-    print('Activating ' + repr(schedule_entry))
+    print('Activating {}'.format(repr(schedule_entry)))
 
 js8call = pyjs8call.Client()
 # set schedule activation callback
@@ -319,10 +334,13 @@ Set config file settings:
 import pyjs8call
 
 js8call = pyjs8call.Client()
+
 # set config file settings before starting
 js8call.settings.enable_heartbeat_acknowledgements()
+js8call.settings.set_heartbeat_interval(15)
 js8call.settings.enable_reporting()
 js8call.settings.set_speed('normal')
+
 js8call.start()
 ```
 
@@ -333,8 +351,10 @@ import pyjs8call
 js8call = pyjs8call.Client()
 js8call.start()
 
-# use built-in spot distance filters
+# use built-in spot distance filter
 regional_stations = [spot.origin for spot in js8call.spots.filter(distance = 500)]
+for station in regional_stations:
+    print('{}: {} {} at {}\N{DEGREE SIGN}'.format(station.origin, station.distance, station.distance_units, station.bearing))
 
 # access message attributes directly
 # this requires the message to contain grid square data
@@ -343,10 +363,81 @@ distance = last_heartbeat.distance
 bearing = last_heartbeat.bearing
 
 # manually calculate distance and bearing from local station
-distance, bearing = js8call.grid_distance('FM16')
+distance, distance_units, bearing = js8call.grid_distance('FM16')
 
 # manually calculate distance and bearing between grid squares
-distance, bearing = js8call.grid_distance('FM16fq', 'EM19ub')
+distance, distance_units, bearing = js8call.grid_distance('FM16fq', 'EM19ub')
+```
+
+Using propagation data:
+```
+from datetime import datetime
+import pyjs8call
+
+js8call = pyjs8call.Client()
+js8call.start()
+
+# allow some time to capture spots
+# note: default maximum spot age is 7 days
+
+# get SNR data for each spotted grid square in the last 30 minutes
+js8call.propagation.grids_dataset()
+
+# get median SNR data for each unique grid square spotted in the last hour
+js8call.propagation.grids_median_dataset(60)
+
+# get median SNR data for each unique origin callsign spotted from 8pm to 10pm yesterday
+now = datetime.now()
+start = datetime(now.year, now.month, now.day - 1, hour = 20)
+end = datetime(now.year, now.month, now.day - 1, hour = 22)
+js8call.propagation.origins_median_dataset(start_time = start, end_time = end)
+
+# get the median SNR of a specific origin callsign spotted over the last 2 hours
+js8call.propagation.origin_median_snr(120)
+```
+
+Implementing custom commands:
+```
+import pyjs8call
+
+# custom command callback function
+def news_cmd(msg):
+    # do not respond in the following cases:
+    if (
+        js8call.settings.autoreply_confirmation_enabled() or
+        not js8call.msg_is_to_me(msg) or # not directed to local station or configured group
+        msg.text in (None, '') # message text is empty
+    ):
+        return
+
+    # read latest news from file
+    with open('latest_news.txt', 'r') as fd:
+        news = fd.read()
+
+    # respond to origin station with directed message
+    js8call.send_directed_message(msg.origin, news)
+
+js8call = pyjs8call.Client()
+js8call.start()
+
+# set custom command callback
+# note the leading space in the command string
+js8call.callback.register_command(' NEWS?', news_cmd)
+```
+
+Configuring email notifications:
+```
+import pyjs8call
+js8call = pyjs8call.Client()
+js8call.start()
+
+# set SMTP server credentials
+js8call.notifications.set_smtp_credentials('email.address@gmail.com', 'app_password')
+# set destination email address to a Verzion mobile number
+js8call.notifications.set_email_destination('2018675309@vtext.com')
+# enable automatic notifications for incoming directed messages
+js8call.notifications.enable()
+
 ```
 
 &nbsp;

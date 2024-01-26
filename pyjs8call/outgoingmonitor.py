@@ -25,6 +25,8 @@
 Directed messages are monitored by default (see pyjs8call.client.Client.monitor_outgoing).
 
 Set `client.callback.outgoing` to receive outgoing message status updates. See pyjs8call.client.Callbacks for *outgoing* callback function details.
+
+Autoreply messages sent directly by the JS8Call application (not by pyjs8call) are detected as outgoing activity.
 '''
 
 __docformat__ = 'google'
@@ -51,11 +53,11 @@ class OutgoingMonitor:
 
     A message changes to STATUS_SENT when the destination and value are no longer seen in the JS8Call tx text field and the status of the message is STATUS_SENDING.
 
-    A message changes to STATUS_FAILED when the message is not sent within 600 tx cycles. Therefore the maximum age of a monitored message depends on the JS8Call modem speed setting:
-    - 6 minutes in turbo mode which has 6 second tx cycles
-    - 10 minutes in fast mode which has 10 second tx cycles
-    - 15 minutes in normal mode which has 15 second cycles
-    - 30 minutes in slow mode which has 30 second tx cycles
+    A message changes to STATUS_FAILED when the message is not sent within 60 tx cycles. Therefore the maximum age of a monitored message depends on the JS8Call modem speed setting:
+    - 6 minutes in turbo mode (6 second tx cycles)
+    - 10 minutes in fast mode (10 second tx cycles)
+    - 15 minutes in normal mode (15 second cycles)
+    - 30 minutes in slow mode (30 second tx cycles)
 
     A message is dropped from the monitoring queue once the status is set to STATUS_SENT or STATUS_FAILED.
     '''
@@ -105,10 +107,7 @@ class OutgoingMonitor:
         thread.start()
 
     def disable(self):
-        '''Disable outgoing message monitoring.
-        
-        **Caution**: Internal processes rely on the transmit text field state updates performed by this module.
-        '''
+        '''Disable outgoing message monitoring.'''
         self._enabled = False
 
     def pause(self):
@@ -132,6 +131,9 @@ class OutgoingMonitor:
             thread.daemon = True
             thread.start()
 
+        if msg.destination == '@HB':
+            self._client.heartbeat.outgoing_msg(msg)
+
     def monitor(self, msg):
         '''Monitor a new message.
 
@@ -153,11 +155,16 @@ class OutgoingMonitor:
             if self._paused:
                 continue
 
-            # other modules rely on tx text updates from JS8Call
             tx_text = self._client.get_tx_text()
 
+            # keep processing when tx text is empty to determine if msg was sent
             if tx_text is None:
                 tx_text = ''
+
+            # detect autoreplies as outgoing activity
+            # sets last outgoing timestamp to end of tx for all msgs
+            if tx_text != '':
+                self._client.js8call.last_outgoing = time.time()
 
             # drop the first callsign and strip spaces and end-of-message
             # original format: 'callsign: callsign  message'

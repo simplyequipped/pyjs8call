@@ -43,14 +43,16 @@ class JS8Call:
 
     Receives and transmits pyjs8call.message objects, and generally manages the local state representation of the JS8Call application.
 
-    Initializes pyjs8call.appmonitor as well as rx, tx, logging, application ping threads.
+    Initializes pyjs8call.appmonitor as well as rx, tx, logging, application ping, and local state monitoring threads.
+
+    Note: *last_band_change* is set to the current time when *pyjs8call* is started.
     
     Attributes:
         app (pyjs8call.appmonitor): Application monitor object
         connected (bool): Whether the JS8Call TCP socket is connected
-        max_spots (int): Maximum number of spots to store before dropping old spots, defaults to 5000
         last_incoming (float): Timestamp of last incoming user message, defaults to 0 (zero)
         last_outgoing (float): Timestamp of last outgoing user message, defaults to 0 (zero)
+        last_band_change (float): Timestamp of last frequency band change
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442):
@@ -73,6 +75,8 @@ class JS8Call:
         self._tx_queue_lock = threading.Lock()
         self._socket = None
         self._socket_ping_delay = 60 # seconds
+        self.connected = False
+
         self._debug = False
         self._debug_all = False
         self._log = False
@@ -81,44 +85,147 @@ class JS8Call:
         self._log_queue = ''
         self._log_queue_lock = threading.Lock()
         self._debug_log_type_blacklist = [
-            Message.TX_GET_TEXT,        # tx monitor every 1 second
-            Message.TX_TEXT,            # tx monitor every 1 second
+            Message.TX_GET_TEXT,        # every second for outgoing monitor
+            Message.TX_TEXT,            # every second for outgoing monitor
             Message.RIG_PTT,            # too frequent, not useful
             Message.TX_FRAME,           # start of outgoing message, not useful
-            Message.INBOX_MESSAGES,     # inbox monitor every window transition
-            Message.INBOX_GET_MESSAGES, # inbox monitor every window transition
             Message.STATION_STATUS,     # too frequent
-            Message.RIG_GET_FREQ,       # offset monitor every window transition
-            Message.RIG_FREQ            # offset monitor every window transition
+            Message.RIG_GET_FREQ,       # every window transition for offset monitor
+            Message.RIG_FREQ            # every window transition for offset monitor
         ]
-        self._watching = None
-        self._watch_timeout = 3 # seconds
+
         self._spots = []
-        self.max_spots = 5000
         self._recent_spots = []
         self._spots_lock = threading.Lock()
-        self.connected = False
+
+        self._last_incoming_by_band = dict()
+        self._last_outgoing_by_band = dict()
         self.last_incoming = 0
         self.last_outgoing = 0
+        self.last_band_change = time.time()
         self._last_incoming_api_msg = 0
+        
+        self._watching = None
+        self._watch_timeout = 3 # seconds
 
-        self.state = {
-            'ptt' : False,
-            'dial': None,
-            'freq' : None,
-            'offset' : None,
-            'callsign' : None,
-            'speed' : None,
-            'grid' : None,
-            'info' : None,
-            'rx_text' : None,
-            'tx_text' : None,
-            'inbox': None,
-            'call_activity' : None,
-            'band_activity' : None,
-            'selected_call' : None,
+        # update frequency:
+        #   positive value: update every X seconds
+        #   zero value:     update at window transition
+        #   negative value: update abs(X) seconds before window transition
+        #
+        # minimum update frequency is 0.5 seconds
+        self._state = {
+            'ptt' : {
+                'value': False,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': None
+            },
+            'dial': {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.RIG_GET_FREQ
+            },
+            'freq' : {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.RIG_GET_FREQ
+            },
+            'band' : {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.RIG_GET_FREQ
+            },
+            # offset monitor: runs 1 sec before window transition
+            # hb network:     runs 1 sec before window transition
+            'offset' : {
+                'value': None,
+                'update_frequency': -1.25,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.RIG_GET_FREQ
+            },
+            # monitor for callsign changes on ui
+            'callsign' : {
+                'value': None,
+                'update_frequency': -2,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.STATION_GET_CALLSIGN
+            },
+            'speed' : {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.MODE_GET_SPEED
+            },
+            'grid' : {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.STATION_GET_GRID
+            },
+            'info' : {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.STATION_GET_INFO
+            },
+            'rx_text' : {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.RX_GET_TEXT
+            },
+            # outgoing monitor: runs every 0.5 secs
+            'tx_text' : {
+                'value': None,
+                'update_frequency': 0.5,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.TX_GET_TEXT
+            },
+            'inbox': {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.INBOX_GET_MESSAGES
+            },
+            'call_activity' : {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.RX_GET_CALL_ACTIVITY
+            },
+            'band_activity' : {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.RX_GET_BAND_ACTIVITY
+            },
+            'selected_call' : {
+                'value': None,
+                'update_frequency': None,
+                'last_update': 0,
+                'last_update_request': 0,
+                'msg_type': Message.RX_GET_SELECTED_CALL
+            }
         }
-
+        
         self.app = pyjs8call.AppMonitor(self)
 
     def start(self, headless=False, args = None):
@@ -149,10 +256,6 @@ class JS8Call:
         rx_thread.daemon = True
         rx_thread.start()
 
-        hb_thread = threading.Thread(target=self._ping)
-        hb_thread.daemon = True
-        hb_thread.start()
-
         log_thread = threading.Thread(target=self._log_monitor)
         log_thread.daemon = True
         log_thread.start()
@@ -162,6 +265,8 @@ class JS8Call:
 
         # wait for application to respond
         while True:
+            time.sleep(0.01)
+            
             try:
                 # value error while application is still starting (i.e. raspberry pi)
                 self._client.settings.get_speed()
@@ -172,6 +277,14 @@ class JS8Call:
 
             if time.time() > timeout:
                 RuntimeError('JS8Call application failed to start')
+
+        ping_thread = threading.Thread(target=self._ping)
+        ping_thread.daemon = True
+        ping_thread.start()
+        
+        state_thread = threading.Thread(target=self._state_monitor)
+        state_thread.daemon = True
+        state_thread.start()
 
     def reinitialize(self, settings):
         '''Re-initialize internal settings after restart.
@@ -193,15 +306,19 @@ class JS8Call:
             dict: Settings used to re-initialize on restart
         '''
         settings = [
-            'state',
+            '_state',
             '_spots',
-            'max_spots',
             '_tx_queue',
             '_debug',
             '_debug_all',
             '_debug_log_type_blacklist',
             '_log',
-            '_log_all'
+            '_log_all',
+            '_last_incoming_by_band',
+            '_last_outgoing_by_band',
+            'last_incoming',
+            'last_outgoing',
+            'last_band_change'
         ]
 
         return {setting: getattr(self, setting) for setting in settings}
@@ -235,6 +352,45 @@ class JS8Call:
         
         if log_all:
             self._log_all = True
+
+    def process_freq_change(self, previous_freq, current_freq=None):
+        '''Manage last incoming/outgoing timestamps on band change.
+
+        This function is called internally when the local frequency state is updated. If a band change has occured, last incoming and outgoing timestamps for the previous band are stored, and last incoming and outgoing timestamps for the current band of loaded (if available).
+
+        Note: Changing from one out-of-band frequency to another out-of-band frequency is not considered a band change.
+
+        Args:
+            previous_freq (int): Previous frequency in Hz
+            current_freq (int): Current frequency in Hz, defaults to current frequency
+        '''
+        if previous_freq is None:
+            # freq initialization on start, no band change
+            return
+
+        if current_freq is None:
+            current_freq = self._client.settings.get_freq()
+
+        current_band = pyjs8call.Client.freq_to_band(current_freq)
+        previous_band = pyjs8call.Client.freq_to_band(previous_freq)
+
+        if current_band == previous_band:
+            # no band change
+            return
+
+        self._last_incoming_by_band[previous_band] = self.last_incoming
+        self._last_outgoing_by_band[previous_band] = self.last_outgoing
+        self.last_band_change = time.time()
+
+        if current_band in self._last_incoming_by_band:
+            self.last_incoming = self._last_incoming_by_band[current_band]
+        else:
+            self.last_incoming = 0
+
+        if current_band in self._last_outgoing_by_band:
+            self.last_outgoing = self._last_outgoing_by_band[current_band]
+        else:
+            self.last_outgoing = 0
 
     def activity(self, age=0):
         '''Whether there is outgoing activity.
@@ -346,8 +502,19 @@ class JS8Call:
         while self.watching(state):
             time.sleep(0.1)
 
-        return self.state[state]
+        return self._state[state]['value']
 
+    def _set_state(self, item, value):
+        '''Set local state value.
+
+        Args:
+            item (str): State item name (ex. \'freq\')
+            value (varies): New value of the state item
+        '''
+        if item in self._state:
+            self._state[item]['value'] = value
+            self._state[item]['last_update'] = time.time()
+    
     def watching(self, state=None):
         '''Get internal asynchronous setting state.
 
@@ -383,40 +550,77 @@ class JS8Call:
         Returns:
             The value of the given local state variable
         '''
-        if item not in self.state:
+        if item not in self._state:
             return None
 
         self._watching = item
-        last_state = self.state[item]
-        self.state[item] = None
+        last_state = self._state[item]['value']
+        self._state[item]['value'] = None
         timeout = time.time() + self._watch_timeout
 
         while timeout > time.time():
-            if self.state[item] is not None:
+            if self._state[item]['value'] is not None:
                 break
             time.sleep(0.001)
 
-        # timeout occurred, revert to last state
-        if self.state[item] is None:
-            self.state[item] = last_state
+        if self._state[item]['value'] is None:
+            # timeout occurred, revert to last state
+            self._state[item]['value'] = last_state
         
         self._watching = None
-        return self.state[item]
+        return self._state[item]['value']
 
     def get_spots(self):
-        '''Get list of spot messages.
+        '''Get spotted message objects.
         
         Returns:
-            list: All spot message objects
+            list: spot message objects
         '''
-        return self._spots
+        with self._spots_lock:
+             return self._spots
+
+    def get_spots_str(self):
+        '''Get spotted message objects as json string.
+
+         Used with *set_spots_str* to save spot messages for later use.
+
+        Returns:
+            str: json.dumps of each spot dictionary representation, joined with newlines
+        '''
+        spots = [spot.dump() for spot in self.get_spots()]
+        return '\n'.join(spots)
+
+    def set_spots(self, spots, append=True):
+        '''Set spotted message objects.
+
+        Args:
+            spots (list): list of spot message objects
+            append (bool): append to spot list if True, replace spots if False, defaults to True
+        '''
+        with self._spots_lock:
+            if append:
+                self._spots.append(spots)
+            else:
+                self._spots = spots
+
+    def set_spots_str(self, spots, append=True):
+        '''Set spotted message objects from json string.
+
+         Used with *get_spots_str* to load previously saved spot messages.
+
+        Args:
+            spots (str): json string of spot message dictionaries, separated with newlines
+            append (bool): append to spots if True, replace spots if False, defaults to True
+        '''
+        spots = [Message().load(spot.strip()) for spot in spots.split('\n')]
+        self.set_spots(spots, append)
 
     def _spot(self, msg):
         '''Store a message when a station is heard.
 
         The message is compared to a list of recent messages (heard within the last 10 seconds) to prevent duplicate spots from multiple JS8Call API messages associated with the same station event.
 
-        The list of stored messages is culled once it exceeeds the maximum size set by *max_spots* by dropping the oldest message.
+        The list of stored messages is culled once the maximum age set by *client.max_spot_age* by dropping aged messages.
 
         See pyjs8call.spotmonitor to utilize spots.
 
@@ -432,7 +636,7 @@ class JS8Call:
                 self._spots.append(msg)
     
             # cull spots
-            if len(self._spots) > self.max_spots:
+            while len(self._spots) > 0 and self._spots[0].age() > self._client.max_spot_age:
                 self._spots.pop(0)
 
     def _log_msg(self, msg):
@@ -474,6 +678,53 @@ class JS8Call:
                 
             time.sleep(5)
 
+    def _state_monitor(self):
+        '''Local state monitor thread.
+
+        Minimum update frequency is 0.5 seconds.
+        '''
+        # allow initial api messages and requests to initialize state
+        time.sleep(2)
+        
+        while self.online:
+            time.sleep(0.05)
+            
+            for item in self._state:
+                update = False
+                now = time.time()
+                
+                update_frequency = self._state[item]['update_frequency'] # seconds
+                last_update = self._state[item]['last_update'] # timestamp
+                last_update_request = self._state[item]['last_update_request'] # timestamp
+                msg_type = self._state[item]['msg_type']
+                
+                # skip updating in the following cases:
+                if (self.watching(item) or # state is currently being updated
+                    update_frequency is None or # do not update
+                    msg_type is None or # no associated message type
+                    now - last_update_request < max(0.5, abs(update_frequency)) # update requested recently
+                ):
+                    continue
+                
+                # positive, update every X seconds
+                if update_frequency > 0 and now - last_update >= update_frequency:
+                    update = True
+                # zero, update at end of rx/tx window
+                # default transition time of 5 seconds prevents frequent state updates just after starting
+                elif update_frequency == 0 and self._client.window.next_transition_seconds(default = 5) < 0.1:
+                    update = True
+                # negative, update abs(X) seconds before end of rx/tx window
+                # default transition time of 5 seconds prevents frequent state updates just after starting
+                elif update_frequency < 0 and self._client.window.next_transition_seconds(default = 5) <= abs(update_frequency):
+                    update = True
+
+                if update:
+                    msg = Message()
+                    msg.set('type', msg_type)
+                    self.send(msg)
+                    
+                    self._state[item]['last_update_request'] = now
+
     def _tx(self):
         '''JS8Call application transmit thread.
 
@@ -488,7 +739,7 @@ class JS8Call:
 
         while self.online:
             # TxMonitor updates tx_text every second
-            if self.state['tx_text'] == '':
+            if self._state['tx_text']['value'] == '':
                 tx_text = False
             else:
                 tx_text = True
@@ -639,7 +890,7 @@ class JS8Call:
         ### message type handling ###
 
         if msg.type == Message.INBOX_MESSAGES:
-            self.state['inbox'] = msg.messages
+            self._set_state('inbox', msg.messages)
 
         elif msg.type == Message.RX_SPOT:
             self._spot(msg)
@@ -659,48 +910,58 @@ class JS8Call:
             self._spot(msg)
 
         elif msg.type == Message.RIG_FREQ:
-            self.state['dial'] = msg.dial
-            self.state['freq'] = msg.freq
-            self.state['offset'] = int(msg.offset)
+            previous_freq = self._state['dial']['value']
+
+            self._set_state('dial', msg.dial)
+            self._set_state('freq', msg.freq)
+            self._set_state('offset', msg.offset)
+
+            if msg.get('band') is not None:
+                self._set_state('band', msg.band)
+                self.process_freq_change(previous_freq)
 
         elif msg.type == Message.RIG_PTT:
             if msg.value == 'on':
-                self.state['ptt'] = True
+                self._set_state('ptt', True)
             else:
-                self.state['ptt'] = False
+                self._set_state('ptt', False)
 
         elif msg.type == Message.STATION_STATUS:
-            self.state['dial'] = msg.dial
-            self.state['freq'] = msg.freq
-            self.state['offset'] = int(msg.offset)
-            self.state['speed'] = msg.speed
+            previous_freq = self._state['dial']['value']
+
+            self._set_state('dial', msg.dial)
+            self._set_state('freq', msg.freq)
+            self._set_state('offset', msg.offset)
+            self._set_state('speed', msg.speed)
+
+            self.process_freq_change(previous_freq)
 
         elif msg.type == Message.STATION_CALLSIGN:
-            self.state['callsign'] = msg.value
+            self._set_state('callsign', msg.value)
 
         elif msg.type == Message.STATION_GRID:
-            self.state['grid'] = msg.value
+            self._set_state('grid', msg.value)
 
         elif msg.type == Message.STATION_INFO:
-            self.state['info'] = msg.value
+            self._set_state('info', msg.value)
 
         elif msg.type == Message.MODE_SPEED:
-            self.state['speed'] = msg.speed
+            self._set_state('speed', msg.speed)
 
         elif msg.type == Message.TX_TEXT:
-            self.state['tx_text'] = msg.value
+            self._set_state('tx_text', msg.value)
 
         elif msg.type == Message.RX_TEXT:
-            self.state['rx_text'] = msg.value
+            self._set_state('rx_text', msg.value)
 
         elif msg.type == Message.RX_SELECTED_CALL:
-            self.state['selected_call'] = msg.value
+            self._set_state('selected_call', msg.value)
 
         elif msg.type == Message.RX_CALL_ACTIVITY:
-            self.state['call_activity'] = msg.call_activity
+            self._set_state('call_activity', msg.call_activity)
 
         elif msg.type == Message.RX_BAND_ACTIVITY:
-            self.state['band_activity'] = msg.band_activity
+            self._set_state('band_activity', msg.band_activity)
 
         elif msg.type == Message.RX_ACTIVITY:
             pass

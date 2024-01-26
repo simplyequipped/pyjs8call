@@ -24,6 +24,8 @@
 
 **CAUTION: Enabling inbox monitoring will cause your radio to transmit almost immediately. Consider cabling and antenna connections prior to enabling inbox monitoring.**
 
+Autoreply on at startup must be enabled, and autoreply confirmation must be disabled, in order to allow periodic message queries or automatic responses to *MSG* commands.
+
 Set `client.callback.inbox` to receive new inbox messages as they arrive. See pyjs8call.client.Callbacks for *inbox* callback function details.
 '''
 
@@ -84,13 +86,13 @@ class InboxMonitor:
         '''
         return self._paused
 
-    def enable(self, query=True, destination='@ALLCALL', interval=60):
+    def enable(self, query=False, destination='@ALLCALL', interval=60):
         '''Enable inbox monitoring.
 
         If *query* is True a message query will be sent to *destination* every *interval* minutes. Incoming directed messages are responded to whether *query* is True or not. See *process_incoming()* for more information on incoming directed message handling.
 
         Args:
-            query (bool): Transmit message queries periodically if True, defaults to True
+            query (bool): Transmit message queries periodically if True, defaults to False
             destination (str): Outgoing message query destination, defaults to '@ALLCALL'
             interval (int): Minutes between message queries, defaults to 60
         '''
@@ -395,9 +397,13 @@ class InboxMonitor:
                 if msg.get('msg_id') is None and (last_tx_timestamp + response_delay) < time.time():
                     # process next msg response
                     msg.set('msg_id', self._get_msg_id(msg))
-                    self._client.query_message_id(msg.origin, msg.msg_id)
-                    # reset age
-                    msg.set('timestamp', time.time())
+
+                    # only query message ID if autoreply enabled
+                    if self._client.settings.autoreply_startup_enabled() and not self._client.settings.autoreply_confirmation_enabled():
+                        self._client.query_message_id(msg.origin, msg.msg_id)
+                        # reset age
+                        msg.set('timestamp', time.time())
+                        
                     self._rx_queue.insert(0, msg)
 
                 elif msg.get('msg_id') is not None and msg.age() > response_delay:
@@ -407,7 +413,13 @@ class InboxMonitor:
                     # wait for response
                     self._rx_queue.insert(0, msg)
 
-            elif not rx_processing and query and (last_query_timestamp + query_interval) < time.time():
+            elif (
+                not rx_processing and
+                query and
+                (last_query_timestamp + query_interval) < time.time() and
+                self._client.settings.autoreply_startup_enabled() and # only query messages if autoreply enabled
+                not self._client.settings.autoreply_confirmation_enabled() # only query messages if autoreply enabled
+                ):
                 # ensure no last second state change before transmitting
                 if not self._paused and self._enabled:
                     self._client.query_messages(destination)

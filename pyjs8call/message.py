@@ -30,146 +30,13 @@ __docformat__ = 'google'
 
 import json
 import time
-from datetime import datetime, timezone
+import math
 import secrets
+from datetime import datetime, timezone
 
 
 class Message:
     '''Message object for incoming and outgoing messages.
-
-    Types:
-
-    | Outgoing Type | Value |
-    | -------- | -------- |
-    | RX_GET_TEXT | 'RX.GET_TEXT' |
-    | RX_GET_CALL_ACTIVITY | 'RX.GET_CALL_ACTIVITY' |
-    | RX_GET_BAND_ACTIVITY | 'RX.GET_BAND_ACTIVITY' |
-    | RX_GET_SELECTED_CALL | 'RX.GET_CALL_SELECTED' |
-    | TX_SEND_MESSAGE | 'TX.SEND_MESSAGE' |
-    | TX_GET_TEXT | 'TX.GET_TEXT' |
-    | TX_SET_TEXT | 'TX.SET_TEXT' |
-    | MODE_GET_SPEED | 'MODE.GET_SPEED' |
-    | MODE_SET_SPEED | 'MODE.SET_SPEED' |
-    | STATION_GET_INFO | 'STATION.SET_INFO' |
-    | STATION_SET_INFO | 'STATION.GET_INFO' |
-    | STATION_GET_GRID | 'STATION.GET_GRID' |
-    | STATION_SET_GRID | 'STATION.SET_GRID' |
-    | STATION_GET_CALLSIGN | 'STATION.GET_CALLSIGN' |
-    | INBOX_GET_MESSAGES | 'INBOX.GET_MESSAGES' |
-    | INBOX_STORE_MESSAGE | 'INBOX.STORE_MESSAGE' |
-    | RIG_GET_FREQ | 'RIG.GET_FREQ' |
-    | RIG_SET_FREQ | 'RIG.SET_FREQ' |
-    | WINDOW_RAISE | 'WINDOW.RAISE' |
-    | PING | 'PING' |
-    | &nbsp; | &nbsp; |
-    | **Incoming Type** | **Value** |
-    | MESSAGES | 'MESSAGES' |
-    | INBOX_MESSAGE | 'INBOX.MESSAGE' |
-    | INBOX_MESSAGES | 'INBOX.MESSAGES' |
-    | RX_SPOT | 'RX.SPOT' |
-    | RX_DIRECTED | 'RX.DIRECTED' |
-    | RX_DIRECTED_ME | 'RX.DIRECTED.ME' |
-    | RX_SELECTED_CALL | 'RX.CALL_SELECTED' |
-    | RX_CALL_ACTIVITY | 'RX.CALL_ACTIVITY' |
-    | RX_BAND_ACTIVITY | 'RX.BAND_ACTIVITY' |
-    | RX_ACTIVITY | 'RX.ACTIVITY' |
-    | RX_TEXT | 'RX.TEXT' |
-    | TX_TEXT | 'TX.TEXT' |
-    | TX_FRAME | 'TX.FRAME' |
-    | RIG_FREQ | 'RIG.FREQ' |
-    | RIG_PTT | 'RIG.PTT' |
-    | STATION_CALLSIGN | 'STATION.CALLSIGN' |
-    | STATION_GRID | 'STATION.GRID' |
-    | STATION_INFO | 'STATION.INFO' |
-    | STATION_STATUS | 'STATION.STATUS' |
-    | MODE_SPEED | 'MODE.SPEED' |
-    | LOG_QSO | 'LOG.QSO' |
-    | &nbsp; | &nbsp; |
-    | **Types** | **Value** |
-    | TX_TYPES | *list* of outgoing types |
-    | RX_TYPES | *list* of incoming types |
-    | DIRECTED_TYPES | *list* of directed types |
-    | USER_MSG_TYPES | *list* of in/out msg types |
-    | TYPES | *list* of all types |
-
-    &nbsp;
-
-    Commands:
-
-    | Command | Value |
-    | -------- | -------- |
-    | CMD_HB | ' HB' |
-    | CMD_HEARTBEAT | ' HEARTBEAT' |
-    | CMD_HEARTBEAT_SNR | ' HEARTBEAT SNR' |
-    | CMD_CQ | ' CQ' |
-    | CMD_SNR | ' SNR' |
-    | CMD_SNR_Q | ' SNR?' |
-    | CMD_GRID_Q | ' GRID?' |
-    | CMD_GRID | ' GRID' |
-    | CMD_INFO_Q | ' INFO?' |
-    | CMD_INFO | ' INFO' |
-    | CMD_STATUS_Q | ' STATUS?' |
-    | CMD_STATUS | ' STATUS' |
-    | CMD_HEARING_Q | ' HEARING?' |
-    | CMD_HEARING | ' HEARING' |
-    | CMD_HW_CPY_Q | ' HW CPY?' |
-    | CMD_MSG | ' MSG' |
-    | CMD_MSG_TO | ' MSG TO:' |
-    | CMD_QUERY | ' QUERY' |
-    | CMD_QUERY_MSGS | ' QUERY MSGS' |
-    | CMD_QUERY_MSGS_Q | ' QUERY MSGS?' |
-    | CMD_QUERY_CALL | ' QUERY CALL' |
-    | CMD_NO | ' NO' |
-    | CMD_YES | ' YES' |
-    | CMD_AGN_Q | ' AGN?' |
-    | CMD_ACK | ' ACK' |
-    | CMD_NACK | ' NACK' |
-    | CMD_DIT_DIT | ' DIT DIT' |
-    | CMD_FB | ' FB' |
-    | CMD_SK | ' SK' |
-    | CMD_RR | ' RR' |
-    | CMD_QSL | ' QSL' |
-    | CMD_QSL_Q | ' QSL?' |
-    | CMD_CMD | ' CMD' |
-    | CMD_SNR | ' SNR' |
-    | CMD_73 | ' 73' |
-    | CMD_RELAY | '>' |
-    | CMD_Q | '?' |
-    | CMD_FREETEXT | '&nbsp;' &nbsp;&nbsp;(space) |
-    | CMD_FREETEXT_2 | '&nbsp;&nbsp;' &nbsp;(space x2) |
-    | &nbsp; | &nbsp; |
-    | **Commands** | **Value** |
-    | AUTOREPLY_COMMANDS | *list* of autoreply commands |
-    | CHECKSUM_COMMANDS | *list* of checksumed commands |
-    | COMMANDS | *list* of all commands |
-
-    &nbsp;
-
-    Statuses:
-
-    | Status | Value |
-    | -------- | -------- |
-    | STATUS_CREATED | 'created' |
-    | STATUS_QUEUED | 'queued' |
-    | STATUS_SENDING | 'sending' |
-    | STATUS_SENT | 'sent' |
-    | STATUS_FAILED | 'failed' |
-    | STATUS_RECEIVED | 'received' |
-    | STATUS_ERROR | 'error' |
-    | &nbsp; | &nbsp; |
-    | **Statuses** | **Value** |
-    | STATUSES | *list* of all statuses |
-
-    &nbsp;
-
-    Characters:
-
-    | Character | Value |
-    | -------- | -------- |
-    | EOM | '♢' |
-    | ERR | '…' |
-
-    &nbsp;
 
     Most attributes with a default value of None are included so messages can be handled internally without worrying about the nuances of JS8Call API message attributes, which vary greatly.
 
@@ -236,8 +103,6 @@ class Message:
     WINDOW_RAISE            = 'WINDOW.RAISE'
     PING                    = 'PING'
 
-    TX_TYPES = [RX_GET_TEXT, RX_GET_CALL_ACTIVITY, RX_GET_BAND_ACTIVITY, RX_GET_SELECTED_CALL, TX_SEND_MESSAGE, TX_GET_TEXT, TX_SET_TEXT, MODE_GET_SPEED, MODE_SET_SPEED, STATION_GET_INFO, STATION_SET_INFO, STATION_GET_GRID, STATION_SET_GRID, STATION_GET_CALLSIGN, INBOX_GET_MESSAGES, INBOX_STORE_MESSAGE, RIG_GET_FREQ, RIG_SET_FREQ, WINDOW_RAISE]
-    
     # incoming message types
     MESSAGES                = 'MESSAGES'
     INBOX_MESSAGE           = 'INBOX.MESSAGE'
@@ -261,7 +126,12 @@ class Message:
     MODE_SPEED              = 'MODE.SPEED'
     LOG_QSO                 = 'LOG.QSO'
     
-    RX_TYPES = [MESSAGES, INBOX_MESSAGE, INBOX_MESSAGES, RX_SPOT, RX_DIRECTED, RX_DIRECTED_ME, RX_SELECTED_CALL, RX_CALL_ACTIVITY, RX_BAND_ACTIVITY, RX_ACTIVITY, RX_TEXT, TX_TEXT, TX_FRAME, RIG_FREQ, RIG_PTT, STATION_CALLSIGN, STATION_GRID, STATION_INFO, STATION_STATUS, MODE_SPEED, LOG_QSO]
+    TX_TYPES = [RX_GET_TEXT, RX_GET_CALL_ACTIVITY, RX_GET_BAND_ACTIVITY, RX_GET_SELECTED_CALL, TX_SEND_MESSAGE, TX_GET_TEXT, TX_SET_TEXT, MODE_GET_SPEED,
+        MODE_SET_SPEED, STATION_GET_INFO, STATION_SET_INFO, STATION_GET_GRID, STATION_SET_GRID, STATION_GET_CALLSIGN, INBOX_GET_MESSAGES, INBOX_STORE_MESSAGE,
+        RIG_GET_FREQ, RIG_SET_FREQ, WINDOW_RAISE]
+    
+    RX_TYPES = [MESSAGES, INBOX_MESSAGE, INBOX_MESSAGES, RX_SPOT, RX_DIRECTED, RX_DIRECTED_ME, RX_SELECTED_CALL, RX_CALL_ACTIVITY, RX_BAND_ACTIVITY,
+        RX_ACTIVITY, RX_TEXT, TX_TEXT, TX_FRAME, RIG_FREQ, RIG_PTT, STATION_CALLSIGN, STATION_GRID, STATION_INFO, STATION_STATUS, MODE_SPEED, LOG_QSO]
 
     TYPES = TX_TYPES + RX_TYPES
     DIRECTED_TYPES = [RX_DIRECTED, RX_DIRECTED_ME]
@@ -301,20 +171,25 @@ class Message:
     CMD_QSL                 = ' QSL'
     CMD_QSL_Q               = ' QSL?'
     CMD_CMD                 = ' CMD'
-    CMD_SNR                 = ' SNR'
     CMD_73                  = ' 73'
     CMD_RELAY               = '>'
     CMD_Q                   = '?'
     CMD_FREETEXT            = ' '
+    '''1x space'''
     CMD_FREETEXT_2          = '  '
+    '''2x space'''
 
-    COMMANDS = [CMD_HB, CMD_HEARTBEAT, CMD_HEARTBEAT_SNR, CMD_CQ, CMD_SNR_Q, CMD_Q, CMD_GRID_Q, CMD_GRID, CMD_INFO_Q, CMD_INFO, CMD_STATUS_Q, CMD_STATUS, CMD_HEARING_Q, CMD_HEARING, CMD_HW_CPY_Q, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_NO, CMD_YES, CMD_AGN_Q, CMD_ACK, CMD_NACK, CMD_DIT_DIT, CMD_FB, CMD_SK, CMD_RR, CMD_QSL, CMD_QSL_Q, CMD_CMD, CMD_SNR, CMD_73, CMD_RELAY, CMD_FREETEXT, CMD_FREETEXT_2]
+    COMMANDS = [CMD_HB, CMD_HEARTBEAT, CMD_HEARTBEAT_SNR, CMD_CQ, CMD_SNR_Q, CMD_Q, CMD_GRID_Q, CMD_GRID, CMD_INFO_Q, CMD_INFO, CMD_STATUS_Q,
+        CMD_STATUS, CMD_HEARING_Q, CMD_HEARING, CMD_HW_CPY_Q, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL,
+        CMD_NO, CMD_YES, CMD_AGN_Q, CMD_ACK, CMD_NACK, CMD_DIT_DIT, CMD_FB, CMD_SK, CMD_RR, CMD_QSL, CMD_QSL_Q, CMD_CMD, CMD_SNR, CMD_73,
+        CMD_RELAY, CMD_FREETEXT, CMD_FREETEXT_2]
 
-    AUTOREPLY_COMMANDS = [CMD_SNR_Q, CMD_Q, CMD_HEARING_Q, CMD_GRID, CMD_STATUS_Q, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_INFO_Q, CMD_AGN_Q, CMD_ACK, CMD_NACK]
+    QUERY_COMMANDS = [CMD_SNR_Q, CMD_Q, CMD_HEARING_Q, CMD_GRID_Q, CMD_STATUS_Q, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS,
+        CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_INFO_Q, CMD_AGN_Q, CMD_QSL_Q, CMD_HW_CPY_Q]
 
-    COMMAND_RESPONSES = [CMD_HEARTBEAT_SNR, CMD_SNR, CMD_GRID, CMD_INFO, CMD_STATUS, CMD_HEARING, CMD_NO, CMD_YES, CMD_ACK, CMD_SNR]
+    AUTOREPLY_COMMANDS = [CMD_HEARTBEAT_SNR, CMD_SNR, CMD_GRID, CMD_INFO, CMD_STATUS, CMD_HEARING, CMD_NO, CMD_YES, CMD_ACK, CMD_NACK]
 
-    CHECKSUM_COMMANDS = [CMD_RELAY, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_MSGS, CMD_QUERY_MSGS_Q, CMD_QUERY_CALL, CMD_CMD]
+    CHECKSUM_COMMANDS = [CMD_RELAY, CMD_MSG, CMD_MSG_TO, CMD_QUERY, CMD_QUERY_CALL, CMD_CMD]
 
     # status types
     STATUS_CREATED          = 'created'
@@ -327,25 +202,101 @@ class Message:
 
     STATUSES = [STATUS_CREATED, STATUS_QUEUED, STATUS_SENDING, STATUS_SENT, STATUS_FAILED, STATUS_RECEIVED, STATUS_ERROR]
 
-    # constants
-    EOM = '♢'   # end of message, end of transmission
-    ERR = '…'   # error
+    EOM = '♢'
+    '''End-of-message character'''
+    ERR = '…'
+    '''Error character (ellipsis)'''
 
-    def __init__(self, destination=None, cmd=None, value=None):
+    # special group callsigns
+    SPECIAL_GROUPS = [
+        "@ALLCALL",
+        "@JS8NET",
+        "@DX/NA",
+        "@DX/SA",
+        "@DX/EU",
+        "@DX/AS",
+        "@DX/AF",
+        "@DX/OC",
+        "@DX/AN",
+        "@REGION/1",
+        "@REGION/2",
+        "@REGION/3",
+        "@GROUP/0",
+        "@GROUP/1",
+        "@GROUP/2",
+        "@GROUP/3",
+        "@GROUP/4",
+        "@GROUP/5",
+        "@GROUP/6",
+        "@GROUP/7",
+        "@GROUP/8",
+        "@GROUP/9",
+        "@COMMAND",
+        "@CONTROL",
+        "@NET",
+        "@NTS",
+        "@RESERVE/0",
+        "@RESERVE/1",
+        "@RESERVE/2",
+        "@RESERVE/3",
+        "@RESERVE/4",
+        "@APRSIS",
+        "@RAGCHEW",
+        "@JS8",
+        "@EMCOMM",
+        "@ARES",
+        "@MARS",
+        "@AMRRON",
+        "@RACES",
+        "@RAYNET",
+        "@RADAR",
+        "@SKYWARN",
+        "@CQ",
+        "@HB",
+        "@QSO",
+        "@QSOPARTY",
+        "@CONTEST",
+        "@FIELDDAY",
+        "@SOTA",
+        "@IOTA",
+        "@POTA",
+        "@QRP",
+        "@QRO"
+    ]
+
+    CQS = [
+        "CQ CQ CQ",
+        "CQ DX",
+        "CQ QRP",
+        "CQ CONTEST",
+        "CQ FIELD",
+        "CQ FD",
+        "CQ CQ",
+        "CQ"
+    ]
+
+    def __init__(self, destination=None, cmd=None, value=None, origin=None):
         '''Initialize message.
+
+        For outgoing messages, *origin* is used to calculate number of frames.
 
         Args:
             destination (bool): Callsign to send the message to, defaults to None
             cmd (str): Command to use in message, defaults to None (see static commands)
             value (str): Message text to send, defaults to None
+            origin (str): Local station callsign, defaults to None
 
         Returns:
             pyjs8call.message: Constructed message object
         '''
         self.attributes = []
+        '''List of attributes set using Message.set()'''
         self.raw = None
+        '''Raw incoming message string, defaults to None, not used for outgoing messages'''
         self.packed = None
+        '''Packed outgoing message string, defaults to None, not used for incoming messages'''
         self.packed_dict = None
+        '''Packed outgoing message dictionary, defaults to None, not used for incoming messages'''
 
         # initialize common msg fields
         common = [
@@ -382,6 +333,7 @@ class Message:
         self.set('destination', destination)
         self.set('cmd', cmd)
         self.set('value', value)
+        self.set('origin', origin)
         self.set('time', datetime.now(timezone.utc).timestamp())
         self.set('timestamp', time.time())
         self.set('local_time_str', '{}L'.format(time.strftime('%X', time.localtime(self.get('timestamp')))))
@@ -398,9 +350,9 @@ class Message:
         - *from*: set *origin* to the same value
         - *to*: set *destination* to the same value
         - *value*: uppercase and set *text* to the same value if type *str*
-        - *destination*: uppercase if type *str*, uppercase all if type *list*
+        - *destination*: uppercase if type *str*, uppercase all items if type *list*
 
-        Note that attempting to access Message.from directly results in an error.
+        **Note:** attempting to access *Message.from* directly results in an error since *from* is a keyword in Python.
 
         Args:
             attribute (str): Name of attribute to set
@@ -533,7 +485,6 @@ class Message:
         if exclude is None:
             exclude = [] 
 
-        #TODO make sure 'text' is not used since it is excluded by default
         exclude.extend(['id', 'destination', 'cmd', 'time', 'timestamp', 'from', 'origin', 'text', 'status', 'profile', 'error'])
 
         self.packed_dict = self.dict(exclude = exclude)
@@ -614,7 +565,6 @@ class Message:
                     'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))) # milliseconds to seconds
                 })
 
-        #TODO can this replace activity monitor?
         elif self.type == Message.RX_BAND_ACTIVITY:
             self.band_activity = []
             for key, value in msg['params'].items():
@@ -692,6 +642,19 @@ class Message:
         elif isinstance(station, list):
             return any( [self.is_directed_to(str(callsign)) for callsign in station] )
 
+    def is_relay(self):
+        '''Message is relayed.
+
+        Incoming relay message *path* attribute is a list. Outgoing relay message *destination* attribute is a list.
+
+        Returns:
+            bool: *True* if message is relayed, *False* otherwise
+        '''
+        if type(self.destination) == list or type(self.path) == list:
+            return True
+
+        return False
+
     def dump(self):
         '''Get object attributes as *str*.
 
@@ -709,23 +672,28 @@ class Message:
 
         Args:
             msg_str (str): *str* of attributes to convert using *json.loads*
+
+        Returns:
+            pyjs8call.Message: self, for use like `msg = Message().load(str)`
         '''
-        for attribute, value in json.loads(msg_str).items():
+        for attribute, value in json.loads(msg_str.strip()).items():
             self.set(attribute, value)
 
+        return self
+        
     def __eq__(self, msg):
         '''Whether another message is considered equal to self.
 
         There are multiple cases where spots are considered equal:
         - When both incoming messages have the same timestamps (literally the same message)
-        - When both incoming messages have the same origin, offset frequency, and snr (same station event reported by differnt JS8Call API messages at slightly differnt times) 
+        - When both incoming messages have the same origin, offset frequency, and snr (same station event reported by differnt JS8Call API messages at slightly different times) 
         - When both outgoing messages have the same timestamp, type, and value
 
         Args:
             msg (pyjs8call.message): Message to compare
 
         Returns:
-            bool: Whether the two messages are considered equal
+            bool: *True* if the two messages are considered equal, *False* otherwise
         '''
         if not isinstance(msg, Message):
             return False
@@ -750,7 +718,7 @@ class Message:
             msg (pyjs8call.message): Message to compare
 
         Returns:
-            bool: Whether self.timestamp is less than the specified msg.timestamp
+            bool: *True* if self.timestamp is less than the specified msg.timestamp, *False* otherwise
         '''
         return bool(self.timestamp < msg.timestamp)
 
@@ -763,10 +731,10 @@ class Message:
             msg (pyjs8call.message): Message to compare
 
         Returns:
-            bool: Whether self.timestamp is greater than the specified msg.timestamp
+            bool: *True* if self.timestamp is greater than the specified msg.timestamp, *False* otherwise
         '''
         return bool(self.timestamp > msg.timestamp)
 
     def __repr__(self):
-        return '<Message {}>'.format(self.id)
+        return '<{} message {}>'.format(self.type, self.id)
 
