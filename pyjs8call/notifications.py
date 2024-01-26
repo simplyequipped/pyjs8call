@@ -71,6 +71,9 @@ class Notifications:
         station_spots_enabled (bool): Process watched station spot if True, ignore otherwise, defaults to False
         group_spots_enabled (bool): Process watched group spot if True, ignore otherwise, defaults to False
         notify_on_incoming_if_callsign_selected (bool): Process incoming messages while a callsign is selected on the UI if True, ignore otherwise, defaults to False
+        commands (list): Commands matching incoming *Message.cmd* to notify for, defaults to MSG and freetext
+
+    See pyjs8call.Message for more information on message commands.
     '''
     def __init__(self, client):
         '''Initialize notifications.
@@ -133,7 +136,7 @@ class Notifications:
         if not self.incoming_enabled:
             return
 
-        if self._client.js8call.get_state('selected_call') is not None and self.notify_on_incoming_if_callsign_selected == False:
+        if self._client.get_selected_call() is not None and self.notify_on_incoming_if_callsign_selected == False:
             # do not send notification for incoming message if a callsign is selected on the UI
             return
             
