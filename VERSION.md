@@ -3,12 +3,13 @@
 **0.2.2**
 - Add *pyjs8call.propagation* module
 - Add *pyjs8call.notifications* module
+- Fix bug when JS8Call is running before pyjs8call is started on Windows (see discussion #1)
 - Fix intermittent transmission of heartbeat messages outside of sub-band
 - Improve pyjs8call heartbeat interval timing and utilize config file heartbeat interval
 - Prevent pyjs8call heartbeat networking in turbo mode and when a callsign is selected on the JS8Call UI
 - Add additional configuration management functions to *pyjs8call.client.settings*
-- Read/write persistent *pyjs8call.client* attributes to/from configuration on init/stop
 - Write configuration to file on *pyjs8call.client* stop, including JS8Call application exit
+- Read/write persistent *pyjs8call.client* attributes to/from configuration on init/stop
 - Update *pyjs8call.message* autoreply commands
 - Detect JS8Call autoreplies as outgoing activity
 - Prevent past schedule entries running when *pyjs8call.client.schedule* re-enabled
