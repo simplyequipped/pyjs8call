@@ -133,7 +133,7 @@ class Notifications:
         if not self.incoming_enabled:
             return
 
-        if self._client.js8call.get_state('selected_callsign') is not None and not self.notify_on_incoming_if_callsign_selected:
+        if self._client.js8call.get_state('selected_call') is not None and self.notify_on_incoming_if_callsign_selected == False:
             # do not send notification for incoming message if a callsign is selected on the UI
             return
             
