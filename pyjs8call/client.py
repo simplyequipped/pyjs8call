@@ -1065,7 +1065,7 @@ class Client:
         Returns:
             list: Call activity items, sorted decending by *time* (recent first)
 
-            If grid is not set, distance is *(None, None)*.
+            If grid is not set, distance is *(None, None, None)*.
         '''
         if age is None:
             age = self.config.get('Configuration', 'CallsignAging', int)
