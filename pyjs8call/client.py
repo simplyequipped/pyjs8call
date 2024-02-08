@@ -39,10 +39,12 @@ Typical usage example:
 __docformat__ = 'google'
 
 
+import os
 import time
 import shutil
 import atexit
 import threading
+import configparser
 from datetime import datetime, timezone
 from math import radians, sin, cos, acos, atan2, pi
 
@@ -220,7 +222,8 @@ class Client:
         self.process_outgoing = None
         self.clean_directed_text = True
         self.monitor_outgoing = True
-        self.max_spot_age = 7 * 24 * 60 * 60 # 7 days 
+        self.max_spot_age = 7 * 24 * 60 * 60 # 7 days
+        self._previous_profile = None
 
         self.js8call = None
         self.spots = None
@@ -233,6 +236,7 @@ class Client:
         self.heartbeat = None
         self.schedule = None
         self.propagation = None
+
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
@@ -261,6 +265,80 @@ class Client:
 
         # stop application and client at exit
         atexit.register(self.stop)
+
+    def load_config(self, config_path):
+        '''Load settings from configuration file.
+
+        The configuration file referenced here is specific to pyjs8call, and is not the same as the JS8Call configuration file. The pyjs8call configuration file is not required, but may be useful for configuring application specific settings.
+
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+
+        Configuration file formatting:
+            - must have a typical *.ini `key = value` format
+            - must contain a `[pyjs8call.settings]` section header
+            - keys must match the name of a *client.settings* function
+            - if a key is set to a value, the value will be passed to the corresponding pyjs8call.settings function
+            - if a key is **not** set to a value, the corresponding pyjs8call.settings function will be called without arguments
+
+        See *client.settings* for more information on available settings functions. Values are type *str* by default, and are automatically parsed to type *None*, *int*, *bool*, or *list* as needed.
+
+        Example configuration file format:
+        ```
+        [pyjs8call.settings]
+        
+        set_heartbeat_interval = 15 # minutes
+        enable_heartbeat_acknowledgements =
+        enable_multi_decode =
+        enable_autoreply_startup =
+        disable_autoreply_confirmation =
+        set_idle_timeout = 0 # disable idle timeout
+        set_distance_units = miles
+        set_station_info = QRPLABS QDX, 40M DIPOLE 33FT
+        append_pyjs8call_to_station_info = 
+        set_primary_highlight_words = [KT7RUN, OH8STN]
+        ```
+        Args:
+            config_path (str): Relative or absolute path to configuration file
+
+        Raises:
+            RuntimeError: Specified pyjs8call configuration file is missing the [pyjs8call.settings] section
+            ValueError: Specified configuration file is missing the [pyjs8call.settings] section
+        '''
+        config_path = os.path.abspath(config_path)
+        
+        if not os.path.exists(config_path):
+            raise OSError('Specified configuration file does not exist: {}'.format(config_path))
+            
+        config = configparser.ConfigParser(interpolation = None)
+        config.read(config_path)
+    
+        if not config.has_section('pyjs8call.settings'):
+            raise RuntimeError('Specified configuration file is missing the [pyjs8call.settings] section: {}'.format(config_path))
+    
+        # parse config parameter values and call each pyjs8call.settings function
+        for func, value in config.items('pyjs8call.settings'):
+            try:
+                settings_func = getattr(self.settings, func)
+            except:
+                raise ValueError('Configuration key does not match a pyjs8call.settings function name: {}'.format(func))
+    
+            # convert config string values into python types
+            if value.isnumeric():
+                value = int(value)
+            elif value.lower() == 'true':
+                value = True
+            elif value.lower() == 'false':
+                value = False
+            elif value.lower() == 'none':
+                value = None
+            elif len(value) > 0 and value.strip()[0] == '[' and value.strip()[-1] == ']':
+                # convert string to list
+                value = [item.strip() for item in value.strip(' []').split(',')]
+    
+            if value == '':
+                settings_func()
+            else:
+                settings_func(value)
         
     def start(self, headless=False, args=None, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
@@ -371,6 +449,11 @@ class Client:
         self.config.set('Configuration', 'pyjs8callCleanDirectedText', self.clean_directed_text)
         self.config.set('Configuration', 'pyjs8callMonitorOutgoing', self.monitor_outgoing)
         self.config.set('Configuration', 'pyjs8callMaxSpotAge', self.max_spot_age)
+
+        # restore previous config profile
+        if self._previous_profile is not None and self._previous_profile in self.settings.get_profile_list():
+            self.settings.set_profile(self._previous_profile)
+            
         self.config.write()
 
     def stop(self):
@@ -1851,7 +1934,7 @@ class Settings:
         '''
         return self._client.config.get_profile_list()
 
-    def set_profile(self, profile):
+    def set_profile(self, profile, restore_on_exit=False):
         '''Set active JS8Call configuration profile via config file.
         
         This is a convenience function. See pyjs8call.confighandler for other configuration related functions.
@@ -1860,6 +1943,7 @@ class Settings:
 
         Args:
             profile (str): Profile name
+            restore_on_exit (bool): Restore previous profile on exit, defaults to False
 
         Raises:
             ValueError: Specified profile name does not exist
@@ -1867,7 +1951,10 @@ class Settings:
         if profile not in self._client.config.get_profile_list():
             raise ValueError('Config profile \'' + profile + '\' does not exist')
 
-        # set the profile as active
+        if restore_on_exit:
+            self._previous_profile = self.get_profile()
+            
+        # set profile as active
         self._client.config.change_profile(profile)
 
     def get_primary_highlight_words(self):
