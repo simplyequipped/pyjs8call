@@ -1,5 +1,8 @@
 ### Versions
 
+**0.2.3**
+- Add *pyjs8call.client.load_config* function to load external configuration file
+
 **0.2.2**
 - Add *pyjs8call.propagation* module
 - Add *pyjs8call.notifications* module
