@@ -302,6 +302,7 @@ class Client:
             RuntimeError: Specified pyjs8call configuration file is missing the [pyjs8call.settings] section
             ValueError: Specified configuration file is missing the [pyjs8call.settings] section
         '''
+        config_path = os.path.expanduser(config_path)
         config_path = os.path.abspath(config_path)
         
         if not os.path.exists(config_path):
