@@ -1,7 +1,8 @@
 ### Versions
 
 **0.2.3**
-- Add *pyjs8call.client.load_config* function to load external configuration file
+- Add *pyjs8call.client.load_config* function to load settings from pyjs8call configuration file
+- Add option to restore previous JS8Call configuration profile on exit to *pyjs8call.client.settings.set_profile*
 
 **0.2.2**
 - Add *pyjs8call.propagation* module
