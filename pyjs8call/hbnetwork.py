@@ -98,7 +98,9 @@ class HeartbeatNetworking:
     def disable(self):
         '''Disable heartbeat networking.'''
         self._enabled = False
-        self._offset.disable()
+        
+        if self._offset is not None:
+            self._offset.disable()
 
     def pause(self):
         '''Pause heartbeat networking.'''
