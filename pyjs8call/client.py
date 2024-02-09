@@ -269,14 +269,14 @@ class Client:
     def load_config(self, config_path):
         '''Load settings from configuration file.
 
-        The configuration file referenced here is specific to pyjs8call, and is not the same as the JS8Call configuration file. The pyjs8call configuration file is not required, but may be useful for configuring application specific settings.
+        The configuration file referenced here is specific to pyjs8call, and is not the same as the JS8Call configuration file. The pyjs8call configuration file is not required.
 
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
 
         Configuration file formatting:
             - must have a typical *.ini `key = value` format
             - must contain a `[pyjs8call.settings]` section header
-            - keys must match the name of a *client.settings* function
+            - keys must match the name of a *client.settings* function that changes a setting via the JS8Call config file
             - if a key is set to a value, the value will be passed to the corresponding pyjs8call.settings function
             - if a key is **not** set to a value, the corresponding pyjs8call.settings function will be called without arguments
 
@@ -286,15 +286,13 @@ class Client:
         ```
         [pyjs8call.settings]
         
-        set_heartbeat_interval = 15 # minutes
+        set_heartbeat_interval = 15
         enable_heartbeat_acknowledgements =
         enable_multi_decode =
         enable_autoreply_startup =
         disable_autoreply_confirmation =
-        set_idle_timeout = 0 # disable idle timeout
+        set_idle_timeout = 0
         set_distance_units = miles
-        set_station_info = QRPLABS QDX, 40M DIPOLE 33FT
-        append_pyjs8call_to_station_info = 
         set_primary_highlight_words = [KT7RUN, OH8STN]
         ```
         Args:
@@ -1952,7 +1950,7 @@ class Settings:
             raise ValueError('Config profile \'' + profile + '\' does not exist')
 
         if restore_on_exit:
-            self._previous_profile = self.get_profile()
+            self._client._previous_profile = self.get_profile()
             
         # set profile as active
         self._client.config.change_profile(profile)
