@@ -43,7 +43,7 @@ def send_test_msg(content='testing lxmf'):
 RNS.Reticulum()
 
 # load local Identiy or create a new Identity
-identity_path = os.path.join(os.path.expanduser('~'), '/identity')
+identity_path = os.path.join(os.path.expanduser('~'), 'identity')
 if os.path.exists(identity_path):
     router_id = RNS.Identity.from_file(identity_path)
 else:
@@ -51,7 +51,7 @@ else:
     router_id = RNS.Identity()
     router_id.to_file(identity_path)
     
-router = LXMF.LXMRouter(identity = router_identity, storagepath='./tmp')
+router = LXMF.LXMRouter(identity = router_id, storagepath='./tmp')
 router.register_delivery_callback(handle_lxmf_delivery)
 source = router.register_delivery_identity(RNS.Identity(), display_name='JS8Call')
 print('JS8Call destination created')
