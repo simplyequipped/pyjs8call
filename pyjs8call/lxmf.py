@@ -71,12 +71,26 @@ class pyjs8callApp:
             
         notification_identity = RNS.Identity.recall(self.notification_destination_hash)
         notification_destination = RNS.Destination(notification_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, 'lxmf', 'delivery')
-        callsign_destination = self.get_destination_by_callsign(msg.origin)
+
+        if msg.origin in self.callsign_destinations:
+            callsign_destination = self.callsign_destinations
+        else:
+            for destination_hash in RNS.Identity.known_destinations:
+                if msg.origin == RNS.Identity.get_app_data(destination_hash):
+                    callsign_destination = RNS.Identity.recall(callsign
+            #callsign_identity = self.get_identity_by_callsign(msg.origin)
+            callsign_identity = RNS.Identity.recall(callsign_destination.hash)
+
+            if callsign_identity is None:
+                callsign_identity = RNS.Identity()
+            
+        callsign_destination = RNS.Destination(callsign_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, "lxmf", "delivery")
+        self.callsign_destinations[msg.origin] = callsign_destination.hash
             
         lxm = LXMF.LXMessage(notification_destination, callsign_destination, msg.text)
         router.handle_outbound(lxm)
 
-    def get_destination_by_callsign(self, callsign):
+    def get_identity_by_callsign(self, callsign):
         callsign_destination_hash = None
         callsign_identity = None
         
@@ -88,9 +102,6 @@ class pyjs8callApp:
 
         if callsign_identity is None:
             callsign_identity = RNS.Identity()
-
-        #TODO is this the right way to generate a destination?
-        return self.router.register_delivery_identity(identity, display_name=callsign)
 
     def get_callsign_by_destination_hash(self, destination_hash):
         for callsign, destination in self.callsign_destinations:
