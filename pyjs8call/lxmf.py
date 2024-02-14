@@ -11,6 +11,7 @@ class pyjs8callLXMF:
     CONTROL_HELP_TEXT = '''JS8Call Control Help:
     settings.get_freq
     settings.set_freq 7078000
+    new KT7RUN
     '''
     def __init__(self, client, config_path=None, identity_path=None):
         self._client = client
@@ -57,7 +58,7 @@ class pyjs8callLXMF:
         RNS.Transport.request_path(self.notification_destination_hash)
         notification_destination = self.get_notification_destination()
 
-        lxm = LXMF.LXMessage(notification_destination, self.destination, 'JS8Call online\nTry sending \'--help\'')
+        lxm = LXMF.LXMessage(notification_destination, self.destination, 'JS8Call online\nTry sending \'settings\'')
         self.router.handle_outbound(lxm)
     
     def lxmf_delivery_callback(self, lxm):
@@ -87,22 +88,17 @@ class pyjs8callLXMF:
         lxm = LXMF.LXMessage(notification_destination, callsign_destination, msg.text)
         self.router.handle_outbound(lxm)
 
-    def handle_js8call_control_message(self, lxm):
-        if lxm.content_as_string().strip().lower() == '--help':
-            notification_destination = self.get_notification_destination()
-            lxm = LXMF.LXMessage(notification_destination, self.destination, pyjs8callLXMF.CONTROL_HELP_TEXT)
-            self.router.handle_outbound(lxm)
-            return
-            
-        control = lxm.content_as_string().strip().lower()
-        print('Control message: {}'.format(control))
-
-        #TODO expand control handling
-
     def get_notification_destination(self):
         notification_identity = RNS.Identity.recall(self.notification_destination_hash)
         return RNS.Destination(notification_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, 'lxmf', 'delivery')
 
+    def callsign_destination_exists(self, callsign):
+        for destination_hash, destination in self.router.delivery_destinations.items():
+            if destination.display_name == callsign:
+                return True
+
+        return False        
+    
     def get_destination_by_callsign(self, callsign):
         # check router delivery destinations
         for destination_hash, destination in self.router.delivery_destinations.items():
@@ -136,4 +132,48 @@ class pyjs8callLXMF:
         # no router delivery destination, try identity known destinations
         # None if destination not known
         return RNS.Identity.recall_app_data(destination_hash)
+
+    def handle_js8call_control_message(self, lxm):
+        command = lxm.content_as_string().strip().lower()
+        command_value = None
+        response_content = None
+        response_destination = self.destination
+        notification_destination = self.get_notification_destination()
+        #TODO get list of client.settings functions and arg requirements via introspection?
+        #client_settings = [method for method in dir(obj) if callable(getattr(obj, method)) and not method.startswith("__")]
+
+
+        # separate command and value
+        if ' ' in command:
+            command_parts = command.split()
+            command = command_parts[0]
+            command_value = command_parts[1]
+        
+        if command in ['help', 'setting', 'settings', 'control', 'example', 'examples']:
+            response_content = pyjs8callLXMF.CONTROL_HELP_TEXT
+        elif command == 'new':
+            value = value.upper()
+
+            if self.callsign_destination_exists(value):
+                response_content = 'Destination exists for {}, conversation bumped'.format(value)
+                callsign_response_content = 'JS8Call Control: bumping conversation'
+            else:
+                response_content = 'Destination created for {}, conversation initialized'.format(value)
+                callsign_response_content = 'JS8Call Control: initializing conversation'
+            
+            callsign_destination = self.get_destination_by_callsign(value.upper())
+            callsign_destination.announce()
+            lxm = LXMF.LXMessage(notification_destination, callsign_destination, callsign_response_content)
+            self.router.handle_outbound(lxm)
+        else:
+            # split on .
+            # if command in client.settings and value is not None:
+            pass
+            
+        if response_content is not None:
+            lxm = LXMF.LXMessage(notification_destination, self.destination, response_content)
+            self.router.handle_outbound(lxm)
+
+        #TODO
+        print('Control message: {}'.format(control))
         
