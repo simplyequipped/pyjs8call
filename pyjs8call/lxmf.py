@@ -1,16 +1,21 @@
-import threading
-import time
 import os
+import time
 
 import RNS
 import LXMF
 
+import pyjs8call
 
-class pyjs8callApp:
-    def __init__(self, client, config_path=None, identity_path=None, announce_on_start=True):
+
+class pyjs8callLXMF:
+    CONTROL_HELP_TEXT = '''JS8Call Control Help:
+    settings.get_freq
+    settings.set_freq 7078000
+    '''
+    def __init__(self, client, config_path=None, identity_path=None):
         self._client = client
         self.notification_destination_hash = None
-        self.callsign_destinations = {}
+        self.display_name_format = '{} (JS8Call)'
 
         if config_path is not None:
             self.config_path = config_path
@@ -30,8 +35,10 @@ class pyjs8callApp:
             os.makedirs(self.config_path)
         if not os.path.isdir(self.storage_path):
             os.makedirs(self.storage_path)
+        if not os.path.isdir(self.directory_path):
+            os.makedirs(self.directory_path)
             
-        if os.path.isdir(self.identity_path):
+        if os.path.exists(self.identity_path):
             self.identity = RNS.Identity.from_file(self.identity_path)
         else:
             self.identity = RNS.Identity()
@@ -39,80 +46,94 @@ class pyjs8callApp:
 
         self.router = LXMF.LXMRouter(self.identity, storagepath=self.storage_path)
         self.router.register_delivery_callback(self.lxmf_delivery_callback)
-        self.destination = self.router.register_delivery_identity(self.identity, display_name='JS8Call')
+        self.destination = self.router.register_delivery_identity(self.identity, display_name='JS8Call Control')
+        self.router.announce(self.destination.hash)
 
-        if announce_on_start:
-            self.router.announce(self.destination.hash)
-
-    def set_notification_destination_hash(destination_hash):
+    def set_notification_destination_hash(self, destination_hash):
         if not isinstance(destination_hash, bytes):
-            destination_hash = bytes.from_hex(destination_hash)
+            destination_hash = bytes.fromhex(destination_hash)
 
         self.notification_destination_hash = destination_hash
         RNS.Transport.request_path(self.notification_destination_hash)
-        #TODO wait for known identity
-        notification_identity = RNS.Identity.recall(self.notification_destination_hash)
-        RNS.Identity.remember(packet_hash=None, destination_hash=self.notification_destination_hash, public_key=notification_identity.get_public_key())
+        notification_destination = self.get_notification_destination()
+
+        lxm = LXMF.LXMessage(notification_destination, self.destination, 'JS8Call online\nTry sending \'--help\'')
+        self.router.handle_outbound(lxm)
     
     def lxmf_delivery_callback(self, lxm):
-        callsign = self.get_callsign_by_destination_hash(lxm.get_destination())
+        if lxm.destination.hash == self.destination.hash:
+            self.handle_js8call_control_message(lxm)
+            return
+
+        callsign = self.get_callsign_by_destination_hash(lxm.destination.hash)
 
         if callsign is None:
             #TODO improve handling for unknown callsign
-            print('Callsign not known for destination {}, dropping outgoing LXMF message'.format(RNS.hexrep(source_hash, delimit=False)))
+            print('Callsign not known for destination {}, dropping outgoing LXMF message'.format(lxm.destination.hash.hex()))
             return
 
-        self._client.send_directed_message(callsign, lxm.content_as_string())
+        #TODO test code
+        print('JS8Call -> {}: {}'.format(callsign, lxm.content_as_string()))
+        #self._client.send_directed_message(callsign, lxm.content_as_string())
     
     def js8call_incoming_callback(self, msg):
         if self.notification_destination_hash is None:
             print('Notificaiton target not set, dropping incoming JS8Call message')
             return None
             
-        notification_identity = RNS.Identity.recall(self.notification_destination_hash)
-        notification_destination = RNS.Destination(notification_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, 'lxmf', 'delivery')
-
-        if msg.origin in self.callsign_destinations:
-            callsign_destination = self.callsign_destinations
-        else:
-            for destination_hash in RNS.Identity.known_destinations:
-                if msg.origin == RNS.Identity.get_app_data(destination_hash):
-                    callsign_destination = RNS.Identity.recall(callsign
-            #callsign_identity = self.get_identity_by_callsign(msg.origin)
-            callsign_identity = RNS.Identity.recall(callsign_destination.hash)
-
-            if callsign_identity is None:
-                callsign_identity = RNS.Identity()
-            
-        callsign_destination = RNS.Destination(callsign_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, "lxmf", "delivery")
-        self.callsign_destinations[msg.origin] = callsign_destination.hash
+        notification_destination = self.get_notification_destination()
+        callsign_destination = self.get_destination_by_callsign(msg.origin)
             
         lxm = LXMF.LXMessage(notification_destination, callsign_destination, msg.text)
-        router.handle_outbound(lxm)
+        self.router.handle_outbound(lxm)
 
-    def get_identity_by_callsign(self, callsign):
-        callsign_destination_hash = None
-        callsign_identity = None
-        
-        if callsign in self.callsign_destinations:
-            callsign_destination_hash = self.callsign_destinations[callsign]
+    def handle_js8call_control_message(self, lxm):
+        if lxm.content_as_string().strip().lower() == '--help':
+            notification_destination = self.get_notification_destination()
+            lxm = LXMF.LXMessage(notification_destination, self.destination, pyjs8callLXMF.CONTROL_HELP_TEXT)
+            self.router.handle_outbound(lxm)
+            return
+            
+        control = lxm.content_as_string().strip().lower()
+        print('Control message: {}'.format(control))
 
-        if callsign_destination_hash is not None:
-            callsign_identity = RNS.Identity.recall(callsign_destination_hash)
+        #TODO expand control handling
 
+    def get_notification_destination(self):
+        notification_identity = RNS.Identity.recall(self.notification_destination_hash)
+        return RNS.Destination(notification_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, 'lxmf', 'delivery')
+
+    def get_destination_by_callsign(self, callsign):
+        # check router delivery destinations
+        for destination_hash, destination in self.router.delivery_destinations.items():
+            if destination.display_name == callsign:
+                return destination
+
+        # no router delivery destination, try stored callsign identities
+        if callsign in os.listdir(self.directory_path):
+            callsign_identity = RNS.Identity.from_file(os.path.join(self.directory_path, callsign))
+
+        # callsign destination not known, create new identity
         if callsign_identity is None:
             callsign_identity = RNS.Identity()
 
+        # create new callsign destination
+        display_name = self.display_name_format.format(callsign)
+        callsign_destination = self.router.register_delivery_identity(callsign_identity, display_name=display_name)
+        self.router.announce(callsign_destination.hash)
+        
+        # remember new callsign identity
+        if callsign not in os.listdir(self.directory_path):
+            callsign_identity.to_file(os.path.join(self.directory_path, callsign))
+        
+        return callsign_destination
+
     def get_callsign_by_destination_hash(self, destination_hash):
-        for callsign, destination in self.callsign_destinations:
-            if destination_hash == destination:
-                return callsign
+        # check router delivery destinations
+        if destination_hash in self.router.delivery_destinations:
+            return self.router.delivery_destinations[destination_hash].display_name
 
-        return None
-
-
-
-
-
-
-
+        # no router delivery destination, try identity known destinations
+        # None if destination not known
+        return RNS.Identity.recall_app_data(destination_hash)
+        
