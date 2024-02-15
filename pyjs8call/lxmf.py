@@ -9,28 +9,101 @@ import pyjs8call
 
 
 #TODO
-# - add enable/disable/enabled/pause/resume functions for restart handling
-# - add lxmf module to client, handle in client.restart
-# - use callsign grid square for telemetry?
+# - add lxmf module to client (after client.settings)
+# - add network activity conversation
+# - add control command for callsign activity
+# - handle client.settings methods that require list args, handle str or list in method
+# - test propagation node
+# - should propagation be on by default?
+# - uncomment call to send_directed_message
+# - use callsign grid square data for telemetry?
 
-class pyjs8callLXMF:
-    CONTROL_HELP_TEXT = '''JS8Call Control Examples:
-    get freq
-    set freq: 7078000
-    get station grid
-    set station grid: EM19
-    new KT7RUN
-    restart js8call
+class Node:
+    '''Send notifications and control pyjs8call via LXMF.
+
+    LXMF is a messaging format and delivery protocal built in top of the Reticulum. Reticulum is a cryptography-based networking stack for building both local and wide-area networks, with self-configuring multi-hop routing (aka auto mesh networking). See the links below for more information on these underlying systems.
+
+    Sideband is a desktop and mobile app utilizing LXMF, allowing it to interface with other LXMF devices and nodes. Integrating an LXMF node into pyjs8call allows the user to utilize an application like Sideband to receive notifications when an incoming JS8Call message is received, as well as respond to those messages, and even issue control messages to the JS8Call application.
+
+    **JS8Call Callsigns**
+    A Reticulum Identity and Destination object are created for each callsign that an incoming message is received from, which allows messages from that callsign to be passed to the LXMF device (i.e. Sideband mobile app). Once this unique destination is created on the LXMF node, two way communication can take place. However, an unknown destination cannot initiate a new outgoing conversation directly. Instead, a control command can be sent to initiate a new conversation to a specific callsign, which will create the assocaited Identity and Destination objects. See below for more information on control commands.
+
+    **JS8Call Control Commands**
+    In additon to each conversation with a JS8Call callsign, a conversation is created to handle control commands. Control commands allow the user to change JS8Call settings and initialize new outgoing conversations from their device (i.e. Sideband mobile app). When the pyjs8call LXMF node is enabled, a conversation titled *JS8Call Control* will appear. This conversation will be used for control commands with the pyjs8call system.
+
+    Control commands are mapped to a function in *pyjs8call.client.settings* with the same name. Control commands can be called with underscores just like the *pyjs8call.client.settings* function names, or spaces can be used instead for a more natural experience.
+    
+    Example control commands:
+    
+    ```
+    | client.settings Function | Control Command         | Usage                                  |
+    | ------------------------ | ----------------------- | -------------------------------------- |
+    | get_freq()               | get freq                | Get current JS8Call frequency in Hz    |
+    | set_freq(7078000)        | set freq: 7078000       | Set JS8Call frequency to 7.078 MHz     |
+    | get_station_grid()       | get station grid        | Get current station grid square        |
+    | set_station_grid(EM19)   | set station grid: EM19  | Set station grid square to EM19        |
+    ```
+
+    There are additional control commands that not directly related to *pyjs8call.client.settings* functions.
+
+    ```
+    | Control Command         | Usage                                  |
+    | ----------------------- | -------------------------------------- |
+    | new KT7RUN              | Initiate a conversation with KT7RUN    |
+    | restart js8call         | Restart JS8Call                        |
+    ```
+    
+    **Enabling LXMF**
+    There are two options for enabling the LXMF node for JS8Call messaging and control:
+    
+    __Option A__
+    Call the command `python -m pyjs8call --lxmf [ADDRESS]` from the command line, where [ADDRESS] is the LXMF address of the device to receive messages from JS8Call. This will launch JS8Call and enable the LXMF node.
+
+    __Option B__
+    Import pyjs8call in a script or program, enable the LXMF node, and set the LXMF address of the device to receive messages from JS8Call. Example:
+    ```
+    import pyjs8call
+    
+    js8call = pyjs8call.Client()
+    js8call.start()
+
+    js8call.lxmf.enable([ADDRESS])
+    ```
+    Be sure to replace [ADDRESS] with the LXMF address of the device to receive messages from JS8Call.
+
+    See the [Sideband GitHub releases page](https://github.com/markqvist/Sideband/releases) for the latest Android APK and Python wheel.
+    See the [Reticulum website](https://reticulum.network/) for more information.
+    See the [LXMF GitHub repo](https://github.com/markqvist/LXMF) for an overview. LXMF documentation will be expanded in the future.
     '''
     def __init__(self, client, config_path=None, identity_path=None):
-        self._client = client
-        self.notification_destination_hash = None
-        self.display_name_format = '{} (JS8Call)'
-        self.control_command_separator = ':'
+        '''Initialize LXMF node.
 
-        # get dict of client.settings methods and positional arguments
-        #TODO handle client.settings methods that require list args, handle str or list in method?
+        Args:
+            client (pyjs8call.client): Parent client object
+            config_path (str): Absolute path to configuration directory, defaults to `~/.pyjs8call`
+            identity_path (str): Absolute path to LXMRouter identity, defaults to `[config_path]/storage/identity`
+        
+        Returns:
+            pyjs8call.Node: Constructed node object
+        '''
+        self._client = client
+        self._enabled = False
+        self.notification_address = None
+        '''LXMF notification address, see set_notification_address()'''
+        self.display_name_format = '{} (JS8Call)'
+        '''Format string used to set the Sideband conversation display name assocaited with a callsign destination'''
+        self.control_command_separator = ':'
+        '''String used to separate control commands from their values, defaults to the colon character (ex. `set freq: 7078000`)'''
+        self.router = None
+        '''LXMF.LXMRouter object'''
+        self.destination = None
+        '''JS8Call Control RNS destination'''
+        self.identity = None
+        '''LXMF.LXMRouter and JS8Call Control RNS identity'''
+
+        # get dict of client.settings methods and positional argument count
         self.settings = {}
+        '''Dictionary of function name strings from *pyjs8call.client.settings* mapped to the number of positional arguments that function accepts. This is used to map control commands to a setting function.'''
         for method in dir(self._client.settings):
             method_obj = getattr(self._client.settings, method)
             if callable(method_obj) and not method.startswith('__'):
@@ -38,7 +111,7 @@ class pyjs8callLXMF:
                 positional_args = [arg for arg, params in inspect.signature(method_obj).parameters.items() if params.kind == inspect.Parameter.POSITIONAL_ONLY]
                 # get positional argument count, or None if count is zero
                 args = len(positional_args) if len(positional_args) > 0 else None
-                self.settings[method_] = args
+                self.settings[method] = args
 
         if config_path is not None:
             self.config_path = config_path
@@ -67,54 +140,171 @@ class pyjs8callLXMF:
             self.identity = RNS.Identity()
             self.identity.to_file(self.identity_path)
 
-        self.router = LXMF.LXMRouter(self.identity, storagepath=self.storage_path)
-        self.router.register_delivery_callback(self.lxmf_delivery_callback)
-        self.destination = self.router.register_delivery_identity(self.identity, display_name='JS8Call Control')
-        self.router.announce(self.destination.hash)
+        self.incoming_enabled = True
+        self.spots_enabled = False
+        self.station_spots_enabled = False
+        self.group_spots_enabled = False
+        self.notify_if_callsign_selected = False
 
-    def set_notification_destination_hash(self, destination_hash):
-        if not isinstance(destination_hash, bytes):
-            destination_hash = bytes.fromhex(destination_hash)
+        self.incoming_commands = [pyjs8call.Message.CMD_MSG, pyjs8call.Message.CMD_FREETEXT]
 
-        self.notification_destination_hash = destination_hash
-        RNS.Transport.request_path(self.notification_destination_hash)
-        notification_destination = self.get_notification_destination()
+    def enabled(self):
+        '''Get enabled status.
 
-        lxm = LXMF.LXMessage(notification_destination, self.destination, 'JS8Call online\nTry sending \'settings\'')
-        self.router.handle_outbound(lxm)
-    
-    def lxmf_delivery_callback(self, lxm):
-        if lxm.destination.hash == self.destination.hash:
-            self.handle_control_message(lxm)
+        Returns:
+            bool: True if enabled, False if disabled
+        '''
+        return self._enabled
+
+    def enable(self, notification_address=None, enable_propagation=False):
+        '''Enable LXMF notifications.
+
+        Note: *notification_address* is an optional argument, but the notification address must be set to recieve notifications. See *set_notification_address()*.
+
+        Args:
+            notification_address (str, bytes, or None): LXMF address to send JS8Call related messages to, defaults to None
+            enable_propagation (bool): Whether to enable the local LXMF propagation node, defaults to False
+
+        Incoming directed messages directed to the local station or configured groups will be sent to the notification address. Messages with a command are ignored unless the command is in *pyjs8call.lxmf.incoming_commands*.
+        '''
+        if self._enabled:
             return
 
+        if notification_address is not None:
+            self.set_notification_address(notification_address)
+
+        if RNS.Reticulum.get_instance() is None:
+            RNS.Reticulum()
+
+        # handle re-enable
+        if self.router is None:
+            self.router = LXMF.LXMRouter(self.identity, storagepath=self.storage_path)
+            self.destination = self.router.register_delivery_identity(self.identity, display_name='JS8Call Control')
+            
+        self.router.register_delivery_callback(self.lxmf_delivery)
+        self.router.announce(self.destination.hash)
+
+        if enable_propagation:
+            # enabling propagation announces propagation node
+            self.router.enable_propagation()
+
+        self._client.callback.register_incoming(self.process_incoming)
+        self._client.callback.register_spots(self.process_spots)
+        self._client.callback.register_station_spot(self.process_station_spots)
+        self._client.callback.register_group_spot(self.process_group_spots)
+        self._enabled = True
+
+    def disable(self):
+        '''Disable LXMF notifications.'''
+        self._enabled = False
+        
+        self.router.disable_propagation()
+        self.router.register_delivery_callback(None)
+        
+        self._client.callback.remove_incoming(self.process_incoming)
+        self._client.callback.remove_spots(self.process_spots)
+        self._client.callback.remove_station_spot(self.process_station_spots)
+        self._client.callback.remove_group_spot(self.process_group_spots)
+
+    def process_incoming(self, msg):
+        '''Process incoming directed messages.
+
+        This function is used internally.
+        '''
+        if not self._enabled or not self.incoming_enabled:
+            return
+
+        if self._client.get_selected_call() is not None and self.notify_if_callsign_selected == False:
+            # do not send notification if a callsign is selected on the UI
+            return
+            
+        if self._client.msg_is_to_me(msg) and (msg.cmd in (None, '') or msg.cmd in self.incoming_commands):
+            if self.notification_address is None:
+                print('Notification address not set, dropping incoming JS8Call message')
+                return None
+                
+            # remove end-of-message and error character
+            content = msg.text.replace(pyjs8call.Message.EOM, '').replace(pyjs8call.Message.ERR, '...')
+            # get callsign destination, creating new identity as required
+            callsign_destination = self.get_destination_by_callsign(msg.origin)
+            self.send_notification(content, callsign_destination)
+
+    def process_spots(self, spots):
+        '''Process spots.
+
+        This function is used internally.
+        '''
+        if not self.spots_enabled:
+            return
+
+        spots = [spot.origin for spot in spots]
+        spots_destination = self.get_destination_by_callsign('Spots')
+        self.send_notification('Spotted {}'.format(', '.join(spots)), spots_destination)
+
+    def process_station_spots(self, spot):
+        '''Process watched station spots.
+
+        This function is used internally.
+        '''
+        if not self.station_spots_enabled:
+            return
+
+        spots_destination = self.get_destination_by_callsign('Spots')
+        self.send_notification('Spotted watched station {}'.format(spot.origin), spots_destination)
+
+    def process_group_spots(self, spot):
+        '''Process watched group spots.
+
+        This function is used internally.
+        '''
+        if not self.group_spots_enabled:
+            return
+
+        spots_destination = self.get_destination_by_callsign('Spots')
+        self.send_notification('Spotted watched group {}'.format(spot.destination), spots_destination)
+
+    def set_notification_address(self, address):
+        if not isinstance(address, bytes):
+            address = bytes.fromhex(address)
+
+        self.notification_address = address
+        RNS.Transport.request_path(self.notification_address)
+        self.send_notification('JS8Call online\nTry sending \'settings\'')
+    
+    def lxmf_delivery(self, lxm):
+        if not self._enabled:
+            return
+            
+        if lxm.destination.hash == self.destination.hash:
+            self.process_control_message(lxm)
+            return
+
+        #TODO queue lxmf messages while restarting?
+        if self._client.restarting:
+            return
+            
         callsign = self.get_callsign_by_destination_hash(lxm.destination.hash)
 
         if callsign is None:
-            # respond to source destination
-            # may be someone else on the network responding to an announce
-            response_content = 'JS8Call Control: Callsign not associated with this conversation'.format(lxm.destination.hash.hex())
-            lxm = LXMF.LXMessage(lxm.source, self.destination, response_content)
-            self.router.handle_outbound(lxm)
+            # unknown destination target
+            #TODO are there other cases to handle here?
+            print('Dropping LXMF message with unknown destination {} from {}'.format(lxm.destination.hash.hex(), lxm.source.hash.hex()))
             return
 
-        #TODO test code
-        print('JS8Call -> {}: {}'.format(callsign, lxm.content_as_string()))
+        #TODO
         #self._client.send_directed_message(callsign, lxm.content_as_string())
-    
-    def js8call_incoming_callback(self, msg):
-        if self.notification_destination_hash is None:
-            print('Notificaiton target not set, dropping incoming JS8Call message')
-            return None
+        print('JS8Call -> {}: {}'.format(callsign, lxm.content_as_string()))
+
+    def send_notification(self, content, source=None):
+        if source is None:
+            source = self.destination
             
         notification_destination = self.get_notification_destination()
-        callsign_destination = self.get_destination_by_callsign(msg.origin)
-            
-        lxm = LXMF.LXMessage(notification_destination, callsign_destination, msg.text)
+        lxm = LXMF.LXMessage(notification_destination, source, content)
         self.router.handle_outbound(lxm)
 
     def get_notification_destination(self):
-        notification_identity = RNS.Identity.recall(self.notification_destination_hash)
+        notification_identity = RNS.Identity.recall(self.notification_address)
         return RNS.Destination(notification_identity, RNS.Destination.OUT, RNS.Destination.SINGLE, 'lxmf', 'delivery')
 
     def callsign_destination_exists(self, callsign):
@@ -162,7 +352,7 @@ class pyjs8callLXMF:
     #    getter methods (w/o args): method name
     #    setter methods (w/ args) : method name: arg
     # client.settings method names can use spaces or underscores
-    def handle_control_message(self, lxm):
+    def process_control_message(self, lxm):
         original_command = lxm.content_as_string().strip().lower()
         command = original_command
         command_value = None
@@ -178,45 +368,42 @@ class pyjs8callLXMF:
                 command_value = command_parts[1].strip()
             
             if command in ['help', 'setting', 'settings', 'control', 'example', 'examples']:
-                response_content = pyjs8callLXMF.CONTROL_HELP_TEXT
+                # handle help request
+                response_content = 'JS8Call Control Examples:'
+                response_content += '\n  get freq'
+                response_content += '\n  set freq: 7078000'
+                response_content += '\n  get station grid'
+                response_content += '\n  set station grid: EM19'
+                response_content += '\n  new KT7RUN'
+                response_content += '\n  restart js8call'
             elif command == 'new':
+                # handle new conversation request
                 callsign = command_value.upper()
     
                 if self.callsign_destination_exists(callsign):
-                    response_content = 'Destination exists for {}, conversation bumped'.format(callsign)
+                    response_content = 'Conversation bumped for {}'.format(callsign)
                     callsign_response_content = 'JS8Call Control: bumping conversation'
                 else:
-                    response_content = 'Destination created for {}, conversation initialized'.format(callsign)
-                    callsign_response_content = 'JS8Call Control: initializing conversation'
+                    response_content = 'Conversation created for {}'.format(callsign)
+                    callsign_response_content = 'JS8Call Control: created conversation'
                 
                 callsign_destination = self.get_destination_by_callsign(callsign)
                 callsign_destination.announce()
-                lxm = LXMF.LXMessage(notification_destination, callsign_destination, callsign_response_content)
-                self.router.handle_outbound(lxm)
+                self.send_notification(callsign_response_content, callsign_destination)
             elif command == 'restart js8call':
-                notification_destination = self.get_notification_destination()
-                
-                response_content = 'JS8Call will restart when there is no outgoing activity, please wait...'
-                lxm = LXMF.LXMessage(notification_destination, self.destination, response_content)
-                self.router.handle_outbound(lxm)
-
                 # restart after 3 seconds of inactivity
                 self._client.restart_when_inactive(age=3)
+                self.send_notification('JS8Call restarting, this may take several seconds...')
                 
                 while not self._client.restarting:
                     time.sleep(0.1)
                 
-                response_content = 'JS8Call restarting, this may take several seconds...'
-                lxm = LXMF.LXMessage(notification_destination, self.destination, response_content)
-                self.router.handle_outbound(lxm)
-                
                 while self._client.restarting:
                     time.sleep(0.1)
                 
-                response_content = 'JS8Call successfully restarted'
-                lxm = LXMF.LXMessage(notification_destination, self.destination, response_content)
-                self.router.handle_outbound(lxm)
+                self.send_notification('JS8Call successfully restarted')
             else:
+                # handle setting request
                 method = command
                 args = command_value
                 setting = None
@@ -235,6 +422,7 @@ class pyjs8callLXMF:
                         # setter method, correct number of args
                         try:
                             setting = getattr(self._client.settings, method)(*args)
+                            response_content = '{}: {}'.format(original_command, setting)
                         except Exception:
                             raise Exception('Failed to process setting')
                     elif self.settings[method] is None and args is not None:
@@ -244,24 +432,18 @@ class pyjs8callLXMF:
                         # getter method, without args
                         try:
                             setting = getattr(self._client.settings, method)()
+                            response_content = '{}: {}'.format(original_command, setting)
                         except Exception:
                             raise Exception('Failed to process setting')
                 else:
                     raise Exception('Invalid setting'.format(original_command))
-
-                if setting is not None:
-                    # setting request executed, return result
-                    response_content = '{}: {}'.format(original_command, setting)
                 
         except Exception as e:
             response_content = 'Error: {}'.format(e)
             
         if response_content is not None:
-            notification_destination = self.get_notification_destination()
-            lxm = LXMF.LXMessage(notification_destination, self.destination, response_content)
-            self.router.handle_outbound(lxm)
-
+            self.send_notification(response_content)
+        
         #TODO
         print('Control message: {}'.format(original_command))
-            
         
