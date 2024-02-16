@@ -202,6 +202,7 @@ class Client:
         - settings (pyjs8call.client.settings)
         - callback (pyjs8call.client.callbacks)
         - notifications (pyjs8call.notifications)
+        - lxmf (pyjs8call.lxmf
 
         Args:
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
@@ -236,6 +237,7 @@ class Client:
         self.heartbeat = None
         self.schedule = None
         self.propagation = None
+        self.lxmf = None
 
 
         # delay between setting value and getting updated value
@@ -250,6 +252,7 @@ class Client:
         self.callback = Callbacks()
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
         self.notifications = pyjs8call.Notifications(self)
+        self.lxmf = pyjs8call.lxmf.Node(self)
 
         config_clean_directed_text = self.config.get('Configuration', 'pyjs8callCleanDirectedText', bool)
         if config_clean_directed_text is not None:

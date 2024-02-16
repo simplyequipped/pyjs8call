@@ -15,8 +15,9 @@ import pyjs8call
 # - handle client.settings methods that require list args, handle str or list in method
 # - test propagation node
 # - should propagation be on by default?
-# - uncomment call to send_directed_message
 # - use callsign grid square data for telemetry?
+
+
 
 class Node:
     '''Send notifications and control pyjs8call via LXMF.
@@ -102,16 +103,8 @@ class Node:
         '''LXMF.LXMRouter and JS8Call Control RNS identity'''
 
         # get dict of client.settings methods and positional argument count
-        self.settings = {}
-        '''Dictionary of function name strings from *pyjs8call.client.settings* mapped to the number of positional arguments that function accepts. This is used to map control commands to a setting function.'''
-        for method in dir(self._client.settings):
-            method_obj = getattr(self._client.settings, method)
-            if callable(method_obj) and not method.startswith('__'):
-                # get list of method positional arguments (excuding keyword arguments)
-                positional_args = [arg for arg, params in inspect.signature(method_obj).parameters.items() if params.kind == inspect.Parameter.POSITIONAL_ONLY]
-                # get positional argument count, or None if count is zero
-                args = len(positional_args) if len(positional_args) > 0 else None
-                self.settings[method] = args
+        self.settings = [method for method in dir(self._client.settings) if callable(getattr(self._client.settings, method)) and not method.startswith('__')]
+        '''List of function names from *pyjs8call.client.settings*.'''
 
         if config_path is not None:
             self.config_path = config_path
@@ -170,9 +163,6 @@ class Node:
         if self._enabled:
             return
 
-        if notification_address is not None:
-            self.set_notification_address(notification_address)
-
         if RNS.Reticulum.get_instance() is None:
             RNS.Reticulum()
 
@@ -183,10 +173,16 @@ class Node:
             
         self.router.register_delivery_callback(self.lxmf_delivery)
         self.router.announce(self.destination.hash)
+        #TODO using own propagation node as outbound propagation node
+        self.router.set_outbound_propagation_node(self.router.propagation_destination.hash)
 
         if enable_propagation:
             # enabling propagation announces propagation node
             self.router.enable_propagation()
+
+        if notification_address is not None:
+            self.set_notification_address(notification_address)
+
 
         self._client.callback.register_incoming(self.process_incoming)
         self._client.callback.register_spots(self.process_spots)
@@ -291,9 +287,7 @@ class Node:
             print('Dropping LXMF message with unknown destination {} from {}'.format(lxm.destination.hash.hex(), lxm.source.hash.hex()))
             return
 
-        #TODO
-        #self._client.send_directed_message(callsign, lxm.content_as_string())
-        print('JS8Call -> {}: {}'.format(callsign, lxm.content_as_string()))
+        self._client.send_directed_message(callsign, lxm.content_as_string())
 
     def send_notification(self, content, source=None):
         if source is None:
@@ -309,15 +303,18 @@ class Node:
 
     def callsign_destination_exists(self, callsign):
         for destination_hash, destination in self.router.delivery_destinations.items():
-            if destination.display_name == callsign:
+            if self.get_callsign_by_display_name(destination.display_name) == callsign:
                 return True
+
+        if callsign in os.listdir(self.directory_path):
+            return True
 
         return False        
     
     def get_destination_by_callsign(self, callsign):
         # check router delivery destinations
         for destination_hash, destination in self.router.delivery_destinations.items():
-            if destination.display_name == callsign:
+            if self.get_callsign_by_display_name(destination.display_name) == callsign:
                 return destination
 
         # no router delivery destination, try stored callsign identities
@@ -342,11 +339,20 @@ class Node:
     def get_callsign_by_destination_hash(self, destination_hash):
         # check router delivery destinations
         if destination_hash in self.router.delivery_destinations:
-            return self.router.delivery_destinations[destination_hash].display_name
+            display_name = self.router.delivery_destinations[destination_hash].display_name
+            return self.get_callsign_by_display_name(display_name)
 
         # no router delivery destination, try identity known destinations
         # None if destination not known
-        return RNS.Identity.recall_app_data(destination_hash)
+        display_name = RNS.Identity.recall_app_data(destination_hash)
+        return self.get_callsign_by_display_name(display_name)
+
+    def get_callsign_by_display_name(self, display_name):
+        for pattern in self.display_name_format.split('{}'):
+            display_name = display_name.strip(pattern)
+
+        return display_name.strip()
+            
 
     # control messages must follow this format:
     #    getter methods (w/o args): method name
@@ -359,14 +365,14 @@ class Node:
         response_content = None
 
         try:
-            if self.control_command_separator in command:
+            if self.control_command_separator in original_command:
                 # separate command and value
-                command_parts = command.split(self.control_command_separator)
+                command_parts = original_command.split(self.control_command_separator)
                 # handle command with spaces or underscores
                 original_command = command_parts[0].strip()
-                command = original_command.replace(' ', '_')
-                command_value = command_parts[1].strip()
-            
+                command = original_command
+                command_value = self.control_command_separator.join(command_parts[1:])
+
             if command in ['help', 'setting', 'settings', 'control', 'example', 'examples']:
                 # handle help request
                 response_content = 'JS8Call Control Examples:'
@@ -376,9 +382,10 @@ class Node:
                 response_content += '\n  set station grid: EM19'
                 response_content += '\n  new KT7RUN'
                 response_content += '\n  restart js8call'
-            elif command == 'new':
+
+            elif command.startswith('new') and len(command.split()) == 2:
                 # handle new conversation request
-                callsign = command_value.upper()
+                callsign = command.split()[1].strip().upper()
     
                 if self.callsign_destination_exists(callsign):
                     response_content = 'Conversation bumped for {}'.format(callsign)
@@ -390,6 +397,8 @@ class Node:
                 callsign_destination = self.get_destination_by_callsign(callsign)
                 callsign_destination.announce()
                 self.send_notification(callsign_response_content, callsign_destination)
+                time.sleep(1)
+
             elif command == 'restart js8call':
                 # restart after 3 seconds of inactivity
                 self._client.restart_when_inactive(age=3)
@@ -402,48 +411,36 @@ class Node:
                     time.sleep(0.1)
                 
                 self.send_notification('JS8Call successfully restarted')
+
             else:
                 # handle setting request
-                method = command
+                method = original_command.replace(' ', '_')
                 args = command_value
-                setting = None
         
                 if args is not None:
                     args = args.split()
                             
                 if method in self.settings:
-                    if self.settings[method] is not None and args is None:
-                        # setter method, missing args
-                        raise Exception('Missing expected setting value, try \'{}: VALUE\''.format(original_command))
-                    elif self.settings[method] is not None and len(args.split()) != self.settings[method]:
-                        # setter method, incorrect number of args
-                        raise Exception('{} setting values given, {} required, check pyjs8call documentation'.format(len(args.split()), self.settings[method]))
-                    elif self.settings[method] is not None:
-                        # setter method, correct number of args
-                        try:
-                            setting = getattr(self._client.settings, method)(*args)
-                            response_content = '{}: {}'.format(original_command, setting)
-                        except Exception:
-                            raise Exception('Failed to process setting')
-                    elif self.settings[method] is None and args is not None:
-                        # getter method, with args
-                        raise Exception('Unexpected setting value, try \'{}\''.format(original_command))
-                    else:
+                    if args is None:
                         # getter method, without args
                         try:
                             setting = getattr(self._client.settings, method)()
                             response_content = '{}: {}'.format(original_command, setting)
                         except Exception:
                             raise Exception('Failed to process setting')
+                    else:
+                        # setter method, with args
+                        try:
+                            setting = getattr(self._client.settings, method)(*args)
+                            response_content = '{}: {}'.format(original_command, setting)
+                        except Exception:
+                            raise Exception('Failed to process setting')
                 else:
-                    raise Exception('Invalid setting'.format(original_command))
+                    raise Exception('Invalid setting')
                 
         except Exception as e:
             response_content = 'Error: {}'.format(e)
             
         if response_content is not None:
             self.send_notification(response_content)
-        
-        #TODO
-        print('Control message: {}'.format(original_command))
         
