@@ -14,7 +14,7 @@ import pyjs8call
 # - add control command for callsign activity
 # - handle client.settings methods that require list args, handle str or list in method
 # - test propagation node
-# - should propagation be on by default?
+# - should propagation be enabled by default?
 # - use callsign grid square data for telemetry?
 
 
@@ -101,6 +101,8 @@ class Node:
         '''JS8Call Control RNS destination'''
         self.identity = None
         '''LXMF.LXMRouter and JS8Call Control RNS identity'''
+        self.delivery_method = LXMF.LXMessage.DIRECT
+        '''LXMF.LXMessage delivery method, defaults to DIRECT, set to PROPAGATED if propagation enabled'''
 
         # get dict of client.settings methods and positional argument count
         self.settings = [method for method in dir(self._client.settings) if callable(getattr(self._client.settings, method)) and not method.startswith('__')]
@@ -149,14 +151,14 @@ class Node:
         '''
         return self._enabled
 
-    def enable(self, notification_address=None, enable_propagation=False):
+    def enable(self, notification_address=None, enable_propagation=True):
         '''Enable LXMF notifications.
 
         Note: *notification_address* is an optional argument, but the notification address must be set to recieve notifications. See *set_notification_address()*.
 
         Args:
             notification_address (str, bytes, or None): LXMF address to send JS8Call related messages to, defaults to None
-            enable_propagation (bool): Whether to enable the local LXMF propagation node, defaults to False
+            enable_propagation (bool): Whether to enable the local LXMF propagation node, defaults to True
 
         Incoming directed messages directed to the local station or configured groups will be sent to the notification address. Messages with a command are ignored unless the command is in *pyjs8call.lxmf.incoming_commands*.
         '''
@@ -177,12 +179,10 @@ class Node:
         self.router.set_outbound_propagation_node(self.router.propagation_destination.hash)
 
         if enable_propagation:
-            # enabling propagation announces propagation node
-            self.router.enable_propagation()
+            self.enable_propagation()
 
         if notification_address is not None:
             self.set_notification_address(notification_address)
-
 
         self._client.callback.register_incoming(self.process_incoming)
         self._client.callback.register_spots(self.process_spots)
@@ -266,6 +266,15 @@ class Node:
         self.notification_address = address
         RNS.Transport.request_path(self.notification_address)
         self.send_notification('JS8Call online\nTry sending \'settings\'')
+
+    def enable_propagation(self):
+        self.delivery_method = LXMF.LXMessage.PROPAGATED
+        # enabling propagation announces propagation node
+        self.router.enable_propagation()
+
+    def disable_propagation(self):
+        # disabling propagation announces propagation node
+        self.router.disable_propagation()
     
     def lxmf_delivery(self, lxm):
         if not self._enabled:
@@ -294,7 +303,7 @@ class Node:
             source = self.destination
             
         notification_destination = self.get_notification_destination()
-        lxm = LXMF.LXMessage(notification_destination, source, content)
+        lxm = LXMF.LXMessage(notification_destination, source, content, desired_method=self.delivery_method)
         self.router.handle_outbound(lxm)
 
     def get_notification_destination(self):
