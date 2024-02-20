@@ -225,6 +225,8 @@ class Client:
         self.max_spot_age = 7 * 24 * 60 * 60 # 7 days
         self._previous_profile = None
 
+        self.config = None
+        #self.pyjs8call_config = {}
         self.js8call = None
         self.spots = None
         self.window = None
@@ -236,7 +238,6 @@ class Client:
         self.heartbeat = None
         self.schedule = None
         self.propagation = None
-
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
@@ -304,12 +305,26 @@ class Client:
         '''
         config_path = os.path.expanduser(config_path)
         config_path = os.path.abspath(config_path)
+        #module_map = {
+        #    'client': self,
+        #    'heartbeat': self.heartbeat,
+        #    'inbox': ,
+        #    'settings': ,
+        #    'notifications': ,
+        #    'spots': 
+        #}
         
         if not os.path.exists(config_path):
             raise OSError('Specified configuration file does not exist: {}'.format(config_path))
             
         config = configparser.ConfigParser(interpolation = None)
         config.read(config_path)
+
+        #for section in config.sections():
+        #    if section not in module_map:
+        #        continue
+        #
+        #    if 
     
         if not config.has_section('pyjs8call.settings'):
             raise RuntimeError('Specified configuration file is missing the [pyjs8call.settings] section: {}'.format(config_path))
@@ -338,6 +353,11 @@ class Client:
                 settings_func()
             else:
                 settings_func(value)
+
+    def apply_config(self):
+        '''
+        '''
+        pass
         
     def start(self, headless=False, args=None, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
