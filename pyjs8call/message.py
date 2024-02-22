@@ -475,6 +475,8 @@ class Message:
     def pack(self, exclude=None):
         '''Pack message for transmission over TCP socket.
 
+        If message is already packed, packed value is returned without repacking.
+
         The following attributes are excluded by default:
         - id
         - destination
@@ -494,6 +496,9 @@ class Message:
         Returns:
             UTF-8 encoded byte string. A dictionary representation of the message attributes is converted to a string using *json.dumps* before encoding.
         '''
+        if self.is_packed:
+            return self.packed
+            
         if exclude is None:
             exclude = [] 
 
