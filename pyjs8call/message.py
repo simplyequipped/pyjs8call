@@ -31,9 +31,19 @@ __docformat__ = 'google'
 import json
 import time
 import math
+import base64
 import secrets
 from datetime import datetime, timezone
 
+
+BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+'''Base64 alphabet string'''
+JS8CALL_BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ,.-"?!)(=:_&$%#@*><[]{}|;^0123456789+/'
+'''Base64-mapped alphabet string with JS8Call supported characters'''
+BYTES_TRANSLATION_TABLE = str.maketrans(JS8CALL_BASE64_ALPHABET, BASE64_ALPHABET)
+'''Translation table from JS8Call supported characters to Base64 characters'''
+JS8CALL_TRANSLATION_TABLE = str.maketrans(BASE64_ALPHABET, JS8CALL_BASE64_ALPHABET)
+'''Translation table from Base64 characters to JS8Call supported characters'''
 
 class Message:
     '''Message object for incoming and outgoing messages.
@@ -293,10 +303,13 @@ class Message:
         '''List of attributes set using Message.set()'''
         self.raw = None
         '''Raw incoming message string, defaults to None, not used for outgoing messages'''
+        self.is_packed = False
+        '''Whether message has been packed, defaults to False, not used for incoming messages'''
         self.packed = None
         '''Packed outgoing message string, defaults to None, not used for incoming messages'''
         self.packed_dict = None
         '''Packed outgoing message dictionary, defaults to None, not used for incoming messages'''
+        self._bytes = None
 
         # initialize common msg fields
         common = [
@@ -388,7 +401,6 @@ class Message:
             
         elif attribute == 'destination' and isinstance(value, str):
             self.destination = value.upper()
-
 
     def get(self, attribute):
         '''Get message attribute value.
@@ -491,11 +503,14 @@ class Message:
         # convert dict to json string
         packed = json.dumps(self.packed_dict) + '\r\n'
         self.packed = packed.encode('utf-8')
-
+        self.is_packed = True
+        
         return self.packed
 
     def parse(self, msg_str):
         '''Load message string into message object.
+        
+        Supports usage like `Message().parse(raw_incoming_string)`
 
         *Message.parse* should be called inside a try/except block to handle parsing errors.
 
@@ -523,7 +538,6 @@ class Message:
                 value = value.strip()
 
             self.set(param, value)
-        
         
         # type handling
         
@@ -584,7 +598,6 @@ class Message:
                 except ValueError:
                     continue
 
-                
         # command handling
 
         if self.cmd == Message.CMD_GRID and self.text is not None and Message.ERR not in self.text:
@@ -597,7 +610,6 @@ class Message:
             # 0 = origin, 1 = destination, 2 = command, -1 = EOM
             hearing = self.text.split()[3:-1]
             self.set('hearing', hearing)
-
 
         # relay path handling
 
@@ -679,6 +691,59 @@ class Message:
         for attribute, value in json.loads(msg_str.strip()).items():
             self.set(attribute, value)
 
+        return self
+
+    def encode(self):
+        '''Encode packed message value to byte string.
+        
+        Returns:
+            bytes: Packed message value converted to bytes
+        '''
+        global JS8CALL_TRANSLATION_TABLE
+        
+        if not self.is_packed:
+            # pack message to build message value
+            self.pack()
+
+        js8call_text = self.packed_dict['value']
+
+        if len(js8call_text) == 0:
+            self._bytes = b''
+            return self._bytes
+
+        try:
+            # translate js8call alphabet to base46 alphabet
+            base64_text = js8call_text.translate(JS8CALL_TRANSLATION_TABLE)
+            # convert base64 to bytes
+            self._bytes = base64.decode(base64_text)
+        except Exception as e:
+            #TODO review and troubleshoot
+            return ''
+            
+        return self._bytes
+    
+    def decode(self, bytes_str):
+        '''Decode byte string into message object.
+
+        Supports usage like `Message().decode(byte_string)`.
+
+        Args:
+            bytes_str (bytes): Byte string to decode to text
+
+        Returns:
+            pyjs8call.Message: Message object with *value* attribute set to decoded string
+        '''
+        global BYTES_TRANSLATION_TABLE
+        
+        try:
+            # convert bytes to base64
+            base64_text = base64.encode(bytes_str)
+            # translate base64 alphabet to js8call alphabet
+            message_text = base64_text.translate(BYTES_TRANSLATION_TABLE)
+            self.set('value', message_text)
+        except Exception as e:
+            self.set('value', '')
+            
         return self
         
     def __eq__(self, msg):
