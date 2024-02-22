@@ -38,11 +38,11 @@ from datetime import datetime, timezone
 
 BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 '''Base64 alphabet string'''
-JS8CALL_BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ,.-"?!)(=:_&$%#@*><[]{}|;^0123456789+/'
+JS8CALL_BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ,.-"?!)(~:_&$%#@*><[]{}|;^0123456789+/'
 '''Base64-mapped alphabet string with JS8Call supported characters'''
-BYTES_TRANSLATION_TABLE = str.maketrans(JS8CALL_BASE64_ALPHABET, BASE64_ALPHABET)
+BASE64_TO_JS8CALL_TRANSLATION_TABLE = str.maketrans(BASE64_ALPHABET, JS8CALL_BASE64_ALPHABET)
 '''Translation table from JS8Call supported characters to Base64 characters'''
-JS8CALL_TRANSLATION_TABLE = str.maketrans(BASE64_ALPHABET, JS8CALL_BASE64_ALPHABET)
+JS8CALL_TO_BASE64_TRANSLATION_TABLE = str.maketrans(JS8CALL_BASE64_ALPHABET, BASE64_ALPHABET)
 '''Translation table from Base64 characters to JS8Call supported characters'''
 
 class Message:
@@ -699,53 +699,73 @@ class Message:
         return self
 
     def encode(self):
-        '''Encode packed message value to byte string.
+        '''Encode incoming JS8Call compatible message value to bytes.
+
+        Due to the limited character set of JS8Call, a unique process is used to re-encode JS8Call compatible text back to bytes. The text to be re-encoded is derived by *Message.decode()*.
+        
+        Custom encoding process: `JS8Call compatible text -> translate to Base64 alphabet -> encode to byte string -> decode Base64 to bytes`
+
+        The *text* attribute is processed to support cleaning of incoming directed message text. If *text* is not set, and *value* is set, *value* is processed instead.
         
         Returns:
-            bytes: Packed message value converted to bytes
+            bytes: Message text converted to bytes
         '''
-        global JS8CALL_TRANSLATION_TABLE
-        
-        if not self.is_packed:
-            # pack message to build message value
-            self.pack()
+        global JS8CALL_TO_BASE64_TRANSLATION_TABLE
 
-        js8call_text = self.packed_dict['value']
-
-        if len(js8call_text) == 0:
+        if self.get('text') is not None and len(self.get('text')) > 0:
+            # use msg.text if set
+            msg_value = self.text
+        elif self.get('value') is not None and len(self.get('value')) > 0:
+            # use msg.value if set
+            msg_value = self.value
+        else:
+            # set and return empty bytes string
             self._bytes = b''
             return self._bytes
 
         try:
             # translate js8call alphabet to base46 alphabet
-            base64_text = js8call_text.translate(JS8CALL_TRANSLATION_TABLE)
-            # convert base64 to bytes
-            self._bytes = base64.decode(base64_text)
+            base64_text = msg_value.translate(JS8CALL_TO_BASE64_TRANSLATION_TABLE)
+            # encode to bytes
+            base64_bytes = base64_text.encode()
+            # decode base64 to bytes
+            self._bytes = base64.b64decode(base64_bytes)
         except Exception as e:
-            #TODO review and troubleshoot
-            return ''
+            self._bytes = b''
             
         return self._bytes
     
     def decode(self, bytes_str):
-        '''Decode byte string into message object.
+        '''Decode outgoing bytes to JS8Call compatible message value.
+
+        Due to the limited character set of JS8Call, a unique process is used to decode bytes into JS8Call compatible text. The decoded text can be re-encoded using *Message.encode()*.
+        
+        Custom decoding process: `bytes -> encode bytes to Base64 -> decode to string -> translate to JS8Call alphabet -> JS8Call compatible text`
 
         Supports usage like `Message().decode(byte_string)`.
 
         Args:
-            bytes_str (bytes): Byte string to decode to text
+            bytes_str (bytes): Byte string to decode into JS8Call compatible text
 
         Returns:
-            pyjs8call.Message: Message object with *value* attribute set to decoded string
+            pyjs8call.Message: Message object with *value* attribute set to decoded text string
+
+        Raises:
+            TypeError: *bytes_str* is not type bytes
         '''
-        global BYTES_TRANSLATION_TABLE
+        global BASE64_TO_JS8CALL_TRANSLATION_TABLE
+
+        if not isinstance(bytes_str, bytes):
+            raise TypeError('Only type \'bytes\' can be decoded')
         
         try:
             # convert bytes to base64
-            base64_text = base64.encode(bytes_str)
+            base64_bytes = base64.b64encode(bytes_str)
+            # decode from bytes
+            base64_text = base64_bytes.decode()
             # translate base64 alphabet to js8call alphabet
-            message_text = base64_text.translate(BYTES_TRANSLATION_TABLE)
-            self.set('value', message_text)
+            msg_value = base64_text.translate(BASE64_TO_JS8CALL_TRANSLATION_TABLE)
+            self.set('value', msg_value)
         except Exception as e:
             self.set('value', '')
             
