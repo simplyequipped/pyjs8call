@@ -226,7 +226,8 @@ class Client:
         self._previous_profile = None
 
         self.config = None
-        #self.pyjs8call_config = {}
+        self.settings = None
+        self.callback = None
         self.js8call = None
         self.spots = None
         self.window = None
@@ -238,6 +239,7 @@ class Client:
         self.heartbeat = None
         self.schedule = None
         self.propagation = None
+        self.notifications = None
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
@@ -267,14 +269,14 @@ class Client:
         # stop application and client at exit
         atexit.register(self.stop)
 
-    def load_config(self, config_path):
-        '''Load settings from configuration file.
+    def load_settings(self, settings_path):
+        '''Load settings from file.
 
-        The configuration file referenced here is specific to pyjs8call, and is not the same as the JS8Call configuration file. The pyjs8call configuration file is not required.
+        The settings file referenced here is specific to pyjs8call, and is not the same as the JS8Call configuration file. The pyjs8call settings file is not required.
 
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
 
-        Configuration file formatting:
+        Settings file formatting:
             - must have a typical *.ini `key = value` format
             - must contain a `[pyjs8call.settings]` section header
             - keys must match the name of a *client.settings* function that changes a setting via the JS8Call config file
@@ -303,16 +305,16 @@ class Client:
             RuntimeError: Specified pyjs8call configuration file is missing the [pyjs8call.settings] section
             ValueError: Specified configuration file is missing the [pyjs8call.settings] section
         '''
-        config_path = os.path.expanduser(config_path)
-        config_path = os.path.abspath(config_path)
-        #module_map = {
-        #    'client': self,
-        #    'heartbeat': self.heartbeat,
-        #    'inbox': ,
-        #    'settings': ,
-        #    'notifications': ,
-        #    'spots': 
-        #}
+        settings_path = os.path.expanduser(settings_path)
+        settings_path = os.path.abspath(settings_path)
+        module_map = {
+            'client': self,
+            'heartbeat': self.heartbeat,
+            'inbox': ,
+            'settings': ,
+            'notifications': ,
+            'spots': 
+        }
         
         if not os.path.exists(config_path):
             raise OSError('Specified configuration file does not exist: {}'.format(config_path))
