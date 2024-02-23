@@ -721,6 +721,41 @@ class Client:
         self.js8call.send(msg)
         return msg
 
+    def send_directed_bytes_message(self, destination, message):
+        '''Send bytes via JS8Call message.
+        
+        Message format: *MESSAGE*
+        
+        *process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
+
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+
+        Args:
+            destination (str, list): Callsign(s) to direct the message to
+            message (bytes): Bytes to decode and send as JS8Call text
+
+        Returns:
+            pyjs8call.message: Constructed message object
+        '''
+        # msg.type = Message.TX_SEND_MESSAGE by default
+        msg = Message(destination = destination, origin = self.settings.get_station_callsign())
+        # decode message bytes to js8call supported characters
+        msg.decode(message)
+        
+        # custom processing of outgoing messages
+        if self.process_outgoing is not None:
+            msg = self.process_outgoing(msg)
+
+            if msg.error is not None:
+                msg.set('status', Message.STATUS_FAILED)
+                return msg
+
+        if self.monitor_outgoing:
+            self.outgoing.monitor(msg)
+
+        self.js8call.send(msg)
+        return msg
+
     def send_directed_command_message(self, destination, command, message=None):
         '''Send a directed JS8Call command message.
 
