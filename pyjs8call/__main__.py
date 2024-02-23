@@ -87,9 +87,7 @@ def _rns_read_stdin():
         if in_frame and byte == HDLC.FLAG:
             in_frame = False
 
-            # build and send custom message
-            js8call.send_directed_bytes_message('@RNS', data_buffer, origin=False)
-            #js8call.send_directed_message('@RNS', data_buffer.hex())
+            js8call.send_directed_bytes_message('@RNS', data_buffer)
 
         elif byte == HDLC.FLAG:
             in_frame = True
