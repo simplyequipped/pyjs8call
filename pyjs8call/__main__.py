@@ -119,7 +119,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog=program, description='RNS PipeInterface for pyjs8call package', epilog = help_epilog)
     parser.add_argument('--freq', help='Set radio frequency in Hz', type=int)
     parser.add_argument('--grid', help='Set station grid square')
-    parser.add_argument('--speed', help='Set speed of JS8Call modem, defaults to \'normal\'', default='normal')
+    parser.add_argument('--speed', help='Set speed of JS8Call modem, defaults to \'fast\'', default='fast')
     parser.add_argument('--profile', help='Set JS8Call configuration profile, defaults to \'RNS\'', default='RNS')
     parser.add_argument('--callsign', help='Set station callsign')
     parser.add_argument('--headless', help='Run JS8Call headless (only available on Linux platforms)', action='store_true')
