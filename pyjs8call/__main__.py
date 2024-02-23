@@ -55,6 +55,10 @@ class HDLC:
 
 
 def _rns_write_stdout(msg):
+    # drop messages without destination set to @RNS group
+    if not msg.is_directed_to('@RNS'):
+        return
+
     data = bytes([HDLC.FLAG]) + HDLC.escape(msg.encode()) + bytes([HDLC.FLAG])
 
     try:
@@ -107,17 +111,17 @@ def _rns_read_stdin():
 
 
 if __name__ == '__main__':
-    help_epilog =  'If *profile* does not exist, it is created by copying the \'Default\' profile.\n\n'
-    help_epilog += 'See pyjs8call docs for more information: https://simplyequipped.github.io/pyjs8call\n'
+    help_epilog =  'PipeInterface must be configured and enabled in the Reticulum config file. '
+    help_epilog += 'If PROFILE does not exist, it is created by copying the \'Default\' profile. '
+    help_epilog += 'See pyjs8call docs for more information: https://simplyequipped.github.io/pyjs8call'
 
     program = 'python -m pyjs8call'
-
     parser = argparse.ArgumentParser(prog=program, description='RNS PipeInterface for pyjs8call package', epilog = help_epilog)
-    parser.add_argument('--speed', help='Speed of JS8Call modem, defaults to \'normal\'', default='normal')
-    parser.add_argument('--freq', help='Radio frequency in Hz', type=int)
-    parser.add_argument('--callsign', help='Station callsign')
-    parser.add_argument('--grid', help='Station grid square')
-    parser.add_argument('--profile', help='JS8Call configuration profile, defaults to \'RNS\'', default='RNS')
+    parser.add_argument('--freq', help='Set radio frequency in Hz', type=int)
+    parser.add_argument('--grid', help='Set station grid square')
+    parser.add_argument('--speed', help='Set speed of JS8Call modem, defaults to \'normal\'', default='normal')
+    parser.add_argument('--profile', help='Set JS8Call configuration profile, defaults to \'RNS\'', default='RNS')
+    parser.add_argument('--callsign', help='Set station callsign')
     parser.add_argument('--headless', help='Run JS8Call headless (only available on Linux platforms)', action='store_true')
     parser.add_argument('--heartbeat', help='Enable pyjs8call heartbeat networking', action='store_true')
     args = parser.parse_args()
@@ -128,34 +132,28 @@ if __name__ == '__main__':
         if args.profile in js8call.settings.get_profile_list():
             js8call.settings.set_profile(args.profile)
         else:
-            # copies 'Default' profile by default
+            # copy 'Default' profile
             js8call.config.create_new_profile(args.profile)
 
     # set config after setting profile to avoid overwriting settings
-    if args.callsign:
-        js8call.settings.set_station_callsign(args.callsign)
-
-    if args.speed:
-        js8call.settings.set_speed(args.speed)
+    if args.callsign: js8call.settings.set_station_callsign(args.callsign)
+    if args.speed: js8call.settings.set_speed(args.speed)
 
     # allow freetext
     js8call.config.set('Configuration', 'AvoidForcedIdentify', 'true')
-    #
+    # add @RNS group to station groups
     js8call.config.add_group('@RNS')
     # disable idle timeout
     js8call.settings.set_idle_timeout(0)
 
+    # start js8call, headless if specified
     js8call.start(headless = args.headless)
 
-    if args.freq:
-        js8call.settings.set_freq(args.freq)
+    if args.freq: js8call.settings.set_freq(args.freq)
+    if args.grid: js8call.settings.set_station_grid(args.grid)
+    if args.heartbeat: js8call.heartbeat.enable()
 
-    if args.grid:
-        js8call.settings.set_station_grid(args.grid)
-
-    if args.heartbeat:
-        js8call.heartbeat.enable()
-
+    # registered for incoming type RX.DIRECTED by default
     js8call.callback.register_incoming(_rns_write_stdout)
 
     thread = threading.Thread(target=_rns_read_stdin)
