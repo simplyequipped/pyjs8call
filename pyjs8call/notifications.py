@@ -128,6 +128,38 @@ class Notifications:
         self._client.callback.remove_station_spot(self.process_station_spots)
         self._client.callback.remove_group_spot(self.process_group_spots)
 
+    def enable_incoming(self):
+        '''Enable incoming directed message handling.'''
+        self.incoming_enabled = True
+
+    def disable_incoming(self):
+        '''Disable incoming directed message handling.'''
+        self.incoming_enabled = False
+
+    def enable_spots(self):
+        '''Enable spot handling.'''
+        self.spots_enabled = True
+
+    def disable_spots(self):
+        '''Disable spot handling.'''
+        self.spots_enabled = False
+
+    def enable_station_spots(self):
+        '''Enable station spot handling.'''
+        self.station_spots_enabled = True
+
+    def disable_station_spots(self):
+        '''Disable station spot handling.'''
+        self.station_spots_enabled = False
+
+    def enable_group_spots(self):
+        '''Enable group spot handling.'''
+        self.group_spots_enabled = True
+
+    def disable_group_spots(self):
+        '''Disable group spot handling.'''
+        self.group_spots_enabled = False
+
     def process_incoming(self, msg):
         '''Process incoming directed messages.
 
