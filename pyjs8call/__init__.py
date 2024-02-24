@@ -46,6 +46,6 @@ from pyjs8call.outgoingmonitor import OutgoingMonitor
 from pyjs8call.hbnetwork import HeartbeatNetworking
 from pyjs8call.js8call import JS8Call
 from pyjs8call.client import Client
-from pyjs8call.client import Settings
-from pyjs8call.client import Callbacks
+from pyjs8call.settings import Settings
+from pyjs8call.callbacks import Callbacks
 

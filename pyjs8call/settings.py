@@ -1,6 +1,6 @@
 # MIT License
 # 
-# Copyright (c) 2022-2023 Simply Equipped
+# Copyright (c) 2022-2024 Simply Equipped
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -58,6 +58,188 @@ class Settings:
         '''
         self._client = client
         self.loaded_settings = {}
+        self.pending_loaded_settings = False
+        self._pending_loaded_settings = {}
+
+        self._setting_section_object_map = {
+            'settings': self,
+            'notifications': self._client.notifications,
+            'config': self._client.config
+        }
+
+    def load_settings(self, settings_path):
+        '''Load pyjs8call settings from file.
+
+        The settings file referenced here is specific to pyjs8call, and is not the same as the JS8Call configuration file. The pyjs8call settings file is not required.
+
+        This function must be called before calling *client.start()*. Settings that must be set before or after starting the JS8Call application are handled automatically. Settings that affect the JS8Call config file are set immediately. All other settings are set after *client.start()* is called.
+
+        Each settings file section identifies the associated pyjs8call module. Each key in a key-value pair identifies the function in the section/module. A value (if set) in a key-value pair identifies the function argument. Example:
+        ```
+        [settings]
+        set_freq = 7078000
+        pause_heartbeat_during_qso
+        ```
+        These settings equate to calling `client.settings.set_freq(7078000)` and `client.settings.pause_heartbeat_during_qso()`.
+
+        Supported sections (i.e. pyjs8call modules):
+            - settings
+            - notifications
+            - config
+            - heartbeat
+            - inbox
+            - spots
+            - drift_sync
+            - time_master
+
+        Settings file formatting:
+            - must have a typical *.ini `key = value` format
+            - must contain a `[pyjs8call.settings]` section header
+            - keys must match the name of a *client.settings* function that changes a setting via the JS8Call config file
+            - if a key is set to a value, the value will be passed to the corresponding pyjs8call.settings function
+            - if a key is **not** set to a value, the corresponding pyjs8call.settings function will be called without arguments
+
+        See *client.settings* for more information on available settings functions. Values are type *str* by default, and are automatically parsed to type *None*, *int*, *bool*, or *list* as needed.
+
+        Example configuration file format:
+        ```
+        [settings]
+        set_freq = 7078000
+        set_heartbeat_interval = 15
+        enable_heartbeat_acknowledgements
+        enable_multi_decode
+        enable_autoreply_startup
+        disable_autoreply_confirmation
+        set_idle_timeout = 0
+        set_distance_units = miles
+        set_primary_highlight_words = [KT7RUN, OH8STN]
+
+        [notifications]
+
+        ```
+        Args:
+            config_path (str): Relative or absolute path to configuration file
+        '''
+        #TODO handle multiple function args
+        #TODO handle attributes and function ( callable() )
+
+        settings_path = os.path.expanduser(settings_path)
+        settings_path = os.path.abspath(settings_path)
+
+        if not os.path.exists(settings_path):
+            raise OSError('Specified settings file not found: {}'.format(settings_path))
+
+        current_section = None
+        with open(settings_path, 'r') as file:
+            for line in file:
+                line = line.strip()
+                # detect section headers
+                if line.startswith('[') and line.endswith(']'):
+                    # convert section space characters to underscore
+                    current_section = line.strip(' []').replace(' ', '_')
+                    self.loaded_settings[current_section] = {}
+                # handle key-value pairs within sections
+                elif current_section is not None and '=' in line:
+                    key, value = line.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    self.loaded_settings[current_section][key] = value
+                elif current_section is not None:
+                    self.loaded_settings[current_section][key] = None
+
+        # apply loaded settings
+        for section in self.loaded_settings:
+            for key, value in self.loaded_settings[section].items():
+                # store pending setting for post-start sections
+                if section not in self._setting_section_object_map:
+                    if section not in self._pending_loaded_settings:
+                        self._pending_loaded_settings[section] = {}
+    
+                    self._pending_loaded_settings[section][key] = value
+                    self.pending_loaded_settings = True
+                    continue
+        
+                self._apply_loaded_setting(section, key, value)
+
+    def apply_pending_loaded_settings(self):
+        '''Apply pending loaded settings.
+
+        This function is called internally by *Client.start()*.
+        '''
+        # set post-start section objects
+        post_start_setting_section_object_map = {
+            'heartbeat': self._client.heartbeat,
+            'drift_sync': self._client.drift_sync,
+            'time_master': self._client.time_master,
+            'inbox': self._client.inbox,
+            'spots': self._client.spots
+        }
+        self._setting_section_object_map.update(post_start_setting_section_object_map)
+
+        for section in self._pending_loaded_settings:
+            if section not in self._setting_section_object_map:
+                # drop unsupported sections
+                continue
+        
+            for key, value in self._pending_loaded_settings[section].items():
+                self._apply_loaded_setting(section, key, value)
+
+    def _apply_loaded_setting(self, section, key, value):
+        '''Apply setting loaded from file.
+
+        This function is used internally.
+
+        Args:
+            section (str): Settings file section
+            key (str): Setting file key from key-value pair
+            value (str, None): Setting file value from key-value pair
+
+        Raises:
+            ValueError: Loaded setting key does not match a function from the specified module
+            ValueError: Loading setting failed while calling a function from the specified module
+        '''
+        try:
+            func = getattr(self._setting_section_object_map[section], key)
+        except:
+            raise ValueError('Loaded setting does not match a {} module function: {}'.format(section, func))
+
+        #TODO need a cleaner way to identify functions that need to be called after js8call is running
+        if not self._client.online and 'client.restart' not in func.__doc__:
+            # store pending setting for post-start functions
+            if section not in self._pending_loaded_settings:
+                self._pending_loaded_settings[section] = {}
+
+            self._pending_loaded_settings[section][key] = value
+            self.pending_loaded_settings = True
+            return
+
+        # convert config string values to python types
+        if value is None:
+            pass
+        elif value.lower() == 'true':
+            value = True
+        elif value.lower() == 'false':
+            value = False
+        elif value.lower() in ('none', ''):
+            value = None
+        elif value.isnumeric():
+            value = int(value)
+        elif len(value) > 0 and value.strip()[0] == '[' and value.strip()[-1] == ']':
+            # convert string to list
+            value = [item.strip() for item in value.strip(' []').split(',')]
+    
+        if value is None:
+            # call mapped function object with no arg
+            try:
+                func()
+            except Exception:
+                raise ValueError('Loading setting failed while calling {}'.format(key))
+        else:
+            # call mapped function object with arg
+            try:
+                func(value)
+            except Exception:
+                raise ValueError('Loading setting failed while calling {} with arg: {}'.format(key, value))
 
     def enable_heartbeat_networking(self):
         '''Enable heartbeat networking via config file.
