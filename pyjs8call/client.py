@@ -254,17 +254,20 @@ class Client:
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
         self.notifications = pyjs8call.Notifications(self)
 
-        config_clean_directed_text = self.config.get('Configuration', 'pyjs8callCleanDirectedText', bool)
-        if config_clean_directed_text is not None:
-            self.clean_directed_text = config_clean_directed_text
+        if 'pyjs8callCleanDirectedText' in self.config.config['Configuration']:
+            config_clean_directed_text = self.config.get('Configuration', 'pyjs8callCleanDirectedText', bool)
+            if config_clean_directed_text is not None:
+                self.clean_directed_text = config_clean_directed_text
 
-        config_monitor_outgoing = self.config.get('Configuration', 'pyjs8callMonitorOutgoing', bool)
-        if config_monitor_outgoing is not None:
-            self.monitor_outgoing = config_monitor_outgoing
+        if 'pyjs8callMonitorOutgoing' in self.config.config['Configuration']:
+            config_monitor_outgoing = self.config.get('Configuration', 'pyjs8callMonitorOutgoing', bool)
+            if config_monitor_outgoing is not None:
+                self.monitor_outgoing = config_monitor_outgoing
 
-        config_max_spot_age = self.config.get('Configuration', 'pyjs8callMaxSpotAge', int)
-        if config_max_spot_age is not None:
-            self.max_spot_age = config_max_spot_age
+        if 'pyjs8callMaxSpotAge' in self.config.config['Configuration']:
+            config_max_spot_age = self.config.get('Configuration', 'pyjs8callMaxSpotAge', int)
+            if config_max_spot_age is not None:
+                self.max_spot_age = config_max_spot_age
 
         # stop application and client at exit
         atexit.register(self.stop)
