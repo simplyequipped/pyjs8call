@@ -254,10 +254,12 @@ class Client:
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
         self.notifications = pyjs8call.Notifications(self)
 
-        if 'pyjs8callCleanDirectedTest' in self.config.config['Configuration'] and self.config.get('Configuration', 'pyjs8callCleanDirectedText') is not None:
-            config_clean_directed_text = self.config.get('Configuration', 'pyjs8callCleanDirectedText', bool)
-            if config_clean_directed_text is not None:
-                self.clean_directed_text = config_clean_directed_text
+        #TODO
+        print( self.config.get('Configuration', 'pyjs8callCleanDirectedText') )
+
+        config_clean_directed_text = self.config.get('Configuration', 'pyjs8callCleanDirectedText', bool)
+        if config_clean_directed_text is not None:
+            self.clean_directed_text = config_clean_directed_text
 
         config_monitor_outgoing = self.config.get('Configuration', 'pyjs8callMonitorOutgoing', bool, fallback=self.monitor_outgoing)
         if config_monitor_outgoing is not None:
