@@ -20,25 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-'''Main JS8Call API interface.
+'''JS8Call settings.
 
-Includes many functions for reading/writing settings and sending various types
-of messages.
-
-Typical usage example:
-
-    ```
-    js8call = pyjs8call.Client()
-    js8call.callback.register_incoming(incoming_callback_function)
-    js8call.start()
-
-    js8call.send_directed_message('KT7RUN', 'Great content thx')
-    ```
+Functions for reading and writing settings, including configuration file convenience functions.
 '''
 
 __docformat__ = 'google'
 
 
+import os
 import configparser
 
 from pyjs8call import Message
@@ -57,196 +47,237 @@ class Settings:
             pyjs8call.client.Settings: Constructed setting object
         '''
         self._client = client
-        self.loaded_settings = {}
-        self.pending_loaded_settings = False
-        self._pending_loaded_settings = {}
+        self.loaded_settings = None
 
-        self._setting_section_object_map = {
-            'settings': self,
-            'notifications': self._client.notifications,
-            'config': self._client.config
+        self._settings_map = {
+            'station' : {
+                'callsign': lambda value: self.set_station_callsign(value),
+                'grid': lambda value: self.set_station_grid(value),
+                'speed': lambda value: self.set_speed(value),
+                'freq': lambda value: self.set_freq(value),
+                'frequency': lambda value: self.set_freq(value),
+                'offset': lambda value: self.set_offset(value),
+                'info': lambda value: self.set_station_info(value),
+                'append_pyjs8call_info': lambda value: self.append_pyjs8call_to_station_info()
+            },
+            'general': {
+                'groups': lambda value: self.set_groups(value),
+                'multi_speed_decode': lambda value: self.enable_multi_decode() if value else self.disable_multi_decode(),
+                'autoreply_on_at_startup': lambda value: self.enable_autoreply_startup() if value else self.disable_autoreply_startup(),
+                'autoreply_confirmation': lambda value: self.enable_autoreply_confirmation() if value else self.disable_autoreply_confirmation(),
+                'allcall': lambda value: self.enable_allcall() if value else self.disable_allcall(),
+                'reporting': lambda value: self.enable_reporting() if value else self.disable_reporting(),
+                'transmit': lambda value: self.enable_transmit() if value else self.disable_transmit(),
+                'idle_timeout': lambda value: self.set_idle_timeout(value),
+                'distance_units': lambda value: self.set_distance_units(value)
+            },
+            'heartbeat': {
+                'enable': lambda value: self._client.heartbeat.enable() if value else self._client.heartbeat.disable(),
+                'interval': lambda value: self.set_heartbeat_interval(value),
+                'acknowledgements': lambda value: self.enable_heartbeat_acknowledgements() if value else self.disable_heartbeat_acknowledgements(),
+                'pause_during_qso': lambda value: self.pause_heartbeat_during_qso() if value else self.allow_heartbeat_during_qso()
+            },
+            'profile': {
+                'profile': lambda value: self.set_profile(value),
+                'set_profile_on_exit': lambda value: self._client.set_profile_on_exit(value)
+            },
+            'highlight': {
+                'primary_words': lambda value: self.set_primary_highlight_words(value),
+                'secondary_words': lambda value: self.set_secondary_highlight_words(value)
+            },
+            'spots': {
+                'watch_stations': lambda value: self._client.spots.set_watched_stations(value),
+                'watch_groups': lambda value: self._client.spots.set_watched_groups(value)
+            },
+            'notifications': {
+                'enable': lambda value: self._client.notifications.enable() if value else self._client.notifications.disable(),
+                'smtp_server': lambda value: self._client.notifications.set_smtp_server(value),
+                'smtp_port': lambda value: self._client.notifications.set_smtp_server_port(value),
+                'smtp_email_address': lambda value: self._client.notifications.set_smtp_email_address(value),
+                'smtp_password': lambda value: self._client.notifications.set_smtp_password(value),
+                'notification_email_address': lambda value: self._client.notifications.set_email_destination(value),
+                'notification_email_subject': lambda value: self._client.notifications.set_email_subject(value),
+                'incoming': lambda value: self._client.notifications.enable_incoming() if value else self._client.notifications.disable_incoming(),
+                'spots': lambda value: self._client.notifications.enable_spots() if value else self._client.notifications.disable_spots(),
+                'station_spots': lambda value: self._client.notificaions.enable_station_spots() if value else self._client.notifications.disable_station_spots(),
+                'group_spots': lambda value: self._client.notifications.enable_group_spots() if value else self._client.notifications.disable_group_spots()
+            }
         }
 
-    def load_settings(self, settings_path):
+        self._pre_start_settings = {
+            'station' : [
+                'callsign',
+                'speed'
+            ],
+            'general': [
+                'groups', 
+                'multi_speed_decode',
+                'autoreplay_on_at_startup',
+                'autoreply_confirmation',
+                'allcall',
+                'reporting',
+                'transmit',
+                'idle_timeout',
+                'distance_units'
+            ],
+            'heartbeat': [
+                'interval',
+                'acknowledgements',
+                'pause_during_qso'
+            ],
+            'profile': [
+                'profile',
+                'set_profile_on_exit'
+            ],
+            'highlight': [
+                'primary_words',
+                'secondary_words'
+            ],
+            'spots': [
+            ],
+            'notifications': [
+            ]
+        }
+
+    def load(self, settings_path):
         '''Load pyjs8call settings from file.
 
         The settings file referenced here is specific to pyjs8call, and is not the same as the JS8Call configuration file. The pyjs8call settings file is not required.
 
         This function must be called before calling *client.start()*. Settings that must be set before or after starting the JS8Call application are handled automatically. Settings that affect the JS8Call config file are set immediately. All other settings are set after *client.start()* is called.
 
-        Each settings file section identifies the associated pyjs8call module. Each key in a key-value pair identifies the function in the section/module. A value (if set) in a key-value pair identifies the function argument. Example:
+        Example settings file:
+
         ```
-        [settings]
-        set_freq = 7078000
-        pause_heartbeat_during_qso
-        ```
-        These settings equate to calling `client.settings.set_freq(7078000)` and `client.settings.pause_heartbeat_during_qso()`.
+        [station]
 
-        Supported sections (i.e. pyjs8call modules):
-            - settings
-            - notifications
-            - config
-            - heartbeat
-            - inbox
-            - spots
-            - drift_sync
-            - time_master
+        callsign = CALL0SIGN
+        grid = EM19
+        speed = normal
+        freq = 7078000
+        offset = 1500
+        info = QDX 5W, DIPOLE 30FT
+        append_pyjs8call_info = true
 
-        Settings file formatting:
-            - must have a typical *.ini `key = value` format
-            - must contain a `[pyjs8call.settings]` section header
-            - keys must match the name of a *client.settings* function that changes a setting via the JS8Call config file
-            - if a key is set to a value, the value will be passed to the corresponding pyjs8call.settings function
-            - if a key is **not** set to a value, the corresponding pyjs8call.settings function will be called without arguments
+        [general]
 
-        See *client.settings* for more information on available settings functions. Values are type *str* by default, and are automatically parsed to type *None*, *int*, *bool*, or *list* as needed.
+        groups = @TTP, @AMRRON
+        multi_speed_decode = true
+        autoreply_on_at_startup = true
+        autoreply_confirmation = false
+        allcall = true
+        reporting = true
+        transmit = true
+        idle_timeout = 0
+        distance_units = miles
 
-        Example configuration file format:
-        ```
-        [settings]
-        set_freq = 7078000
-        set_heartbeat_interval = 15
-        enable_heartbeat_acknowledgements
-        enable_multi_decode
-        enable_autoreply_startup
-        disable_autoreply_confirmation
-        set_idle_timeout = 0
-        set_distance_units = miles
-        set_primary_highlight_words = [KT7RUN, OH8STN]
+        [heartbeat]
+
+        enable = true
+        interval = 15
+        acknowledgements = true
+        pause_during_qso = true
+
+        [profile]
+
+        profile = SOTA
+        set_profile_on_exit = Default
+
+        [highlight]
+
+        primary_words = KT7RUN, OH8STN
+        secondary_words = simplyequipped
+
+        [spots]
+
+        watch_stations = KT7RUN, OH8STN
+        watch_groups = @TTP, @AMRRON
 
         [notifications]
 
+        enable = true
+        smtp_server = smtp.gmail.com
+        smtp_port = 465
+        smtp_email_address = email@address.com
+        smtp_password = APP_PASSWORD
+        notification_email_address = 0123456789@vtext.com
+        notification_email_subject = 
+        incoming = true
+        spots = false
+        station_spots = true
+        group_spots = true
         ```
-        Args:
-            config_path (str): Relative or absolute path to configuration file
-        '''
-        #TODO handle multiple function args
-        #TODO handle attributes and function ( callable() )
 
+        Args:
+            settings_path (str): Relative or absolute path to settings file
+
+        Raises:
+            OSError: Specified settings file not found
+        '''
         settings_path = os.path.expanduser(settings_path)
         settings_path = os.path.abspath(settings_path)
 
         if not os.path.exists(settings_path):
-            raise OSError('Specified settings file not found: {}'.format(settings_path))
+            raise FileNotFoundError('Specified settings file not found: {}'.format(settings_path))
 
-        current_section = None
-        with open(settings_path, 'r') as file:
-            for line in file:
-                line = line.strip()
-                # detect section headers
-                if line.startswith('[') and line.endswith(']'):
-                    # convert section space characters to underscore
-                    current_section = line.strip(' []').replace(' ', '_')
-                    self.loaded_settings[current_section] = {}
-                # handle key-value pairs within sections
-                elif current_section is not None and '=' in line:
-                    key, value = line.split('=', 1)
-                    key = key.strip()
-                    value = value.strip()
-                    self.loaded_settings[current_section][key] = value
-                elif current_section is not None:
-                    self.loaded_settings[current_section][key] = None
+        self.loaded_settings = configparser.ConfigParser(interpolation = None)
+        self.loaded_settings.read(settings_path)
 
-        # apply loaded settings
-        for section in self.loaded_settings:
-            for key, value in self.loaded_settings[section].items():
-                # store pending setting for post-start sections
-                if section not in self._setting_section_object_map:
-                    if section not in self._pending_loaded_settings:
-                        self._pending_loaded_settings[section] = {}
-    
-                    self._pending_loaded_settings[section][key] = value
-                    self.pending_loaded_settings = True
-                    continue
-        
-                self._apply_loaded_setting(section, key, value)
+        self.apply_loaded_settings()
 
-    def apply_pending_loaded_settings(self):
-        '''Apply pending loaded settings.
+    def apply_loaded_settings(self, post_start=False):
+        '''Apply loaded pyjs8call settings.
 
-        This function is called internally by *Client.start()*.
-        '''
-        # set post-start section objects
-        post_start_setting_section_object_map = {
-            'heartbeat': self._client.heartbeat,
-            'drift_sync': self._client.drift_sync,
-            'time_master': self._client.time_master,
-            'inbox': self._client.inbox,
-            'spots': self._client.spots
-        }
-        self._setting_section_object_map.update(post_start_setting_section_object_map)
-
-        for section in self._pending_loaded_settings:
-            if section not in self._setting_section_object_map:
-                # drop unsupported sections
-                continue
-        
-            for key, value in self._pending_loaded_settings[section].items():
-                self._apply_loaded_setting(section, key, value)
-
-    def _apply_loaded_setting(self, section, key, value):
-        '''Apply setting loaded from file.
-
-        This function is used internally.
+        This function is called internally by *load_settings()* and *client.start()*.
 
         Args:
-            section (str): Settings file section
-            key (str): Setting file key from key-value pair
-            value (str, None): Setting file value from key-value pair
-
-        Raises:
-            ValueError: Loaded setting key does not match a function from the specified module
-            ValueError: Loading setting failed while calling a function from the specified module
+            post_start (bool): Post start processing if True, pre start processing if False, defaults to False
         '''
-        try:
-            func = getattr(self._setting_section_object_map[section], key)
-        except:
-            raise ValueError('Loaded setting does not match a {} module function: {}'.format(section, func))
+        for section in self.loaded_settings.sections():
+            #skip unsupported section
+            if section not in self._settings_map:
+                continue
 
-        #TODO need a cleaner way to identify functions that need to be called after js8call is running
-        if not self._client.online and 'client.restart' not in func.__doc__:
-            # store pending setting for post-start functions
-            if section not in self._pending_loaded_settings:
-                self._pending_loaded_settings[section] = {}
+            for key, value in self.loaded_settings[section].items():
+                # skip unsupported key
+                if key not in self._settings_map[section]:
+                    continue
 
-            self._pending_loaded_settings[section][key] = value
-            self.pending_loaded_settings = True
-            return
+                # skip post start settings during pre start processing
+                if not post_start and key in self._pre_start_settings[section]:
+                    value = self._parse_loaded_value(value)
+                    self._settings_map[section][key](value)
 
-        # convert config string values to python types
+                # skip pre start settings during post start processing
+                if post_start and not key in self._pre_start_settings[section]:
+                    value = self._parse_loaded_value(value)
+                    self._settings_map[section][key](value)
+
+    def _parse_loaded_value(self, value):
+        '''Parse setting value from string to Python type.
+        
+        Args:
+            value (str): Setting value to parse
+        '''
         if value is None:
-            pass
-        elif value.lower() == 'true':
-            value = True
-        elif value.lower() == 'false':
-            value = False
-        elif value.lower() in ('none', ''):
-            value = None
+            return None
+        elif value.lower() in ['true', 'yes']:
+            return True
+        elif value.lower() in ['false', 'no']:
+            return False
+        elif value.lower() in ('none', '', 'nill', 'null'):
+            return None
         elif value.isnumeric():
-            value = int(value)
-        elif len(value) > 0 and value.strip()[0] == '[' and value.strip()[-1] == ']':
-            # convert string to list
-            value = [item.strip() for item in value.strip(' []').split(',')]
-    
-        if value is None:
-            # call mapped function object with no arg
-            try:
-                func()
-            except Exception:
-                raise ValueError('Loading setting failed while calling {}'.format(key))
+            return int(value)
         else:
-            # call mapped function object with arg
-            try:
-                func(value)
-            except Exception:
-                raise ValueError('Loading setting failed while calling {} with arg: {}'.format(key, value))
-
+            return value
+    
     def enable_heartbeat_networking(self):
         '''Enable heartbeat networking via config file.
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         
-        Note that this function disables JS8Call application heartbeat networking via the config file. To enable the pyjs8call heartbeat network messaging module see pyjs8call.hbnetwork.HeartbeatNetworking.enable_networking().
+        Note that this function disables JS8Call application heartbeat networking via the config file. To enable the pyjs8call heartbeat network messaging module see *client.heartbeat.enable()*.
         '''
         self._client.config.set('Common', 'SubModeHB', 'true')
 
@@ -255,7 +286,7 @@ class Settings:
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
         
-        Note that this function disables JS8Call application heartbeat networking via the config file. To disable the pyjs8call heartbeat network messaging module see pyjs8call.hbnetwork.HeartbeatNetworking.disable_networking().
+        Note that this function disables JS8Call application heartbeat networking via the config file. To disable the pyjs8call heartbeat network messaging module see *client.heartbeat.disable()*.
         '''
         self._client.config.set('Common', 'SubModeHB', 'false')
 
@@ -509,6 +540,57 @@ class Settings:
         # set profile as active
         self._client.config.change_profile(profile)
 
+    def get_groups_list(self):
+        '''Get list of configured JS8Call groups via config file.
+
+        This is a convenience function. See pyjs8call.confighandler for other configuration related functions.
+
+        Returns:
+            list: List of configured group names
+        '''
+        return self._client.config.get_groups()
+
+    def add_group(self, group):
+        '''Add configured JS8Call group via config file.
+        
+        This is a convenience function. See pyjs8call.confighandler for other configuration related functions.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+
+        Args:
+            group (str): Group name
+        '''
+        self._client.config.add_group(group)
+
+    def remove_group(self, group):
+        '''Remove configured JS8Call group via config file.
+        
+        This is a convenience function. See pyjs8call.confighandler for other configuration related functions.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+
+        Args:
+            group (str): Group name
+        '''
+        self._client.config.remove_group(group)
+
+    def set_groups(self, groups):
+        '''Set configured JS8Call groups via config file.
+        
+        This is a convenience function. See pyjs8call.confighandler for other configuration related functions.
+        
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+
+        Args:
+            groups (list): List of group names
+        '''
+        if isinstance(groups, str):
+            groups = groups.split(',')
+
+        groups = ['@' + group.strip(' @') for group in groups]
+        groups = ', '.join(groups)
+        self._client.config.set('Configuration', 'MyGroups', groups)
+
     def get_primary_highlight_words(self):
         '''Get primary highlight words via config file.
 
@@ -534,6 +616,9 @@ class Settings:
         Args:
             words (list): Words that should be highlighted on the JC8Call UI
         '''
+        if isinstance(words, str):
+            words = [word.strip() for word in words.split(',')]
+
         if len(words) == 0:
             words = '@Invalid()'
         else:
@@ -566,6 +651,9 @@ class Settings:
         Args:
             words (list): Words that should be highlighted on the JC8Call UI
         '''
+        if isinstance(words, str):
+            words = [word.strip() for word in words.split(',')]
+
         if len(words) == 0:
             words = '@Invalid()'
         else:

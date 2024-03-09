@@ -221,6 +221,26 @@ class Notifications:
         self._smtp_email = email
         self.__smtp_password = password
 
+    def set_smtp_email_address(self, email):
+        '''Set SMTP server account email address.
+
+        Note: Credentials are not written to disk and must be set each time *pyjs8call* is started. Credentials are stored in plain text internally in a variable. This variable is destroyed when the program is closed.
+
+        Args:
+            email (str): SMTP server username (email address)
+        '''
+        self._smtp_email = email
+
+    def set_smtp_password(self, password):
+        '''Set SMTP server account password.
+
+        Note: Credentials are not written to disk and must be set each time *pyjs8call* is started. Credentials are stored in plain text internally in a variable. This variable is destroyed when the program is closed.
+
+        Args:
+            password (str): SMTP server password
+        '''
+        self.__smtp_password = password
+
     def set_smtp_server(self, server, port = None):
         '''Set SMTP server domain.
 
@@ -240,6 +260,14 @@ class Notifications:
             email (str): Destination (aka "to") email address
         '''
         self._email_destination = email
+
+    def set_smtp_server_port(self, port):
+        '''Set SMTP server port.
+
+        Args:
+            port (int): SMTP server port
+        '''
+        self._smtp_port = int(port)
 
     def set_email_subject(self, subject):
         '''Set email subject.

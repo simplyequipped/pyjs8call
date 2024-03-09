@@ -206,6 +206,17 @@ class SpotMonitor:
         '''
         return self._station_watch_list
 
+    def set_watched_stations(self, stations):
+        '''Set watched stations.
+
+        Args:
+            stations (list): List of station callsigns to watch for
+        '''
+        if isinstance(stations, str):
+            stations = [station.strip() for station in stations.split(',')]
+
+        self._station_watch_list = stations
+
     def get_watched_groups(self):
         '''Get watched groups.
 
@@ -213,6 +224,18 @@ class SpotMonitor:
             list: Watched group designators
         '''
         return self._group_watch_list
+
+    def set_watched_groups(self, groups):
+        '''Set watched groups.
+
+        Args:
+            groups (list): List of group designators to watch for
+        '''
+        if isinstance(groups, str):
+            groups = [group.strip() for group in groups.split(',')]
+
+        self._groups_watch_list = groups
+
 
     def _callback(self, spots):
         '''New spots callback function handling.

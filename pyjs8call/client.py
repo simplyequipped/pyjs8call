@@ -370,9 +370,9 @@ class Client:
         self.outgoing.enable()
         self.schedule.enable()
 
-        # if pending loaded settings exist, load them now
-        if self.settings.pending_loaded_settings:
-            self.settings.apply_pending_loaded_settings()
+        # if settings loaded, apply post start settings
+        if self.settings.loaded_settings is not None:
+            self.settings.apply_loaded_settings(post_start = True)
     
     def exit_tasks(self):
         '''Perform application exit tasks.
@@ -477,6 +477,14 @@ class Client:
         self.js8call.block_until_inactive(age = age)
         self.restart()
         
+    def set_profile_on_exit(self, profile):
+        '''
+        '''
+        if profile not in self.config.get_profile_list():
+            raise ValueError('Config profile \'' + profile + ' \' does not exist')
+
+        self._previous_profile = profile
+
     def activity(self, age=0):
         '''Whether there is outgoing activity.
 
