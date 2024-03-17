@@ -4,7 +4,8 @@
 - Add *pyjs8call.settings.load* function to load settings from an ini file
 - Add option to restore previous JS8Call configuration profile on exit to *pyjs8call.client.settings.set_profile*
 - Add option to specifiy pyjs8call settings file path when initializing *pyjs8call.client*
-- Separate *Settings* and *Callbacks* classes into separate modules
+- Add *message.encode()* and *message.decode()* to suppot sending and receiving byte strings
+- Separate *Settings* and *Callbacks* classes into their own modules
 
 **0.2.2**
 - Add *pyjs8call.propagation* module
