@@ -32,6 +32,7 @@ import os
 import time
 import configparser
 
+import pyjs8call
 from pyjs8call import Message
 
 
@@ -100,7 +101,7 @@ class Settings:
                 'notification_email_subject': lambda value: self._client.notifications.set_email_subject(value),
                 'incoming': lambda value: self._client.notifications.enable_incoming() if value else self._client.notifications.disable_incoming(),
                 'spots': lambda value: self._client.notifications.enable_spots() if value else self._client.notifications.disable_spots(),
-                'station_spots': lambda value: self._client.notificaions.enable_station_spots() if value else self._client.notifications.disable_station_spots(),
+                'station_spots': lambda value: self._client.notifications.enable_station_spots() if value else self._client.notifications.disable_station_spots(),
                 'group_spots': lambda value: self._client.notifications.enable_group_spots() if value else self._client.notifications.disable_group_spots()
             }
         }
