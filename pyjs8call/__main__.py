@@ -122,11 +122,15 @@ if __name__ == '__main__':
     parser.add_argument('--speed', help='Set speed of JS8Call modem, defaults to \'fast\'', default='fast')
     parser.add_argument('--profile', help='Set JS8Call configuration profile, defaults to \'RNS\'', default='RNS')
     parser.add_argument('--callsign', help='Set station callsign')
+    parser.add_argument('--settings', help='File path to pyjs8call settings file (NOT JS8CALL CONFIG FILE)')
     parser.add_argument('--headless', help='Run JS8Call headless (only available on Linux platforms)', action='store_true')
     parser.add_argument('--heartbeat', help='Enable pyjs8call heartbeat networking', action='store_true')
     args = parser.parse_args()
 
     js8call = pyjs8call.Client()
+    
+    if args.settings:
+        js8call.settings.load(args.settings)
 
     if args.profile:
         if args.profile in js8call.settings.get_profile_list():

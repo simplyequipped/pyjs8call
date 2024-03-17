@@ -186,16 +186,11 @@ class Client:
         
         return Client.OOB
 
-    def __init__(self, host='127.0.0.1', port=2442, config_path=None):
+    def __init__(self, settings_path=None, host='127.0.0.1', port=2442, config_path=None):
         '''Initialize JS8Call API client.
 
         Registers the Client.stop function with the atexit module.
         
-        Configures the following settings:
-        - enable autoreply at startup
-        - disable autoreply confirmation
-        - enable transmit
-
         Initializes the following for access prior to starting:
         - js8call (pyjs8call.js8call)
         - config (pyjs8call.confighandler)
@@ -204,6 +199,7 @@ class Client:
         - notifications (pyjs8call.notifications)
 
         Args:
+            settings_path (str): pyjs8call settings file path, defaults to None (see pyjs8call.settings.load() for more information)
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
             port (int): JS8Call TCP port setting, defaults to 2442
             config_path (str): Non-standard JS8Call.ini configuration file path, defaults to None
@@ -271,6 +267,10 @@ class Client:
 
         # stop application and client at exit
         atexit.register(self.stop)
+
+        # load settings if file path specified
+        if settings_path is not None:
+            self.settings.load(settings_path)
 
     def start(self, headless=False, args=None, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
