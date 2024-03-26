@@ -22,11 +22,16 @@
 
 __docformat__ = 'google'
 
-'''stdin/stdout pipe interface for pyjs8call.
+'''pyjs8call command line inteface (CLI) and RNS pipe interface.
 
-Developed for use with the [RNS PipeInterface](https://markqvist.github.io/Reticulum/manual/interfaces.html#pipe-interface), but may have other CLI uses as well.
+See [RNS PipeInterface](https://markqvist.github.io/Reticulum/manual/interfaces.html#pipe-interface) for more information on configuring a RNS PipeInterface.
 
 Try `python -m pyjs8call --help` for command line switch options.
+
+Order of precedence for settings:
+    1. Command line switch settings
+    2. Settings loaded from specified ini file (--settings)
+    3. Configuration profile
 '''
 
 import sys
@@ -111,16 +116,17 @@ def _rns_read_stdin():
 
 
 if __name__ == '__main__':
-    help_epilog =  'PipeInterface must be configured and enabled in the Reticulum config file. '
-    help_epilog += 'If PROFILE does not exist, it is created by copying the \'Default\' profile. '
+    help_epilog =  'RNS PipeInterface must be configured and enabled in the Reticulum config file. '
+    help_epilog += 'If specified profile does not exist, it is created by copying the \'Default\' profile. '
     help_epilog += 'See pyjs8call docs for more information: https://simplyequipped.github.io/pyjs8call'
 
     program = 'python -m pyjs8call'
-    parser = argparse.ArgumentParser(prog=program, description='RNS PipeInterface for pyjs8call package', epilog = help_epilog)
+    parser = argparse.ArgumentParser(prog=program, description='pyjs8call CLI and RNS interface', epilog = help_epilog)
+    parser.add_argument('--rns', help='Enable RNS PipeInterface (sets config profile \'RNS\')', type='store_true')
     parser.add_argument('--freq', help='Set radio frequency in Hz', type=int)
     parser.add_argument('--grid', help='Set station grid square')
     parser.add_argument('--speed', help='Set speed of JS8Call modem, defaults to \'fast\'', default='fast')
-    parser.add_argument('--profile', help='Set JS8Call configuration profile, defaults to \'RNS\'', default='RNS')
+    parser.add_argument('--profile', help='Set JS8Call configuration profile')
     parser.add_argument('--callsign', help='Set station callsign')
     parser.add_argument('--settings', help='File path to pyjs8call settings file (NOT JS8CALL CONFIG FILE)')
     parser.add_argument('--headless', help='Run JS8Call headless (only available on Linux platforms)', action='store_true')
@@ -128,47 +134,51 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     js8call = pyjs8call.Client()
+
+    if args.rns:
+        # set config profile, creating the profile if it does not exist
+        js8call.settings.set_profile('RNS', restore_on_exit=True, create=True)
+    elif args.profile:
+        # set config profile, creating the profile if it does not exist
+        js8call.settings.set_profile(args.profile, create=True)
     
-    if args.settings:
-        js8call.settings.load(args.settings)
-
-    if args.profile:
-        if args.profile in js8call.settings.get_profile_list():
-            js8call.settings.set_profile(args.profile)
-        else:
-            # copy 'Default' profile
-            js8call.config.create_new_profile(args.profile)
-
-    # set config after setting profile to avoid overwriting settings
+    if args.settings: js8call.settings.load(args.settings)
+    # set config settings after setting profile and loading settings to avoid overwriting
     if args.callsign: js8call.settings.set_station_callsign(args.callsign)
     if args.speed: js8call.settings.set_speed(args.speed)
 
-    # allow freetext
-    js8call.config.set('Configuration', 'AvoidForcedIdentify', 'true')
-    # add @RNS group to station groups
-    js8call.config.add_group('@RNS')
-    # disable idle timeout
-    js8call.settings.set_idle_timeout(0)
+    if args.rns:
+        # allow freetext
+        js8call.config.set('Configuration', 'AvoidForcedIdentify', 'true')
+        # add @RNS group to station groups
+        js8call.settings.add_group('@RNS')
+        # disable idle timeout
+        js8call.settings.set_idle_timeout(0)
 
     # start js8call, headless if specified
     js8call.start(headless = args.headless)
 
+    time.sleep(1)
     if args.freq: js8call.settings.set_freq(args.freq)
     if args.grid: js8call.settings.set_station_grid(args.grid)
     if args.heartbeat: js8call.heartbeat.enable()
 
-    # registered for incoming type RX.DIRECTED by default
-    js8call.callback.register_incoming(_rns_write_stdout)
+    if args.rns:
+        # registered for incoming type RX.DIRECTED by default
+        js8call.callback.register_incoming(_rns_write_stdout)
+    
+        thread = threading.Thread(target=_rns_read_stdin)
+        thread.daemon = True
+        thread.start()
+    else:
+        print('pyjs8call modem started, press Ctrl-C to stop the modem...')
 
-    thread = threading.Thread(target=_rns_read_stdin)
-    thread.daemon = True
-    thread.start()
-
-    # modem is stopped when EOF reached on stdin pipe
+    # modem is stopped when EOF reached on RNS stdin pipe
     while js8call.connected():
         try:
             time.sleep(0.25)
         except KeyboardInterrupt:
-            print()
+            js8call.stop()
+            print('pyjs8call modem stopped')
             break
     
