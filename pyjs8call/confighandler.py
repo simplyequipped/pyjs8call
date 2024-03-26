@@ -360,7 +360,7 @@ class ConfigHandler:
 
         Args:
             new_profile (str): Name of new profile to create
-            copy_profile (str): Name of an existing profile to copy when creating the new profile
+            copy_profile (str): Name of an existing profile to copy when creating the new profile, defaults to 'Default'
 
         Raises:
             Exception: Specified profile to be copied does not exist
