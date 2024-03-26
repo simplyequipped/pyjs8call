@@ -392,14 +392,19 @@ class Client:
             
         self.config.write()
 
-    def stop(self):
+    def stop(self, terminate_js8call=True):
         '''Stop client, modules, and JS8Call application.
 
         Write to the configuration file, stop all threads, close the TCP socket, and kill the JS8Call application.
+
+        Args:
+            terminate_js8call (bool): Whether to terminate the JS8Call application, defaults to True
         '''
         self.online = False
         self.exit_tasks()
-        
+
+        self.js8call.terminate_js8call = terminate_js8call
+            
         try:
             return self.js8call.stop()
         except Exception:
