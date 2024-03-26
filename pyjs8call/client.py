@@ -102,6 +102,7 @@ class Client:
         settings (pyjs8call.client.Settings): Configuration setting function reference object
         clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages, defaults to True
         monitor_outgoing (bool): Monitor outgoing message status (see pyjs8call.outgoingmonitor), defaults to True
+        autodetect_outgoing_directed_command (bool: Autodetect and handle commands in outgoing directed messages, defaults to True
         max_spot_age (int): Maximum age (in seconds) of spots to store before dropping old spots, defaults to 7 days
         online (bool): Whether the JS8Call application and pyjs8call interface are online
         host (str): IP address matching JS8Call *TCP Server Hostname* setting
@@ -217,6 +218,7 @@ class Client:
         self.process_incoming = None
         self.process_outgoing = None
         self.clean_directed_text = True
+        self.autodetect_outgoing_directed_command = True
         self.monitor_outgoing = True
         self.max_spot_age = 7 * 24 * 60 * 60 # 7 days
         self._previous_profile = None
@@ -624,9 +626,9 @@ class Client:
         
         Message format: *MESSAGE*
         
-        *process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
+        *Client.process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             message (str): Message text to send
@@ -655,10 +657,12 @@ class Client:
         '''Send bytes via JS8Call message.
         
         Message format: *MESSAGE*
-        
-        *process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
+        
+        *Client.process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
+
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
@@ -668,7 +672,7 @@ class Client:
             pyjs8call.message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
-        msg = Message(destination = destination, origin = self.settings.get_station_callsign())
+        msg = Message(destination, origin = self.settings.get_station_callsign())
         # decode message bytes to js8call supported characters
         msg.decode(message)
         
@@ -693,9 +697,9 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
         
-        *process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
+        *Client.process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *Client.monitor_outgoing* is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
@@ -726,9 +730,11 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
         
-        *process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
+        *Client.process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *Client.monitor_outgoing* is True (default).
+
+        **Version 0.2.3:** *Client.autodetect_outgoing_directed_command* indicates that outgoing directed messages will be analyzed for JS8Call commands. If a command is found, a command message is constructed automatically. This simplifies outgoing message handling for applications built on top of pyjs8call.
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
@@ -737,8 +743,24 @@ class Client:
         Returns:
             pyjs8call.message: Constructed message object
         '''
+        cmd_found = False
+        
+        if self.autodetect_outgoing_directed_command:
+            # sort decending by command length to avoid matching a partial command
+            msg_cmds = sorted(pyjs8call.Message.COMMANDS, key=len, reverse=True)
+            for cmd in msg_cmds:
+                if message.startswith(cmd):
+                    cmd_found = True
+                    message = message.replace(cmd, '').strip()
+                    if len(text) == 0:
+                        message = None
+                    break
+    
         # msg.type = Message.TX_SEND_MESSAGE by default
-        msg = Message(destination, value = message, origin = self.settings.get_station_callsign())
+        if cmd_found:
+            msg = Message(destination, command, message, self.settings.get_station_callsign())
+        else:
+            msg = Message(destination, value = message, origin = self.settings.get_station_callsign())
         
         # custom processing of outgoing messages
         if self.process_outgoing is not None:
