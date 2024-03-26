@@ -519,7 +519,7 @@ class Settings:
         '''
         return self._client.config.get_profile_list()
 
-    def set_profile(self, profile, restore_on_exit=False):
+    def set_profile(self, profile, restore_on_exit=False, create=False):
         '''Set active JS8Call configuration profile via config file.
         
         This is a convenience function. See pyjs8call.confighandler for other configuration related functions.
@@ -529,18 +529,36 @@ class Settings:
         Args:
             profile (str): Profile name
             restore_on_exit (bool): Restore previous profile on exit, defaults to False
+            create (bool): Create a new profile (copying from Default) if the specified profile does not exist, defaults to False
 
         Raises:
             ValueError: Specified profile name does not exist
         '''
-        if profile not in self._client.config.get_profile_list():
-            raise ValueError('Config profile \'' + profile + '\' does not exist')
+        if profile not in self.get_profile_list():
+            if create:
+                # copy from Default profile
+                self.create_new_profile(profile)
+            else:
+                raise ValueError('Config profile \'' + profile + '\' does not exist')
 
         if restore_on_exit:
             self._client._previous_profile = self.get_profile()
             
         # set profile as active
         self._client.config.change_profile(profile)
+
+    def create_new_profile(self, new_profile, copy_profile='Default'):
+        '''Create new JS8Call configuration profile.
+            
+        This is a convenience function. See pyjs8call.confighandler for other configuration related functions.
+            
+        It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+    
+        Args:
+            new_profile (str): Name of new profile to create
+            copy_profile (str): Name of an existing profile to copy when creating the new profile, defaults to 'Default'
+        '''
+        self._client.config.create_new_profile(new_profile, copy_profile)
 
     def get_groups_list(self):
         '''Get list of configured JS8Call groups via config file.
