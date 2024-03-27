@@ -1159,13 +1159,12 @@ class Client:
         if age is None:
             age = self.config.get('Configuration', 'CallsignAging', int)
 
-        age *= 60 # minutes to seconds
-
         msg = Message()
         msg.type = Message.RX_GET_CALL_ACTIVITY
         self.js8call.send(msg)
         call_activity = self.js8call.watch('call_activity')
 
+        age *= 60 # minutes to seconds
         hearing = self.hearing(age)
         heard_by = self.heard_by(age , hearing)
         now = time.time()
@@ -1179,26 +1178,77 @@ class Client:
             if age != 0 and (now - activity['timestamp']) > age:
                 continue
 
-            if activity['origin'] in hearing:
-                activity['hearing'] = hearing[activity['origin']]
-            else:
-                activity['hearing'] = []
-
-            if activity['origin'] in heard_by:
-                activity['heard_by'] = heard_by[activity['origin']]
-            else:
-                activity['heard_by'] = []
-
-            if activity['grid'] not in (None, ''):
-                activity['distance'] = self.grid_distance(activity['grid'])
-            else:
-                activity['distance'] = (None, None, None)
+            activity['hearing'] = hearing[activity['origin']] if activity['origin'] in hearing else []
+            activity['heard_by'] = hearing[activity['origin']] if activity['origin'] in heard_by else []
+            activity['distance'] = self.grid_distance(activity['grid']) if activity['grid'] not in (None, '') else (None, None, None)
 
             spot = self.spots.filter(origin = activity['origin'], age = age, count = 1)
-            if len(spot) and isinstance(spot[0].get('speed'), int):
-                activity['speed'] = self.settings.submode_to_speed(spot[0].get('speed'))
-            else:
-                activity['speed'] = ''
+            activity['speed'] = self.settings.submode_to_speed(spot[0].get('speed')) if len(spot) and isinstance(spot[0].get('speed'), int) else ''
+
+            call_activity.append(activity)
+
+        call_activity.sort(key = lambda activity: activity['timestamp'], reverse = True)
+        return call_activity
+        
+    def get_call_activity_from_spots(self, age=None):
+        '''Get JS8Call call activity.
+
+        Same usage as *client.get_call_activity()* except data is pulled from stored spots instead of using the JS8Call API. This function may be faster than *client.get_call_activity()*.
+
+        To get or set JS8Call callsign activity aging from the configuration file:
+        `client.config.get('Configuration', 'CallsignAging', int)`
+        `client.config.set('Configuration', 'CallsignAging', 120) # 120 minutes`
+
+        See *client.get_distance()* for more information on the value and format of *distance*.
+
+        Each call activity item is a dictionary with the following keys:
+
+        | Key | Value Type |
+        | -------- | -------- |
+        | origin | str |
+        | grid | str |
+        | snr | int |
+        | time (UTC) | int |
+        | timestamp (local) | int |
+        | local_time_str | str |
+        | speed | str |
+        | hearing | list |
+        | heard_by | list |
+        | distance | tuple |
+
+        Args:
+            age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
+
+        Returns:
+            list: Call activity items, sorted decending by *time* (recent first)
+
+            If grid is not set, distance is *(None, None, None)*.
+        '''
+        if age is None:
+            age = self.config.get('Configuration', 'CallsignAging', int)
+
+        age *= 60 # minutes to seconds
+        spots = self.spots.filter(age = age)
+        hearing = self.hearing(age, spots)
+        heard_by = self.heard_by(age , hearing)
+        now = time.time()
+        call_activity = []
+
+        for spot in spots:
+            activity = {}
+            activity['origin'] = spot.get('origin')
+            activity['grid'] = spot.get('grid')
+            activity['snr'] = spot.get('snr')
+            activity['time'] = spot.get('time')
+            activity['timestamp'] = spot.get('timestamp')
+            activity['local_time_str'] = spot.get('local_time_str')
+            activity['speed'] = spot.get('speed')
+            activity['distance'] = spot.get('distance')
+
+            activity['hearing'] = hearing[activity['origin']] if activity['origin'] in hearing else []
+            activity['heard_by'] = hearing[activity['origin']] if activity['origin'] in heard_by else []
+            activity['distance'] = self.grid_distance(activity['grid']) if activity['grid'] not in (None, '') else (None, None, None)
+            activity['speed'] = self.settings.submode_to_speed(activity['speed']) if activity['speed'] is not None else ''
 
             call_activity.append(activity)
 
@@ -1415,14 +1465,17 @@ class Client:
 
         return rx_messages
     
-    def hearing(self, age=None):
+    def hearing(self, age=None, spots=None):
         '''Which stations other stations are hearing.
+
+        If calling both *client.spots.filter()* and *client.hearing()*, it is more efficient to pass the result of *client.spots.filter()* to *client.hearing()*. Otherwise, *client.hearing()* will call *client.spots.filter()* again internally.
 
         Args:
             age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
 
         Returns:
             dict: Example format `{'station': ['station', ...], ...}`
+            spots: Spots to process (ex. from *client.spots.filter()*), defaults to None
         '''
         if age is None:
             age = self.config.get('Configuration', 'CallsignAging', int)
@@ -1431,8 +1484,11 @@ class Client:
             
         callsign = self.settings.get_station_callsign()
         hearing = {}
+
+        if spots is None:
+            spots = self.spots.filter(age = age)
         
-        for spot in self.spots.filter(age = age):
+        for spot in spots:
             # only process msgs with directed commands
             if spot.cmd is None:
                 continue
