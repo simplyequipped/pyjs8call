@@ -44,7 +44,7 @@ class Propagation:
         '''
         self._client = client
     
-    def grids_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None):
+    def grids_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None, normalize_snr=False):
         '''Parse spot messages into propagation dataset for grid squares.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
@@ -56,6 +56,7 @@ class Propagation:
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
             start_time (float, datetime.datetime): Dataset starting time, defaults to None
             end_time (float, datetime.datetime): Dataset ending time, defaults to None
+            normalize_snr (bool): Normalize SNR based on JS8Call modem speed if True, defaults to False
 
         Returns:
             list: `[ (GRID, lat, lon, SNR, timestamp), ... ]`
@@ -89,11 +90,12 @@ class Propagation:
         for spot in spots:
             if spot.age() > min_age and spot.grid not in (None, ''):
                 lat, lon = self._client.grid_to_lat_lon(spot.grid)
-                dataset.append( (spot.grid, lat, lon, spot.snr, spot.timestamp) )
+                snr = self.normalize_snr_by_speed(spot.snr, spot.speed) if normalize_snr else spot.snr
+                dataset.append( (spot.grid, lat, lon, snr, spot.timestamp) )
 
         return dataset
 
-    def grids_median_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None):
+    def grids_median_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None, normalize_snr=False):
         '''Parse spot messages into median propagation dataset for grid squares.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
@@ -105,6 +107,7 @@ class Propagation:
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
             start_time (float, datetime.datetime): Dataset starting time, defaults to None
             end_time (float, datetime.datetime): Dataset ending time, defaults to None
+            normalize_snr (bool): Normalize SNR based on JS8Call modem speed if True, defaults to False
 
         Returns:
             list: `[ (GRID, lat, lon, SNR, timestamp), ... ]`
@@ -140,8 +143,9 @@ class Propagation:
                 if spot.grid not in dataset:
                     lat, lon = self._client.grid_to_lat_lon(spot.grid)
                     dataset[spot.grid] = {'snrs': [], 'timestamp': 0, 'lat': lat, 'lon': lon}
-                    
-                dataset[spot.grid]['snrs'].append(spot.snr)
+
+                snr = self.normalize_snr_by_speed(spot.snr, spot.speed) if normalize_snr else spot.snr
+                dataset[spot.grid]['snrs'].append(snr)
 
                 # keep only most recent timestamp
                 if spot.timestamp > dataset[spot.grid]['timestamp']:
@@ -149,7 +153,7 @@ class Propagation:
 
         return [(grid, data['lat'], data['lon'], round(statistics.median(data['snrs'])), data['timestamp']) for grid, data in dataset.items()]
 
-    def grid_median_snr(self, grid, max_age=30, min_age=0, start_time=None, end_time=None):
+    def grid_median_snr(self, grid, max_age=30, min_age=0, start_time=None, end_time=None, normalize_snr=False):
         '''Parse spot messages into median SNR for specified grid square.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
@@ -162,6 +166,7 @@ class Propagation:
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
             start_time (float, datetime.datetime): Dataset starting time, defaults to None
             end_time (float, datetime.datetime): Dataset ending time, defaults to None
+            normalize_snr (bool): Normalize SNR based on JS8Call modem speed if True, defaults to False
 
         Returns:
             tuple: `(SNR, timestamp)`
@@ -192,7 +197,8 @@ class Propagation:
 
         for spot in spots:
             if spot.age() > min_age:
-                snrs.append(spot.snr)
+                snr = self.normalize_snr_by_speed(spot.snr, spot.speed) if normalize_snr else spot.snr
+                snrs.append(snr)
 
                 # keep only most recent timestamp
                 if spot.timestamp > timestamp:
@@ -200,7 +206,7 @@ class Propagation:
 
         return (round(statistics.median(snrs)), timestamp)
         
-    def origins_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None):
+    def origins_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None, normalize_snr=False):
         '''Parse spot messages into propagation dataset for origin callsigns.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
@@ -212,6 +218,7 @@ class Propagation:
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
             start_time (float, datetime.datetime): Dataset starting time, defaults to None
             end_time (float, datetime.datetime): Dataset ending time, defaults to None
+            normalize_snr (bool): Normalize SNR based on JS8Call modem speed if True, defaults to False
 
         Returns:
             list: `[ (ORIGIN, SNR, timestamp), ... ]`
@@ -242,11 +249,12 @@ class Propagation:
 
         for spot in spots:
             if spot.age() > min_age and spot.origin not in (None, ''):
-                dataset.append( (spot.origin, spot.snr, spot.timestamp) )
+                snr = self.normalize_snr_by_speed(spot.snr, spot.speed) if normalize_snr else spot.snr
+                dataset.append( (spot.origin, snr, spot.timestamp) )
 
         return dataset
 
-    def origins_median_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None):
+    def origins_median_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None, normalize_snr=False):
         '''Parse spot messages into median propagation dataset for origin callsigns.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
@@ -258,6 +266,7 @@ class Propagation:
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
             start_time (float, datetime.datetime): Dataset starting time, defaults to None
             end_time (float, datetime.datetime): Dataset ending time, defaults to None
+            normalize_snr (bool): Normalize SNR based on JS8Call modem speed if True, defaults to False
 
         Returns:
             list: `[ (ORIGIN, SNR, timestamp), ... ]`
@@ -291,7 +300,8 @@ class Propagation:
                 if spot.origin not in dataset:
                     dataset[spot.origin] = {'snrs': [], 'timestamp': 0}
                     
-                dataset[spot.origin]['snrs'].append(spot.snr)
+                snr = self.normalize_snr_by_speed(spot.snr, spot.speed) if normalize_snr else spot.snr
+                dataset[spot.origin]['snrs'].append(snr)
 
                 # keep only most recent timestamp
                 if spot.timestamp > dataset[spot.origin]['timestamp']:
@@ -299,7 +309,7 @@ class Propagation:
 
         return [(origin, round(statistics.median(data['snrs'])), data['timestamp']) for origin, data in dataset.items()]
 
-    def origin_median_snr(self, origin, max_age=30, min_age=0, start_time=None, end_time=None):
+    def origin_median_snr(self, origin, max_age=30, min_age=0, start_time=None, end_time=None, normalize_snr=False):
         '''Parse spot messages into median SNR for specified origin callsign.
 
         If *max_age* and *min_age* are zero, all stored spots are used to build the dataset.
@@ -312,6 +322,7 @@ class Propagation:
             min_age (int): Minimum age of spot messages in minutes, defaults to 0
             start_time (float, datetime.datetime): Dataset starting time, defaults to None
             end_time (float, datetime.datetime): Dataset ending time, defaults to None
+            normalize_snr (bool): Normalize SNR based on JS8Call modem speed if True, defaults to False
 
         Returns:
             tuple: `(SNR, timestamp)`
@@ -342,10 +353,37 @@ class Propagation:
 
         for spot in spots:
             if spot.age() > min_age:
-                snrs.append(spot.snr)
+                snr = self.normalize_snr_by_speed(spot.snr, spot.speed) if normalize_snr else spot.snr
+                snrs.append(snr)
 
                 # keep only most recent timestamp
                 if spot.timestamp > timestamp:
                     timestamp = spot.timestamp
 
         return (round(statistics.median(snrs)), timestamp)
+    
+    def normalize_snr_by_speed(self, snr, speed, normalize_to_speed='normal'):
+        '''Noramlize SNR based on JS8Call modem speed.
+        '''
+        snr_range = {
+            'slow': (30, -28),
+            'normal': (30, -24),
+            'fast': (30, -20),
+            'turbo': (30, -18)
+        }
+
+        if speed not in snr_range:
+            raise ValueError('Invalid SNR speed: {}'.format(speed))
+        if normalize_to_speed not in snr_range:
+            raise ValueError('Invalid normalization speed: {}'.format(normalize_to_speed))
+        
+        max_range, min_range = snr_range[speed]
+        norm_max_range, norm_min_range = snr_range[normalize_to_speed]
+        normalized_snrs = []
+
+        for snr in snrs:
+            # linear scaling
+            normalized_snr = norm_max_range + ((norm_min_range - norm_max_range) * (snr - max_range)) / (min_range - max_range)
+            normalized_snrs.append(normalized_snr)
+            
+        return normalized_snrs
