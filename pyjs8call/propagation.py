@@ -58,9 +58,11 @@ class Propagation:
             end_time (float, datetime.datetime): Dataset ending time, defaults to None
 
         Returns:
-            list: `[ (GRID, SNR, timestamp), ... ]`
+            list: `[ (GRID, lat, lon, SNR, timestamp), ... ]`
 
             *GRID* is the grid square of the spot
+            *lat* is the latitude of the grid square of the spot
+            *lon* is the longitude of the grid square of the spot
             *SNR* is the SNR of the spot
             *timestamp* is the local timestamp of when the spot occured
         '''
@@ -86,7 +88,8 @@ class Propagation:
 
         for spot in spots:
             if spot.age() > min_age and spot.grid not in (None, ''):
-                dataset.append( (spot.grid, spot.snr, spot.timestamp) )
+                lat, lon = self._client.grid_to_lat_lon(spot.grid)
+                dataset.append( (spot.grid, lat, lon, spot.snr, spot.timestamp) )
 
         return dataset
 
@@ -104,9 +107,11 @@ class Propagation:
             end_time (float, datetime.datetime): Dataset ending time, defaults to None
 
         Returns:
-            list: `[ (GRID, SNR, timestamp), ... ]`
+            list: `[ (GRID, lat, lon, SNR, timestamp), ... ]`
 
             *GRID* is the grid square of the spot
+            *lat* is the latitude of the grid square of the spot
+            *lon* is the longitude of the grid square of the spot
             *SNR* is the median SNR of GRID spots over the specified time period
             *timestamp* is the most recent local timestamp of GRID spots
         '''
@@ -133,7 +138,8 @@ class Propagation:
         for spot in spots:
             if spot.age() > min_age and spot.grid not in (None, ''):
                 if spot.grid not in dataset:
-                    dataset[spot.grid] = {'snrs': [], 'timestamp': 0}
+                    lat, lon = self._client.grid_to_lat_lon(spot.grid)
+                    dataset[spot.grid] = {'snrs': [], 'timestamp': 0, 'lat': lat, 'lon': lon}
                     
                 dataset[spot.grid]['snrs'].append(spot.snr)
 
@@ -141,7 +147,7 @@ class Propagation:
                 if spot.timestamp > dataset[spot.grid]['timestamp']:
                     dataset[spot.grid]['timestamp'] = spot.timestamp
 
-        return [(grid, round(statistics.median(data['snrs'])), data['timestamp']) for grid, data in dataset.items()]
+        return [(grid, data['lat'], data['lon'], round(statistics.median(data['snrs'])), data['timestamp']) for grid, data in dataset.items()]
 
     def grid_median_snr(self, grid, max_age=30, min_age=0, start_time=None, end_time=None):
         '''Parse spot messages into median SNR for specified grid square.
