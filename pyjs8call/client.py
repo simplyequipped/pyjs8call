@@ -1362,14 +1362,11 @@ class Client:
             if ' - (' not in msg:
                 continue
 
-            parts = msg.split('-')
-            # handle dash/hyphen/negative in message text
-            if len(parts) > 3:
-                parts[2] = '-'.join(parts[2:])
-                parts = parts[:3]
-
+            # limit splits to avoid splitting message text
+            # 2 splits = 3 parts (timestamp, offset, text)
+            parts = msg.split('-', maxsplit=2)
+            
             data = {}
-
             data['time'] = parts[0].strip()
             data['offset'] = int(parts[1].strip(' \n()'))
             data['text'] = parts[2].strip()
