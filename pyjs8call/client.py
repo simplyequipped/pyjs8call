@@ -1152,7 +1152,7 @@ class Client:
             age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
 
         Returns:
-            list: Call activity items, sorted decending by *time* (recent first)
+            list: Call activity items, sorted decending by *timestamp* (recent first)
 
             If grid is not set, distance is *(None, None, None)*.
         '''
@@ -1183,7 +1183,7 @@ class Client:
             activity['distance'] = self.grid_distance(activity['grid']) if activity['grid'] not in (None, '') else (None, None, None)
 
             spot = self.spots.filter(origin = activity['origin'], age = age, count = 1)
-            activity['speed'] = self.settings.submode_to_speed(spot[0].get('speed')) if len(spot) and isinstance(spot[0].get('speed'), int) else ''
+            activity['speed'] = self.settings.submode_to_speed(spot[0].get('speed')) if len(spot) and isinstance(spot[0].get('speed'), int) else None
 
             call_activity.append(activity)
 
@@ -1220,7 +1220,7 @@ class Client:
             age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
 
         Returns:
-            list: Call activity items, sorted decending by *time* (recent first)
+            list: Call activity items, sorted decending by *timestamp* (recent first)
 
             If grid is not set, distance is *(None, None, None)*.
         '''
@@ -1248,7 +1248,7 @@ class Client:
             activity['hearing'] = hearing[activity['origin']] if activity['origin'] in hearing else []
             activity['heard_by'] = hearing[activity['origin']] if activity['origin'] in heard_by else []
             activity['distance'] = self.grid_distance(activity['grid']) if activity['grid'] not in (None, '') else (None, None, None)
-            activity['speed'] = self.settings.submode_to_speed(activity['speed']) if activity['speed'] is not None else ''
+            activity['speed'] = self.settings.submode_to_speed(activity['speed']) if activity['speed'] is not None else None
 
             call_activity.append(activity)
 
