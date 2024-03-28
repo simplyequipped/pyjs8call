@@ -46,46 +46,6 @@ class Callbacks:
     '''Callback functions container.
     
     This class is initilized by pyjs8call.client.Client.
-
-    Attributes:
-        incoming (dict): Incoming message callback function lists organized by message type
-        outgoing (func): Outgoing message status change callback function, defaults to None
-        spots (list): New spots callback funtions, defaults to empty list
-        station_spot (list): Watched station spot callback functions, defaults to empty list
-        group_spot (list): Watched group spot callback functions, defaults to empty list
-        window (func): rx/tx window transition callback function, defaults to None
-        inbox (func): New inbox message callback function, defaults to None
-        schedule (func): Schedule entry activation callback function, defaults to None
-
-    *incoming* structure: *{type: [callback, ...], ...}*
-    - *type* is an incoming  message type (see pyjs8call.message for information on message types)
-    - *callback* signature: *func(msg)* where *msg* is a pyjs8call.message object
-
-    *outgoing* callback signature: *func(msg)* where *msg* is a pyjs8call.message object
-    - Called by pyjs8call.txmonitor
-
-    *spots* structure: *[callback, ...]*
-    - callback signature: *func( list(msg, ...) )* where *msg* is a pyjs8call.message object
-    - Called by pyjs8call.spotmonitor
-
-    *station_spot* structure: *[callback, ...]*
-    - callback signature: *func(msg)* where *msg* is a pyjs8call.message object
-    - Called by pyjs8call.spotmonitor
-
-    *group_spot* structure: *[callback, ...]*
-    - callback signature: *func(msg)* where *msg* is a pyjs8call.message object
-    - Called by pyjs8call.spotmonitor
-
-    *window* callback signature: *func()*
-    - Called by pyjs8call.windowmonitor
-
-    *inbox* callback signature: *func(msgs)* where *msgs* is a list of *dict* message items
-    - See *client.get_inbox_messages()* for message item *dict* key details
-    - Called by pyjs8call.inboxmonitor
-
-    *schedule* callback signature: *func(sch)* where *sch* is a pyjs8call.schedule.Schedule object
-    - See *pyjs8call.schedule.Schedule* for object property details
-    - Called by pyjs8call.schedulemonitor
     '''
 
     def __init__(self):
@@ -95,16 +55,47 @@ class Callbacks:
             pyjs8call.client.Callbacks: Constructed callback object
         '''
         self.outgoing = None
+        '''func: Outgoing message status change callback function, defaults to None
+        *outgoing* callback signature: *func(msg)* where *msg* is a *pyjs8call.Message* object
+        - Called by pyjs8call.txmonitor'''
         self.spots = []
+        '''list: New spots callback funtions, defaults to empty list
+        *spots* structure: *[callback, ...]*
+        - callback signature: *func( list(msg, ...) )* where *msg* is a *pyjs8call.Message* object
+        - Called by pyjs8call.spotmonitor'''
         self.station_spot = []
+        '''list: Watched station spot callback functions, defaults to empty list
+        *station_spot* structure: *[callback, ...]*
+        - callback signature: *func(msg)* where *msg* is a *pyjs8call.Message* object
+        - Called by pyjs8call.spotmonitor'''
         self.group_spot = []
+        '''list: Watched group spot callback functions, defaults to empty list
+        *group_spot* structure: *[callback, ...]*
+        - callback signature: *func(msg)* where *msg* is a *pyjs8call.Message* object
+        - Called by pyjs8call.spotmonitor'''
         self.window = None
+        '''func: JS8Call rx/tx window transition callback function, defaults to None
+        *window* callback signature: *func()*
+        - Called by pyjs8call.windowmonitor'''
         self.inbox = None
+        '''func: New inbox message callback function, defaults to None
+        *inbox* callback signature: *func(msgs)* where *msgs* is a list of *dict* message items
+        - See *client.get_inbox_messages()* for message item *dict* key details
+        - Called by pyjs8call.inboxmonitor'''
         self.schedule = None
+        '''func: Schedule entry activation callback function, defaults to None
+        *schedule* callback signature: *func(sch)* where *sch* is a *pyjs8call.Schedule* object
+        - See *pyjs8call.Schedule* for object property details
+        - Called by pyjs8call.schedulemonitor'''
         self.incoming = {
             Message.RX_DIRECTED: [],
         }
+        '''dict: Mapping of *pyjs8call.Message* types to incoming message callback functions list
+        *incoming* structure: *{type: [callback, ...], ...}*
+        - *type* is an incoming  message type (see pyjs8call.Message for information on message types)
+        - *callback* signature: *func(msg)* where *msg* is a *pyjs8call.Message* object'''
         self.commands = {}
+        '''dict: Mapping of custom commands strings to custom command callback functions list'''
 
     def register_incoming(self, callback, message_type=Message.RX_DIRECTED):
         '''Register incoming message callback function.
@@ -162,25 +153,24 @@ class Callbacks:
     def register_command(self, cmd, callback):
         '''Register command callback function.
 
-        Note: All JS8Call commands must have a leading space. Custom command strings also require a leading space for consistent internal handling.
+        Note: All JS8Call commands must have a leading space. Custom command strings also require a leading space for consistent internal handling. If the specified command string does not have a leading space, one will be added.
 
         Note: Custom commands are only processed for directed messages.
 
         Args:
-            cmd (str): Command string (with leading space)
+            cmd (str): Command string
             callback (func): Callback function object
 
         *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
 
         Raises:
             ValueError: Specified command string is an exsiting JS8Call command
-            ValueError: Specified command string does not have a leading space
         '''
         if cmd in Message.COMMANDS:
             raise ValueError('\'' + cmd + '\' is an existing JS8Call command')
 
-        if cmd[0] != ' ':
-            raise ValueError('All JS8Call commands must have a leading space')
+        if not cmd.startswith(' '):
+            cmd = ' ' + cmd
 
         if cmd not in self.commands:
             self.commands[cmd] = []
