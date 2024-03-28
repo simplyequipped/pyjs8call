@@ -116,7 +116,7 @@ class Client:
         '2.5mm':  (119980000000, 120020000000),
         '2mm':    (142000000000, 149000000000),
         '1mm':    (241000000000, 250000000000),
-        Client.OOB: (0, 0)
+        OOB: (0, 0)
     }
     '''dict: Mapping of frequency band name to minimum and maximum frequencies'''
     
@@ -756,13 +756,13 @@ class Client:
                 if message.startswith(cmd):
                     cmd_found = True
                     message = message.replace(cmd, '').strip()
-                    if len(text) == 0:
+                    if len(message) == 0:
                         message = None
                     break
     
         # msg.type = Message.TX_SEND_MESSAGE by default
         if cmd_found:
-            msg = Message(destination, command, message, self.settings.get_station_callsign())
+            msg = Message(destination, cmd, message, self.settings.get_station_callsign())
         else:
             msg = Message(destination, value = message, origin = self.settings.get_station_callsign())
         
