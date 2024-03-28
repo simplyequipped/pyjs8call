@@ -100,6 +100,7 @@ class Client:
         notifications (pyjs8call.notifications): Send email notifications via SMTP server
         callback (pyjs8call.client.Callbacks): Callback function reference object
         settings (pyjs8call.client.Settings): Configuration setting function reference object
+        restarting (bool): True if the JS8Call application is currently being restarted, False otherwise
         clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages, defaults to True
         monitor_outgoing (bool): Monitor outgoing message status (see pyjs8call.outgoingmonitor), defaults to True
         autodetect_outgoing_directed_command (bool: Autodetect and handle commands in outgoing directed messages, defaults to True
@@ -414,6 +415,8 @@ class Client:
 
     def restart(self):
         '''Stop and restart the JS8Call application and the associated TCP socket.
+
+        The *timer.out* file continues to grow while the JS8Call application is running, eventually consuming all available disk space and causing application errors. If the *timer.out* file exists, it is removed before restarting the application.
 
         Settings, local state, and spots are preserved.
         '''
