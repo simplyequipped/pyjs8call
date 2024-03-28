@@ -24,7 +24,7 @@
 
 **CAUTION: Enabling inbox monitoring will cause your radio to transmit almost immediately. Consider cabling and antenna connections prior to enabling inbox monitoring.**
 
-Autoreply on at startup must be enabled, and autoreply confirmation must be disabled, in order to allow periodic message queries or automatic responses to *MSG* commands.
+Autoreply (aka autoreply on at startup) must be enabled, and autoreply confirmation must be disabled, in order to allow periodic message queries or automatic responses to *MSG* commands.
 
 Set `client.callback.inbox` to receive new inbox messages as they arrive. See pyjs8call.client.Callbacks for *inbox* callback function details.
 '''
@@ -46,7 +46,6 @@ class InboxMonitor:
     Note that inbox functions in this class access the JS8Call sqlite3 inbox database directly.
     
     The JS8Call sqlite3 inbox database has the following schema:
-    
     ```
     CREATE TABLE inbox_v1 (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
