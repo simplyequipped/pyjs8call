@@ -54,13 +54,13 @@ import configparser
 class ConfigHandler:
     '''JS8Call.ini configuration file handler.
 
-    Default configuration file path is QT5 *QStandardPaths::ConfigLocation* file path.
+    Default configuration file base path is QT5 *QStandardPaths::ConfigLocation*:
 
     | Platform | Configuration File Path |
     | -------- | -------- |
     | Windows | C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call\\JS8Call.ini |
-    | Mac OS | $HOME/Library/Preferences/JS8Call.ini |
-    | Unix | $HOME/.config/JS8Call.ini |
+    | Mac OS | ~/Library/Preferences/JS8Call.ini |
+    | Unix | ~/.config/JS8Call.ini |
 
     Attributes:
         path (str): File path to the JS8Call config file
