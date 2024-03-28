@@ -39,15 +39,6 @@ import psutil
 class AppMonitor:
     '''JS8Call application monitor.
 
-    If the JS8Call application is closed and *restart* is *False*, pyjs8call will exit. If *restart* is *True* pyjs8call will continue to run and JS8Call will be restarted.
-
-
-
-    Attributes:
-        headless (bool): Whether JS8Call is running headless using xvfb (see *start()*)
-        args (list): Sequence of command line arguments to be passed to JS8Call, defaults to empty list
-        restart (bool): Whether to restart the JS8Call application if it stops, defaults to False
-        terminate_js8call (bool): Whether to terminate the JS8Call application when stopping the app monitor
     '''
 
     def __init__(self, parent):
@@ -63,9 +54,14 @@ class AppMonitor:
         self._xvfb_proc = None
         self._js8call_proc = None
         self.headless = False
+        '''bool: Whether JS8Call is running headless using xvfb'''
         self.args = []
+        '''list: Command line arguments passed to JS8Call, defaults to empty list'''
         self.restart = False
+        '''bool: Whether to restart the JS8Call application if it stops, defaults to False
+        If the JS8Call application is closed and *restart* is *False*, pyjs8call will exit. If *restart* is *True* pyjs8call will continue to run and JS8Call will be restarted.'''
         self.terminate_js8call = True
+        '''bool: Whether to terminate the JS8Call application when stopping the app monitor, defaults to True'''
 
     def start(self, headless=False, args=None):
         ''' Start JS8Call application.
