@@ -47,7 +47,12 @@ All functionality is supported on all major platforms as of version 0.2.0. Runni
     
     a. Install JS8Call
     
-    See the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
+    On some platforms, such as Raspberry Pi OS, JS8Call can be installed with the package manager:
+    ```
+    sudo apt install js8call
+    ```
+
+    Otherwise, see the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
     
     On Raspberry Pi OS:
     ```
@@ -57,9 +62,13 @@ All functionality is supported on all major platforms as of version 0.2.0. Runni
 
     **NOTE:** When installing JS8Call on Windows be sure to select the option to add JS8Call to the PATH variable during the installation process. This will allow *pyjs8call* to locate the JS8Call executable.
 
-    **NOTE:** When installing JS8Call on MacOS be sure to read the readme file included in the dmg image for information on the fix for the JS8Call shared memory error. The following directory must also be added to the PATH variable to allow *pyjs8call* to locate the JS8Call executable: /Applications/js8call.app/Contents/MacOS
+    **NOTE:** When installing JS8Call on MacOS be sure to read the readme file included in the dmg image for information on the fix for the JS8Call shared memory error. The following directory must also be added to the PATH variable to allow *pyjs8call* to locate the JS8Call executable: `/Applications/js8call.app/Contents/MacOS`
     
-    **NOTE:** When using a QRPLabs QDX tranceiver on Linux consider masking the ModemManager service to prevent CAT control dropouts. See [this post from QRPLabs](https://groups.io/g/QRPLabs/topic/87048220#74634) for more information.
+    **NOTE:** When using a QRPLabs QDX tranceiver on Linux, consider masking the ModemManager service using the below commands to prevent CAT control dropouts (aka rig control errors). See [this post from QRPLabs](https://groups.io/g/QRPLabs/topic/87048220#74634) for more information.
+    ```
+    sudo systemctl stop ModemManager.service
+    sudo systemctl mask ModemManager.service
+    ```
     
     &nbsp;
 
@@ -120,7 +129,7 @@ Monitors JS8Call outgoing message text. Notification of a message status change 
 
 **Heartbeat Networking** (pyjs8call.hbnetwork)
 
-Sends a heartbeat message in the heartbeat sub-band on a time interval.
+Sends a heartbeat message in the heartbeat sub-band on a time interval. This module is useful for enabling heatbeat networking programmatically and without using the JS8Call interface (i.e. running headless).
 
 **Time Monitor** (pyjs8call.timemonitor)
 
@@ -191,7 +200,7 @@ js8call.spots.filter(distance = 1000)
 max_age = 15 * 60 # convert minutes to seconds
 js8call.spots.filter(age = max_age)
 
-# get a list of the 10 most recent spot messages from regional stations in the last hour on the 40m band
+# get a list of the 10 most recent spot messages from regional stations on the 40m band
 js8call.spots.filter(distance = 500, band = '40m', count = 10)
 ```
 
@@ -264,8 +273,16 @@ js8call = pyjs8call.Client()
 js8call.callback.inbox = new_inbox_msg
 js8call.start()
 
-# enable local inbox monitoring and periodic remote inbox message query
+# enable local inbox monitoring
 js8call.inbox.enable()
+
+# enable local inbox monitoring and periodic remote inbox message query
+# to @ALLCALL every 60 minutes
+js8call.inbox.enable(query=True)
+
+# enable local inbox monitoring and periodic remote inbox message query
+# to @MYGROUP every 30 minutes
+js8call.inbox.enable(query=True, destination='@MYGROUP', interval=30)
 ```
 
 Using the outgoing message monitor:
@@ -335,6 +352,7 @@ import pyjs8call
 js8call = pyjs8call.Client()
 
 # set config file settings before starting
+# see pyjs8call.settings for many more settings options
 js8call.settings.enable_heartbeat_acknowledgements()
 js8call.settings.set_heartbeat_interval(15)
 js8call.settings.enable_reporting()
@@ -356,8 +374,8 @@ for station in regional_stations:
     print('{}: {} {} at {}\N{DEGREE SIGN}'.format(station.origin, station.distance, station.distance_units, station.bearing))
 
 # access message attributes directly
-# this requires the message to contain grid square data
-last_heartbeat = js8call.spots.filter(destination='@HB')[-1]
+# this requires the message to contain grid square data (ex. heartbeat message)
+last_heartbeat = js8call.spots.filter(destination='@HB', count=1)[-1]
 distance = last_heartbeat.distance
 bearing = last_heartbeat.bearing
 
@@ -437,6 +455,15 @@ js8call.notifications.set_email_destination('2018675309@vtext.com')
 # enable automatic notifications for incoming directed messages
 js8call.notifications.enable()
 
+# set stations to watch
+js8call.spots.add_station_watch('KT7RUN')
+# enable station spot notifications
+js8call.notifications.enable_station_spots()
+
+# set groups to watch
+js8call.spots.add_group_watch('@TTP')
+# enable station spot notifications
+js8call.notifications.enable_group_spots()
 ```
 
 &nbsp;
