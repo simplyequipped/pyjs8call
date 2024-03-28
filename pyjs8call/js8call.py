@@ -50,10 +50,6 @@ class JS8Call:
     
     Attributes:
         app (pyjs8call.appmonitor): Application monitor object
-        connected (bool): Whether the JS8Call TCP socket is connected
-        last_incoming (float): Timestamp of last incoming user message, defaults to 0 (zero)
-        last_outgoing (float): Timestamp of last outgoing user message, defaults to 0 (zero)
-        last_band_change (float): Timestamp of last frequency band change
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442):
@@ -63,9 +59,6 @@ class JS8Call:
             client (pyjs8call.client): Parent client object
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
             port (int): JS8Call TCP port setting, defaults to 2442
-
-        Returns:
-            pyjs8call.js8call: Constructed js8call object
         '''
         self._client = client
         self._host = host
@@ -77,6 +70,7 @@ class JS8Call:
         self._socket = None
         self._socket_ping_delay = 60 # seconds
         self.connected = False
+        '''bool: Whether the JS8Call TCP socket is connected'''
 
         self._debug = False
         self._debug_all = False
@@ -102,8 +96,11 @@ class JS8Call:
         self._last_incoming_by_band = dict()
         self._last_outgoing_by_band = dict()
         self.last_incoming = 0
+        '''float: Timestamp of last incoming user message, defaults to 0 (zero)'''
         self.last_outgoing = 0
+        '''float: Timestamp of last outgoing user message, defaults to 0 (zero)'''
         self.last_band_change = time.time()
+        '''float: Timestamp of last frequency band change'''
         self._last_incoming_api_msg = 0
         
         self._watching = None
@@ -228,6 +225,7 @@ class JS8Call:
         }
         
         self.app = pyjs8call.AppMonitor(self)
+        '''pyjs8call.appmonitor: Application monitor object'''
 
     def start(self, headless=False, args=None):
         '''Start the JS8Call application.
