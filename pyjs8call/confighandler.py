@@ -61,10 +61,6 @@ class ConfigHandler:
     | Windows | C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call\\JS8Call.ini |
     | Mac OS | ~/Library/Preferences/JS8Call.ini |
     | Unix | ~/.config/JS8Call.ini |
-
-    Attributes:
-        path (str): File path to the JS8Call config file
-        config (configparser.ConfigParser): Config parser object containing config file data
     '''
 
     def __init__(self, config_path=None):
@@ -77,7 +73,13 @@ class ConfigHandler:
             FileNotFoundError: Config file not found at specified path
         '''
         self.file = 'JS8Call.ini'
+        '''str: JS8Call default configuration file name'''
+        self.path = None
+        '''str: JS8Call configuration file path'''
+        self.config = None
+        '''JS8Call configuration container (see python3 configparser for more information)'''
         self.rig = None
+        '''str: Rig name passed to JS8Call at application launch, defaults to None'''
 
         if config_path is not None:
             self.path, self.file = os.path.split(config_path)
