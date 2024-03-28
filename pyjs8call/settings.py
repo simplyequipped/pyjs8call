@@ -50,6 +50,7 @@ class Settings:
         '''
         self._client = client
         self.loaded_settings = None
+        '''Loaded settings container (see python3 configparser for more information)'''
 
         self._settings_map = {
             'station' : {
