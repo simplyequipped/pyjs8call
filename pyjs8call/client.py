@@ -60,9 +60,9 @@ class Client:
     
     Custom Incoming Message Processing:
     
-    The *process_incoming* function is called after internal processing of an incoming message from the JS8Call application, but before adding the message to the incoming message queue.
+    If set, the *process_incoming* function is called after internal processing of an incoming message from the JS8Call application, but before adding the message to the incoming message queue.
     
-    *process_incoming* should accept a pyjs8call.message object, and return a pyjs8call.message object. If an error occurs during processing, either:
+    *process_incoming* should accept a *pyjs8call.message* object, and return a *pyjs8call.message* object. If an error occurs during processing, either:
         - set the *msg.error* string before returning the message, which will cause the message to continue processing and be added to the incoming message queue
         OR
         - return None, which will cause the message to be dropped
@@ -73,46 +73,17 @@ class Client:
 
     Custom Outgoing Message Processing:
     
-    The *process_outgoing* function is called just after message creation in the following functions:
-        - send_message
-        - send_directed_message
-        - send_directed_command_message
+    If set, the *process_outgoing* function is called just after message creation in all outgoing message functions, such as *send_directed_message()*.
     
-    *process_outgoing* should accept a pyjs8call.message object, and return a pyjs8call.message object. If an error occurs during processing:
+    *process_outgoing* should accept a *pyjs8call.message* object, and return a *pyjs8call.message* object. If an error occurs during processing:
         - set the *msg.error* string, which will cause the message to be returned with a failed status (the message will not be sent)
     
     *process_outoing* function signature:
         `func(pyjs8call.Message) -> pyjs8call.Message`
-
-    Attributes:
-        js8call (pyjs8call.js8call): Manages JS8Call application and TCP socket communication
-        spots (pyjs8call.spotmonitor): Monitors station activity and issues callbacks
-        window (pyjs8call.windowmonitor): Monitors the JS8Call transmit window
-        offset (pyjs8call.offsetmonitor): Manages JS8Call offset frequency
-        outgoing (pyjs8call.outgoingmonitor): Monitors JS8Call outgoing message text
-        drift_sync (pyjs8call.timemonitor): Monitors JS8Call time drift
-        time_master (pyjs8call.timemonitor): Manages time master outgoing messages
-        inbox (pyjs8call.inboxmonitor): Monitors JS8Call inbox messages
-        config (pyjs8call.confighandler): Manages JS8Call configuration file
-        heartbeat (pyjs8call.hbnetwork): Manages heartbeat outgoing messages
-        schedule (pyjs8call.schedulemonitor): Monitors and activates schedule entries
-        propagation (pyjs8call.propagation): Parse spots into propagation data
-        notifications (pyjs8call.notifications): Send email notifications via SMTP server
-        callback (pyjs8call.client.Callbacks): Callback function reference object
-        settings (pyjs8call.client.Settings): Configuration setting function reference object
-        restarting (bool): True if the JS8Call application is currently being restarted, False otherwise
-        clean_directed_text (bool): Remove JS8Call callsign structure from incoming messages, defaults to True
-        monitor_outgoing (bool): Monitor outgoing message status (see pyjs8call.outgoingmonitor), defaults to True
-        autodetect_outgoing_directed_command (bool: Autodetect and handle commands in outgoing directed messages, defaults to True
-        max_spot_age (int): Maximum age (in seconds) of spots to store before dropping old spots, defaults to 7 days
-        online (bool): Whether the JS8Call application and pyjs8call interface are online
-        host (str): IP address matching JS8Call *TCP Server Hostname* setting
-        port (int): Port number matching JS8Call *TCP Server Port* setting
-        process_incoming (func): Function to call for custom processing of incoming messages, defaults to None
-        process_outgoing (func): Function to call for custom processing of outgoing messages, defaults to None
-        BANDS (dict): mapping of frequency bands to minimum and maximum frequencies
-        OOB (str): out-of-band designator
     '''
+    
+    OOB = 'OOB'
+    '''str: Out-of-band designator'''
 
     BANDS = {
         '2190m':  (136000,       137000),
@@ -144,10 +115,10 @@ class Client:
         '4mm':    (75500000000,  81000000000),
         '2.5mm':  (119980000000, 120020000000),
         '2mm':    (142000000000, 149000000000),
-        '1mm':    (241000000000, 250000000000)
+        '1mm':    (241000000000, 250000000000),
+        Client.OOB: (0, 0)
     }
-    
-    OOB = 'OOB'
+    '''dict: Mapping of frequency band name to minimum and maximum frequencies'''
     
     @staticmethod
     def freq_to_band(freq):
@@ -157,7 +128,9 @@ class Client:
             freq (int): Frequency in Hz
 
         Returns:
-            str: Band designator like \'40m\' if frequency is in a known band, otherwise *Client.OOB*
+            str: Band name like \'40m\'
+            
+        Returned value is *Client.OOB* if frequency is outside known bands.
         '''
         if freq is None:
             return Client.OOB
@@ -176,7 +149,9 @@ class Client:
             band (str): Band designator like \'40m\'
 
         Returns:
-            tuple or str: (min_freq, max_freq) if band is known, otherwise *Client.OOB*
+            tuple: Format `(min_freq, max_freq)`
+            
+        Returned value is `(0, 0)` if band name is unknown.
         '''
         if band is None:
             return Client.OOB
@@ -186,7 +161,7 @@ class Client:
         if band in Client.BANDS:
             return Client.BANDS[band]
         
-        return Client.OOB
+        return Client.BANDS[Client.OOB]
 
     def __init__(self, settings_path=None, host='127.0.0.1', port=2442, config_path=None):
         '''Initialize JS8Call API client.
@@ -213,32 +188,58 @@ class Client:
             RuntimeError: JS8Call application not installed
         '''
         self.host = host
+        '''str: IP address matching JS8Call *TCP Server Hostname* setting'''
         self.port = port
+        '''int: Port number matching JS8Call *TCP Server Port* setting'''
         self.online = False
+        '''bool: True if the JS8Call application and pyjs8call interface are online, False otherwise'''
         self.restarting = False
+        '''bool: True if the JS8Call application is currently being restarted, False otherwise'''
         self.process_incoming = None
+        '''func: Function to call for custom processing of incoming messages, defaults to None'''
         self.process_outgoing = None
+        '''func: Function to call for custom processing of outgoing messages, defaults to None'''
         self.clean_directed_text = True
+        '''bool: Remove JS8Call callsign structure from incoming messages, defaults to True'''
         self.autodetect_outgoing_directed_command = True
+        '''bool: Autodetect and handle commands in outgoing directed messages, defaults to True (added in version 0.2.3)'''
         self.monitor_outgoing = True
+        '''bool: Monitor outgoing message status (see pyjs8call.outgoingmonitor), defaults to True'''
         self.max_spot_age = 7 * 24 * 60 * 60 # 7 days
+        '''int: Maximum age (in seconds) of spots to store before dropping old spots, defaults to 7 days'''
         self._previous_profile = None
+        '''str: JS8Call configuration profile name before the last profile change, defaults to None'''
 
         self.config = None
+        '''pyjs8call.confighandler: Manages JS8Call configuration file'''
         self.settings = None
+        '''pyjs8call.settings: Configuration and setting function container'''
         self.callback = None
+        '''pyjs8call.callbacks: Callback function container'''
         self.js8call = None
+        '''pyjs8call.js8call: Manages JS8Call application and TCP socket communication'''
         self.spots = None
+        '''pyjs8call.spotmonitor: Monitors station activity and performs associated callbacks'''
         self.window = None
+        '''pyjs8call.windowmonitor: Monitors the JS8Call transmit window'''
         self.offset = None
+        '''pyjs8call.offsetmonitor: Manages JS8Call offset frequency'''
         self.outgoing = None
+        '''pyjs8call.outgoingmonitor: Monitors JS8Call outgoing message text'''
         self.drift_sync = None
+        '''pyjs8call.timemonitor: Monitors JS8Call time drift'''
         self.time_master = None
+        '''pyjs8call.timemonitor: Manages time master outgoing messages'''
         self.inbox = None
+        '''pyjs8call.inboxmonitor: Monitors JS8Call local and remote inbox messages'''
         self.heartbeat = None
+        '''pyjs8call.hbnetwork: Manages outgoing heartbeat network messages'''
         self.schedule = None
+        '''pyjs8call.schedulemonitor: Monitors and activates schedule entries'''
         self.propagation = None
+        '''pyjs8call.propagation: Parse spots into propagation data'''
         self.notifications = None
+        '''pyjs8call.notifications: Send email notifications via SMTP server'''
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
