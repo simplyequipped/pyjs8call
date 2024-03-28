@@ -31,6 +31,7 @@ __docformat__ = 'google'
 import os
 import time
 import json
+import psutil
 import socket
 import threading
 
@@ -228,12 +229,20 @@ class JS8Call:
         
         self.app = pyjs8call.AppMonitor(self)
 
-    def start(self, headless=False, args = None):
+    def start(self, headless=False, args=None):
         '''Start the JS8Call application.
 
-        This function is blocking until the JS8Call application responds to a network command which ensures that the application is operational before continuing. This handles slower computers such as Raspberry Pi.
+        This function is blocking until the JS8Call application responds to a network command, which ensures that the application is operational before continuing. This supports slower computers such as Raspberry Pi 3 where starting the application may take several seconds.
 
-        Used internally by client.start().
+        The *timer.out* file continues to grow while the application is running, eventually consuming all available disk space and causing application errors. If the *timer.out* file exists, it is removed before starting the application. The *timer.out* file can be removed during extended operation by calling *client.restart()*, which calls this function. The *timer.out* base path is QT5 *QStandardPaths::DataLocation*:
+    
+        | Platform | timer.out File Path |
+        | -------- | -------- |
+        | Windows | C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call\\timer.out |
+        | Mac OS | ~/Library/Application Support/timer.out |
+        | Unix | ~/.local/share/JS8Call/timer.out |
+
+        This function is called internally by client.start().
 
         Args:
             headless (bool): Run JS8Call headless using xvfb (Linux only), defaults to False
@@ -244,6 +253,20 @@ class JS8Call:
         '''
         if args is None:
             args = []
+
+        # remove timer.out file when starting, if exists
+        # timer.out file grows continuously until it fills entire disk space and causes an application error
+        # restarting via client.restart() will remove the time.out file
+        # paths based on QT5 writable path QStandardPaths::DataLocation
+        if psutil.WINDOWS:
+            timer_out_path = os.path.expandvars('C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call\\timer.out')
+        elif psutil.MACOS:
+            timer_out_path = os.path.join(os.path.expanduser('~'), 'Library/Application Support/JS8Call/timer.out')
+        else:
+            timer_out_path = os.path.join(os.path.expanduser('~'), '.local/share/JS8Call/timer.out')
+            
+        if os.path.exists(timer_out_path):
+            os.remove(timer_out_path)
         
         self.online = True
         self.app.start(headless=headless, args = args)
