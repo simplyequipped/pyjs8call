@@ -63,18 +63,7 @@ import pyjs8call
 
 
 class Notifications:
-    '''Send email notifiations via SMTP server.
-    
-    Attributes:
-        incoming_enabled (bool): Process incoming directed messages if True, ignore otherwise, defaults to True
-        spots_enabled (bool): Process spots if True, ignore otherwise, defaults to False
-        station_spots_enabled (bool): Process watched station spot if True, ignore otherwise, defaults to False
-        group_spots_enabled (bool): Process watched group spot if True, ignore otherwise, defaults to False
-        notify_on_incoming_if_callsign_selected (bool): Process incoming messages while a callsign is selected on the UI if True, ignore otherwise, defaults to False
-        commands (list): Commands matching incoming *Message.cmd* to notify for, defaults to MSG and freetext
-
-    See pyjs8call.Message for more information on message commands.
-    '''
+    '''Send email notifiations via SMTP server.'''
     def __init__(self, client):
         '''Initialize notifications.
 
@@ -91,12 +80,17 @@ class Notifications:
         self._email_subject = None
 
         self.incoming_enabled = True
+        '''bool: Notify on incoming directed messages if True, ignore otherwise, defaults to True'''
         self.spots_enabled = False
+        '''bool: Notify on all spots if True, ignore otherwise, defaults to False'''
         self.station_spots_enabled = False
+        '''bool: Notify on watched station spot (see *pyjs8call.spotmonitor.add_station_watch*) if True, ignore otherwise, defaults to False'''
         self.group_spots_enabled = False
+        '''bool: Notify on watched group spot (see *pyjs8call.spotmonitor.add_group_watch*) if True, ignore otherwise, defaults to False'''
         self.notify_on_incoming_if_callsign_selected = False
-
+        '''bool: Process incoming messages while a callsign is selected on the JC8Call UI if True, ignore otherwise, defaults to False'''
         self.commands = [pyjs8call.Message.CMD_MSG, pyjs8call.Message.CMD_FREETEXT]
+        '''list: *pyjs8call.Message* commands to notify for, defaults to MSG and free text (single space, includes directed messages)'''
 
     def enabled(self):
         '''Get enabled status.
