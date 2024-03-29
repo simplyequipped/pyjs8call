@@ -1517,7 +1517,7 @@ class Client:
         return rx_messages
     
     def hearing(self, age=None, spots=None):
-        '''Which stations other stations are hearing.
+        '''Stations other stations are hearing.
 
         If calling both *client.spots.filter()* and *client.hearing()*, it is more efficient to pass the result of *client.spots.filter()* to *client.hearing()*. Otherwise, *client.hearing()* will call *client.spots.filter()* again internally.
 
@@ -1540,16 +1540,16 @@ class Client:
             spots = self.spots.filter(age = age)
         
         for spot in spots:
-            # only process msgs with directed commands
-            if spot.cmd is None:
-                continue
-
             # stations we are hearing
             if callsign not in hearing:
                 hearing[callsign] = [spot.origin]
             elif spot.origin not in hearing[callsign]:
                 hearing[callsign].append(spot.origin)
                 
+            # only process msgs with directed commands
+            if spot.cmd is None:
+                continue
+
             if spot.cmd == Message.CMD_HEARING and spot.hearing is not None:
                 if spot.origin not in hearing:
                     hearing[spot.origin] = spot.hearing
@@ -1574,7 +1574,7 @@ class Client:
         return hearing
 
     def station_hearing(self, station=None, age=None):
-        '''Which stations the specified station is hearing.
+        '''Stations the specified station is hearing.
         
         See *client.hearing()* for more information.
 
@@ -1596,7 +1596,7 @@ class Client:
             return []
     
     def heard_by(self, age=None, hearing=None):
-        '''Which stations are hearing other station.
+        '''Stations other stations are heard by.
 
         *client.heard_by()* is the inverse of *client.hearing()*.
 
@@ -1628,7 +1628,7 @@ class Client:
         return heard_by
 
     def station_heard_by(self, station=None, age=None, hearing=None):
-        '''Which stations are hearing the specified station.
+        '''Stations the specified station is heard by.
 
         See *client.heard_by()* for more information.
         
