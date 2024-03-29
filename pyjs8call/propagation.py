@@ -364,6 +364,14 @@ class Propagation:
     
     def normalize_snr_by_speed(self, snr, speed, normalize_to_speed='normal'):
         '''Noramlize SNR based on JS8Call modem speed.
+
+        Args:
+            snr (int, list): SNR value to normalize
+            speed (int, str): Modem speed associated with *snr*
+            normalize_to_speed (str): Modem speed to normalize to, defaults to 'normal'
+
+        Returns:
+            int: Normalized SNR
         '''
         snr_range = {
             'slow': (30, -28),
@@ -372,6 +380,9 @@ class Propagation:
             'turbo': (30, -18)
         }
 
+        if isinstance(speed, int):
+            speed = self._client.settings.submode_to_speed(speed)
+
         if speed not in snr_range:
             raise ValueError('Invalid SNR speed: {}'.format(speed))
         if normalize_to_speed not in snr_range:
@@ -379,11 +390,7 @@ class Propagation:
         
         max_range, min_range = snr_range[speed]
         norm_max_range, norm_min_range = snr_range[normalize_to_speed]
-        normalized_snrs = []
 
-        for snr in snrs:
-            # linear scaling
-            normalized_snr = norm_max_range + ((norm_min_range - norm_max_range) * (snr - max_range)) / (min_range - max_range)
-            normalized_snrs.append(normalized_snr)
-            
-        return normalized_snrs
+        # linear scaling
+        normalized_snr = norm_max_range + ((norm_min_range - norm_max_range) * (snr - max_range)) / (min_range - max_range)
+        return normalized_snr
