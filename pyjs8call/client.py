@@ -1254,7 +1254,7 @@ class Client:
             activity['distance'] = spot.get('distance')
 
             activity['hearing'] = hearing[activity['origin']] if activity['origin'] in hearing else []
-            activity['heard_by'] = hearing[activity['origin']] if activity['origin'] in heard_by else []
+            activity['heard_by'] = heard_by[activity['origin']] if activity['origin'] in heard_by else []
             activity['distance'] = self.grid_distance(activity['grid']) if activity['grid'] not in (None, '') else (None, None, None)
             activity['speed'] = self.settings.submode_to_speed(activity['speed']) if activity['speed'] is not None else None
 
