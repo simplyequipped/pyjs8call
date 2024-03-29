@@ -1298,13 +1298,6 @@ class Client:
         hearing = self.hearing(hearing_age / 60, hearing_spots)
         heard_by = self.heard_by(hearing_age / 60, hearing)
 
-
-        #TODO test code
-        from pprint import pprint
-        pprint(hearing)
-        pprint(heard_by)
-
-        
         for i in range(len(call_activity)):
             # get grid squares that were reported before *spot_age*
             if call_activity[i]['grid'] in (None, '') and call_activity[i]['origin'] in call_activity_grids:
