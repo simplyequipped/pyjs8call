@@ -1,11 +1,22 @@
 ### Versions
 
 **0.2.3**
-- Add *pyjs8call.settings.load* function to load settings from an ini file
-- Add option to restore previous JS8Call configuration profile on exit to *pyjs8call.client.settings.set_profile*
-- Add option to specifiy pyjs8call settings file path when initializing *pyjs8call.client*
-- Add *message.encode()* and *message.decode()* to suppot sending and receiving byte strings
-- Separate *Settings* and *Callbacks* classes into their own modules
+- Add *pyjs8call.settings.Settings.load()* to load settings from an ini file (see example *settings.ini* in repo)
+- Add CLI support for usage like *python -m pyjs8call* (try *--help* for options)
+- Add RNS PipeInterface support using *python -m pyjs8call --rns* (see other CLI options)
+- Add *restore_on_exit* argument to *pyjs8call.settings.Settings.set_profile()*
+- Add *pyjs8call.message.Message.encode()* and *pyjs8call.message.Message.decode()*
+- Add notification type enable/disable functions in *pyjs8call.notifications*
+- Add *terminate_js8call* argument to *pyjs8call.client.Client.stop()*
+- Add *pyjs8call.settings.Settings.create_new_profile()*
+- Add *create* argument to *pyjs8call.settings.Settings.set_profile()*
+- Add *normalize_snr* argument to *propagation* functions
+- Add *pyjs8call.client.Client.get_call_activity_from_spots()* to improve processing speed
+- Separate *pyjs8call.settings.Settings* and *pyjs8call.callbacks.Callbacks* into modules
+- Remove JS8Call *timer.out* file when starting (or restarting) to avoid large file size over time
+- Automatically detect JS8Call commands in outgoing messages to simplify app development
+- Minor documentation improvements
+- Minor bug fixes
 
 **0.2.2**
 - Add *pyjs8call.propagation* module
