@@ -750,9 +750,12 @@ class Client:
         '''
         cmd_found = False
         
+        # identify and handle commands in outgoing directed message
         if self.autodetect_outgoing_directed_command:
             # sort decending by command length to avoid matching a partial command
             msg_cmds = sorted(pyjs8call.Message.COMMANDS, key=len, reverse=True)
+            message = message.upper()
+
             for cmd in msg_cmds:
                 if message.startswith(cmd):
                     cmd_found = True
