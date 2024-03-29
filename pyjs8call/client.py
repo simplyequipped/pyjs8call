@@ -1132,14 +1132,14 @@ class Client:
         '''
         return self.send_directed_command_message(destination, Message.CMD_STATUS_Q)
 
-    def get_call_activity(self, age=None):
+    def get_call_activity(self, age=None, hearing_age=None):
         '''Get JS8Call call activity.
 
         To get or set JS8Call callsign activity aging from the configuration file:
         `client.config.get('Configuration', 'CallsignAging', int)`
         `client.config.set('Configuration', 'CallsignAging', 120) # 120 minutes`
 
-        See *client.get_distance()* for more information on the value and format of *distance*.
+        Specify a different age for hearing and heard_by activity by setting *hearing_age*. If *hearing_age* is None (default), *hearing_age* is set to *age*.
 
         Each call activity item is a dictionary with the following keys:
 
@@ -1154,15 +1154,15 @@ class Client:
         | speed | str |
         | hearing | list |
         | heard_by | list |
-        | distance | tuple |
+        | distance | int |
+        | distance_units | str |
+        | bearing | int |
 
         Args:
             age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
 
         Returns:
             list: Call activity items, sorted decending by *timestamp* (recent first)
-
-            If grid is not set, distance is *(None, None, None)*.
         '''
         if age is None:
             age = self.config.get('Configuration', 'CallsignAging', int)
@@ -1172,42 +1172,58 @@ class Client:
         self.js8call.send(msg)
         call_activity = self.js8call.watch('call_activity')
 
-        age *= 60 # minutes to seconds
-        hearing = self.hearing(age)
-        heard_by = self.heard_by(age , hearing)
+        activity_age = age * 60 # minutes to seconds
+        
+        if hearing_age is None:
+            hearing_age = age # minutes
+            
+        hearing = self.hearing(hearing_age)
+        heard_by = self.heard_by(hearing_age , hearing)
         now = time.time()
 
         for i in call_activity.copy():
             activity = call_activity.pop(0)
             activity['origin'] = activity['origin'].strip()
             activity['grid'] = activity['grid'].strip()
+            activity['distance'] = None
+            activity['distance_units'] = None
+            activity['bearing'] = None
 
             # remove aged activity
-            if age != 0 and (now - activity['timestamp']) > age:
+            if activity_age != 0 and (now - activity['timestamp']) > activity_age:
                 continue
 
             activity['hearing'] = hearing[activity['origin']] if activity['origin'] in hearing else []
-            activity['heard_by'] = hearing[activity['origin']] if activity['origin'] in heard_by else []
-            activity['distance'] = self.grid_distance(activity['grid']) if activity['grid'] not in (None, '') else (None, None, None)
+            activity['heard_by'] = heard_by[activity['origin']] if activity['origin'] in heard_by else []
 
-            spot = self.spots.filter(origin = activity['origin'], age = age, count = 1)
+            if activity['grid'] not in (None, ''):
+                try:
+                    distance, distance_units, bearing = self.grid_distance(activity['grid'])
+                    activity['distance'] = distance
+                    activity['distance_units'] = distance_units
+                    activity['bearing'] = bearing
+                except ValueError:
+                    pass
+
+            spot = self.spots.filter(origin = activity['origin'], age = activity_age, count = 1)
             activity['speed'] = self.settings.submode_to_speed(spot[0].get('speed')) if len(spot) and isinstance(spot[0].get('speed'), int) else None
 
             call_activity.append(activity)
 
+        # sort by most recent first
         call_activity.sort(key = lambda activity: activity['timestamp'], reverse = True)
         return call_activity
         
-    def get_call_activity_from_spots(self, age=None):
+    def get_call_activity_from_spots(self, age=None, hearing_age=None):
         '''Get JS8Call call activity.
 
-        Same usage as *client.get_call_activity()* except data is pulled from stored spots instead of using the JS8Call API. This function may be faster than *client.get_call_activity()*.
+        Similar to *client.get_call_activity()* except that stored spots are processed locally instead of using the JS8Call API. This function has better performance than *client.get_call_activity()*.
 
         To get or set JS8Call callsign activity aging from the configuration file:
         `client.config.get('Configuration', 'CallsignAging', int)`
         `client.config.set('Configuration', 'CallsignAging', 120) # 120 minutes`
 
-        See *client.get_distance()* for more information on the value and format of *distance*.
+        Specify a different age for hearing and heard_by activity by setting *hearing_age*. If *hearing_age* is None (default), *hearing_age* is set to *age*.
 
         Each call activity item is a dictionary with the following keys:
 
@@ -1222,44 +1238,70 @@ class Client:
         | speed | str |
         | hearing | list |
         | heard_by | list |
-        | distance | tuple |
+        | distance | int |
+        | distance_units | str |
+        | bearing | int |
 
         Args:
             age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
+            hearing_age (int, None): Maximum hearing age in minutes, defaults to None
 
         Returns:
             list: Call activity items, sorted decending by *timestamp* (recent first)
-
-            If grid is not set, distance is *(None, None, None)*.
         '''
         if age is None:
             age = self.config.get('Configuration', 'CallsignAging', int)
-
-        age *= 60 # minutes to seconds
-        spots = self.spots.filter(age = age)
-        hearing = self.hearing(age, spots)
-        heard_by = self.heard_by(age , hearing)
-        now = time.time()
+        
+        spot_age *= 60 # minutes to seconds
+        spots = self.spots.filter(age = spot_age)
+        
+        if hearing_age is None:
+            hearing_age = spot_age # seconds
+        
         call_activity = []
+        call_activity_grids = []
+        hearing_spots = []
 
-        for spot in spots:
-            activity = {}
-            activity['origin'] = spot.get('origin')
-            activity['grid'] = spot.get('grid')
-            activity['snr'] = spot.get('snr')
-            activity['time'] = spot.get('time')
-            activity['timestamp'] = spot.get('timestamp')
-            activity['local_time_str'] = spot.get('local_time_str')
-            activity['speed'] = spot.get('speed')
-            activity['distance'] = spot.get('distance')
+        # improve performance by processing all spots only once,
+        # instead of multiple times by calling pre-built functions such as client.spots.filter and client.hearing (without passing spots)
+        for spot in self.spots.all():
+            # map origins to grid squares for later use
+            # keep only most recent grid square for each origin
+            if spot.origin not in (None, '') and spot.origin not in call_activity_grids and spot.grid not in (None, ''):
+                call_activity_grids[spot.origin] = spot.grid
 
-            activity['hearing'] = hearing[activity['origin']] if activity['origin'] in hearing else []
-            activity['heard_by'] = heard_by[activity['origin']] if activity['origin'] in heard_by else []
-            activity['distance'] = self.grid_distance(activity['grid']) if activity['grid'] not in (None, '') else (None, None, None)
-            activity['speed'] = self.settings.submode_to_speed(activity['speed']) if activity['speed'] is not None else None
+            # spot age is seconds
+            if spot.age() <= hearing_age:
+                hearing_spots.append(spot)
+                
+            if spot.age() <= spot_age:
+                activity = {}
+                activity['origin'] = spot.origin
+                activity['grid'] = spot.grid
+                activity['snr'] = spot.snr
+                activity['time'] = spot.time
+                activity['timestamp'] = spot.timestamp
+                activity['local_time_str'] = spot.local_time_str
+                activity['distance'] = spot.distance
+                activity['distance_units'] = spot.distance_units
+                activity['bearing'] = spot.bearing
+                activity['speed'] = self.settings.submode_to_speed(spot.speed) if spot.speed is not None else None
 
-            call_activity.append(activity)
+                call_activity.append(activity)
 
+        # convert seconds to minutes
+        hearing = self.hearing(hearing_age / 60, hearing_spots)
+        heard_by = self.heard_by(hearing_age / 60, hearing)
+        
+        for i in range(len(call_activity)):
+            # get grid squares that were reported before *spot_age*
+            if call_activity[i]['grid'] in (None, '') and call_activity[i]['origin'] in call_activity_grids:
+                call_activity[i]['grid'] = call_activity_grids['origin']
+
+            call_activity[i]['hearing'] = hearing[call_activity[i]['origin']] if call_activity[i]['origin'] in hearing else []
+            call_activity[i]['heard_by'] = heard_by[call_activity[i]['origin']] if call_activity[i]['origin'] in heard_by else []
+
+        # sort by most recent first
         call_activity.sort(key = lambda activity: activity['timestamp'], reverse = True)
         return call_activity
 
