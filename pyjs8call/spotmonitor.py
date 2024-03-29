@@ -125,7 +125,7 @@ class SpotMonitor:
         '''
         spots = []
         
-        for spot in self._client.js8call.get_spots():
+        for spot in self.all():
             if (
                 (age == 0 or spot.age() <= age) and
                 (grid is None or grid.upper() == spot.grid) and
@@ -143,6 +143,21 @@ class SpotMonitor:
             spots = spots[count:]
 
         return spots
+
+    def get_origin_grid(self, origin):
+        '''Get grid square for specified origin callsign.
+
+        Args:
+            origin (str): Origin callsign to match
+
+        Returns:
+            str, None: Most recent grid square spotted for *origin*, or None if not found
+        '''
+        for spot in self.all():
+            if spot.origin == origin and spot.grid not in (None, ''):
+                return spot.grid
+
+        return None
 
     def last_heard(self, count=1):
         '''Get last heard spot messages.
