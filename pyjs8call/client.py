@@ -1297,7 +1297,7 @@ class Client:
         for i in range(len(call_activity)):
             # get grid squares that were reported before *spot_age*
             if call_activity[i]['grid'] in (None, '') and call_activity[i]['origin'] in call_activity_grids:
-                call_activity[i]['grid'] = call_activity_grids['origin']
+                call_activity[i]['grid'] = call_activity_grids[call_activity[i]['origin']]
 
             call_activity[i]['hearing'] = hearing[call_activity[i]['origin']] if call_activity[i]['origin'] in hearing else []
             call_activity[i]['heard_by'] = heard_by[call_activity[i]['origin']] if call_activity[i]['origin'] in heard_by else []
