@@ -443,7 +443,7 @@ class Client:
                 module.pause()
                 paused_modules.append(module)
 
-        # write any pending config file changes, convenience
+        # write config changes to file
         self.config.write()
         # reeset window monitoring
         self.window.reset()
@@ -453,7 +453,8 @@ class Client:
         settings = self.js8call.restart_settings()
 
         # stop
-        self.stop()
+        self.online = False
+        self.js8call.stop()
 
         # start
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
