@@ -1260,7 +1260,7 @@ class Client:
             hearing_age = spot_age # seconds
         
         call_activity = []
-        call_activity_grids = []
+        call_activity_grids = {}
         hearing_spots = []
 
         # improve performance by processing all spots only once,
