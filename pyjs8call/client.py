@@ -437,12 +437,13 @@ class Client:
 
         paused_modules = []
         
+        # avoid resuming modules paused before restart
         for module in modules:
             if module.enabled() and not module.paused():
                 module.pause()
                 paused_modules.append(module)
 
-        # write any pending config file changes, convience
+        # write any pending config file changes, convenience
         self.config.write()
         # reeset window monitoring
         self.window.reset()
