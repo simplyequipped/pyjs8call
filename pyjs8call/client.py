@@ -1260,6 +1260,7 @@ class Client:
             hearing_age = spot_age # seconds
         
         call_activity = []
+        call_activity_origins = []
         call_activity_grids = {}
         hearing_spots = []
 
@@ -1275,7 +1276,10 @@ class Client:
             if spot.age() <= hearing_age:
                 hearing_spots.append(spot)
                 
-            if spot.age() <= spot_age:
+            if spot.age() <= spot_age and spot.origin not in call_activity_origins:
+                # track origins to keep only most recent activity for each origin
+                call_activity_origins.append(spot.origin)
+
                 activity = {}
                 activity['origin'] = spot.origin
                 activity['grid'] = spot.grid
@@ -1293,6 +1297,13 @@ class Client:
         # convert seconds to minutes
         hearing = self.hearing(hearing_age / 60, hearing_spots)
         heard_by = self.heard_by(hearing_age / 60, hearing)
+
+
+        #TODO test code
+        from pprint import pprint
+        pprint(hearing)
+        pprint(heard_by)
+
         
         for i in range(len(call_activity)):
             # get grid squares that were reported before *spot_age*
