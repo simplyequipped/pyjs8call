@@ -154,7 +154,7 @@ class SpotMonitor:
             str, None: Most recent grid square spotted for *origin*, or None if not found
         '''
         for spot in self.all():
-            if spot.origin == origin and spot.grid not in (None, ''):
+            if spot.origin == origin.upper() and spot.grid not in (None, ''):
                 return spot.grid
 
         return None

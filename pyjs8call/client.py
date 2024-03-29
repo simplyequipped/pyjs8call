@@ -1252,7 +1252,7 @@ class Client:
         if age is None:
             age = self.config.get('Configuration', 'CallsignAging', int)
         
-        spot_age *= 60 # minutes to seconds
+        spot_age = age * 60 # minutes to seconds
         spots = self.spots.filter(age = spot_age)
         
         if hearing_age is None:
