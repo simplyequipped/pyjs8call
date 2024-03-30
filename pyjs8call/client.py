@@ -1258,6 +1258,8 @@ class Client:
         
         if hearing_age is None:
             hearing_age = spot_age # seconds
+        else:
+            hearing_age = hearing_age * 60 # minutes to seconds
         
         call_activity = []
         call_activity_origins = []
