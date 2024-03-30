@@ -1272,7 +1272,7 @@ class Client:
             # map origins to grid squares for later use
             # keep only most recent grid square for each origin
             if spot.origin not in (None, '') and spot.origin not in call_activity_grids and spot.grid not in (None, ''):
-                call_activity_grids[spot.origin] = spot.grid
+                call_activity_grids[spot.origin] = (spot.grid, spot.distance, spot.distance_units, spot.bearing)
 
             # spot age is seconds
             if spot.age() <= hearing_age:
@@ -1303,11 +1303,15 @@ class Client:
         for i in range(len(call_activity)):
             # get grid squares that were reported before *spot_age*
             if call_activity[i]['grid'] in (None, '') and call_activity[i]['origin'] in call_activity_grids:
-                call_activity[i]['grid'] = call_activity_grids[call_activity[i]['origin']]
+                grid, distance, distance_units, bearing = call_activity_grids[call_activity[i]['origin']]
+                call_activity[i]['grid'] = grid
+                call_activity[i]['distance'] = distance
+                call_activity[i]['distance_units'] = distance_units
+                call_activity[i]['bearing'] = bearing
 
             call_activity[i]['hearing'] = hearing[call_activity[i]['origin']] if call_activity[i]['origin'] in hearing else []
             call_activity[i]['heard_by'] = heard_by[call_activity[i]['origin']] if call_activity[i]['origin'] in heard_by else []
-
+            
         # sort by most recent first
         call_activity.sort(key = lambda activity: activity['timestamp'], reverse = True)
         return call_activity
