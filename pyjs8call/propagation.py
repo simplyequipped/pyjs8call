@@ -365,14 +365,19 @@ class Propagation:
     def normalize_snr_by_speed(self, snr, speed, normalize_to_speed='normal'):
         '''Noramlize SNR based on JS8Call modem speed.
 
+        If *speed* is None, *snr* is returned unchanged.
+
         Args:
             snr (int, list): SNR value to normalize
-            speed (int, str): Modem speed associated with *snr*
+            speed (int, str, None): Modem speed associated with *snr*
             normalize_to_speed (str): Modem speed to normalize to, defaults to 'normal'
 
         Returns:
             int: Normalized SNR
         '''
+        if speed is None:
+            return snr
+
         snr_range = {
             'slow': (30, -28),
             'normal': (30, -24),
