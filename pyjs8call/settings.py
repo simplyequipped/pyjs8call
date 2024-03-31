@@ -326,7 +326,10 @@ class Settings:
         '''Enable heartbeat acknowledgements via config file.
         
         It is recommended that this function be called before calling *client.start()*. If this function is called after *client.start()* then the application will have to be restarted to utilize the new config file settings. See *client.restart()*.
+
+        Also enables JS8Call heartbeat networking, since heartbeat acknowledgements will not be enabled without heartbeat networking enabled first. This only enables the feature within JS8Call, and does not casue heartbeats to be sent.
         '''
+        self.enable_heartbeat_networking()
         self._client.config.set('Common', 'SubModeHBAck', 'true')
 
     def disable_heartbeat_acknowledgements(self):
