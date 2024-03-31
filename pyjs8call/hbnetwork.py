@@ -81,6 +81,9 @@ class HeartbeatNetworking:
         if self._enabled:
             return
 
+        # enable js8call heartbeat networking
+        # heartbeat acknowledgements only function if heartbeat networking is enabled
+        self._client.settings.enable_heartbeat_networking()
         self._enabled = True
 
         self._offset = OffsetMonitor(self._client, hb = True)
