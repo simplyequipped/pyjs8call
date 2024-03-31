@@ -298,8 +298,6 @@ class Client:
         - outgoing
         - schedule
 
-        Adds the @TIME group to JS8Call via the config file to enable drift monitor features.
-
         If logging is enabled the log file will be stored in the current user's *HOME* directory.
 
         if *args* contains the rig name switch (-r or --rig-name) the rig name is used to instantiate the rig specific config file before launching. Changes to the config object prior to calling *start* are saved to the rig specifc file only, and are not written to the main config file.
@@ -338,8 +336,6 @@ class Client:
             self.config.set('Configuration', 'TCPServer', self.host)
             self.config.set('Configuration', 'TCPServerPort', str(self.port))
             self.config.set('Configuration', 'AcceptTCPRequests', 'true')
-            # support pyjs8call.timemonitor features
-            self.config.add_group('@TIME')
             self.config.write()
         except RuntimeError as e:
             raise RuntimeError('Try launching JS8Call, configuring audio and CAT interfaces as needed, '

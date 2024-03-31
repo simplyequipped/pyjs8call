@@ -35,6 +35,8 @@ from pyjs8call import Message
 class DriftMonitor:
     '''Monitor time drift.
 
+    Add the @TIME group to the stations configuration to participate in the time group.
+
     Note that the JS8Call API does not support changing the time drift. The application will be restarted to apply new time drift settings via the configuration file.
 
     Note that only JS8Call rx/tx window timing relative to other stations is effected. Clock time is not effected.
