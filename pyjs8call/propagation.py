@@ -174,8 +174,8 @@ class Propagation:
         Returns:
             tuple: `(SNR, timestamp)`
 
-            *SNR* is the median SNR of *grid* spots over the specified time period
-            *timestamp* is the most recent local timestamp of *grid* spots
+            *SNR* is the median SNR of *grid* spots over the specified time period, or None if no spots
+            *timestamp* is the most recent local timestamp of *grid* spots, or None if no spots
         '''
         if start_time is not None:
             if isinstance(start_time, datetime):
@@ -207,8 +207,43 @@ class Propagation:
                 if spot.timestamp > timestamp:
                     timestamp = spot.timestamp
 
-        return (round(statistics.median(snrs)), timestamp)
+        if len(snrs) > 0:
+            return (round(statistics.median(snrs)), timestamp)
+        else:
+            return (None, None)
         
+    def best_band_for_grid(self, grid, max_age=30, min_age=0, start_time=None, end_time=None, normalize_snr=False):
+        '''Find best frequency band for grid square based on SNR.
+
+        If *max_age* and *min_age* are zero, all stored spots are used.
+
+        *start_time* and *end_time* can be a Unix timestamp (like *time.time()*) or a *datetime.datetime* object. If *start_time* is set, the dataset age will be calculated based on *start_time* and *end_time*. If *start_time* is set and *end_time* is not set, the minimum age is set to zero.
+        
+        Args:
+            grid (str): Grid square to match
+            max_age (int): Maximum age of spot messages in minutes, defaults to 30
+            min_age (int): Minimum age of spot messages in minutes, defaults to 0
+            start_time (float, datetime.datetime): Dataset starting time, defaults to None
+            end_time (float, datetime.datetime): Dataset ending time, defaults to None
+            normalize_snr (bool): Normalize SNR based on JS8Call modem speed if True, defaults to False
+
+        Returns:
+            str or None: Frequency band designator (ex. \'40m\') with highest SNR for *grid*, or None if no spots from *grid*
+        '''
+        heard_freq_bands = self._client.heard_freq_bands()
+        best_band = None
+        best_snr = -100
+        
+        for band in heard_freq_bands:
+            #TODO improve performance by processing all grid spots directly instead of looping through all spots for each band using self.grid_median_snr
+            snr, timestamp = self.grid_median_snr(grid, max_age=max_age, min_age=min_age, start_time=start_time, end_time=end_time, normalize_snr=normalize_snr, band=band)
+
+            if snr is not None and int(snr) > best_snr:
+                best_band = band
+                best_snr = int(snr)
+
+        return best_band
+
     def origins_dataset(self, max_age=30, min_age=0, start_time=None, end_time=None, normalize_snr=False, **kwargs):
         '''Parse spot messages into propagation dataset for origin callsigns.
 
@@ -333,8 +368,8 @@ class Propagation:
         Returns:
             tuple: `(SNR, timestamp)`
 
-            *SNR* is the median SNR of *origin* spots over the specified time period
-            *timestamp* is the most recent local timestamp of *origin* spots
+            *SNR* is the median SNR of *origin* spots over the specified time period, or None if no spots
+            *timestamp* is the most recent local timestamp of *origin* spots, or None if no spots
         '''
         if start_time is not None:
             if isinstance(start_time, datetime):
@@ -366,8 +401,43 @@ class Propagation:
                 if spot.timestamp > timestamp:
                     timestamp = spot.timestamp
 
-        return (round(statistics.median(snrs)), timestamp)
+        if len(snrs) > 0:
+            return (round(statistics.median(snrs)), timestamp)
+        else:
+            return (None, None)
     
+    def best_band_for_origin(self, origin, max_age=30, min_age=0, start_time=None, end_time=None, normalize_snr=False):
+        '''Find best frequency band for origin callsign based on SNR.
+
+        If *max_age* and *min_age* are zero, all stored spots are used.
+
+        *start_time* and *end_time* can be a Unix timestamp (like *time.time()*) or a *datetime.datetime* object. If *start_time* is set, the dataset age will be calculated based on *start_time* and *end_time*. If *start_time* is set and *end_time* is not set, the minimum age is set to zero.
+        
+        Args:
+            origin (str): Origin callsign to match
+            max_age (int): Maximum age of spot messages in minutes, defaults to 30
+            min_age (int): Minimum age of spot messages in minutes, defaults to 0
+            start_time (float, datetime.datetime): Dataset starting time, defaults to None
+            end_time (float, datetime.datetime): Dataset ending time, defaults to None
+            normalize_snr (bool): Normalize SNR based on JS8Call modem speed if True, defaults to False
+
+        Returns:
+            str or None: Frequency band designator (ex. \'40m\') with highest SNR for *origin*, or None if no spots for *origin*
+        '''
+        heard_freq_bands = self._client.heard_freq_bands()
+        best_band = None
+        best_snr = -100
+        
+        for band in heard_freq_bands:
+            #TODO improve performance by processing all origin spots directly instead of looping through all spots for each band using self.origin_median_snr
+            snr, timestamp = self.origin_median_snr(origin, max_age=max_age, min_age=min_age, start_time=start_time, end_time=end_time, normalize_snr=normalize_snr, band=band)
+
+            if snr is not None and int(snr) > best_snr:
+                best_band = band
+                best_snr = int(snr)
+
+        return best_band
+
     def normalize_snr_by_speed(self, snr, speed, normalize_to_speed='normal'):
         '''Noramlize SNR based on JS8Call modem speed.
 
@@ -403,5 +473,5 @@ class Propagation:
         norm_max_range, norm_min_range = snr_range[normalize_to_speed]
 
         # linear scaling
-        normalized_snr = norm_max_range + ((norm_min_range - norm_max_range) * (snr - max_range)) / (min_range - max_range)
+        normalized_snr = norm_max_range + ((norm_min_range - norm_max_range) * (int(snr) - max_range)) / (min_range - max_range)
         return normalized_snr
