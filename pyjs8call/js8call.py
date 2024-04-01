@@ -413,6 +413,14 @@ class JS8Call:
         else:
             self.last_outgoing = 0
 
+    def heard_freq_bands(self):
+        '''Get frequency bands with incoming messages.
+
+        Returns:
+            list: Frequency band designators like \'40m\'
+        '''
+        return self._last_incoming_by_band.keys()
+
     def activity(self, age=0):
         '''Whether there is outgoing activity.
         
