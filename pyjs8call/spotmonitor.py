@@ -116,7 +116,7 @@ class SpotMonitor:
             distance (int): Maximum message grid square distance, defaults to 0 (zero)
             age (int): Maximum message age in seconds, defaults to 0 (zero)
             count (int): Number of most recent spot messages to return, defaults to 0 (zero)
-            profile (str): Configuration profile at the time spot was sent or received, defaults to None
+            profile (str): Configuration profile at the time spot was received, defaults to None
             dial_freq (int): Dial frequency in Hz to match, defaults to None
             band (str): Frequency band (ex. \'40m\') to match, defaults to None
 
