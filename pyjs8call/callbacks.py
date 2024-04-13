@@ -52,55 +52,57 @@ class Callbacks:
         '''Initialize callback object.
 
         Returns:
-            pyjs8call.client.Callbacks: Constructed callback object
+            pyjs8call.callbacks.Callbacks: Constructed callback object
         '''
         self.outgoing = None
         '''func: Outgoing message status change callback function, defaults to None
-        *outgoing* callback signature: *func(msg)* where *msg* is a *pyjs8call.Message* object
+        - *outgoing* callback signature: *func(msg)* where *msg* is a *pyjs8call.message.Message* object
         - Called by pyjs8call.txmonitor'''
         self.spots = []
         '''list: New spots callback funtions, defaults to empty list
-        *spots* structure: *[callback, ...]*
-        - callback signature: *func( list(msg, ...) )* where *msg* is a *pyjs8call.Message* object
-        - Called by pyjs8call.spotmonitor'''
+        - *spots* structure: *[callback, ...]*
+        - callback signature: *func( list(msg, ...) )* where *msg* is a *pyjs8call.message.Message* object
+        - Called by pyjs8call.spotmonitor
+        - See *Callbacks.register_spots* and *Callbacks.remove_spots*'''
         self.station_spot = []
         '''list: Watched station spot callback functions, defaults to empty list
-        *station_spot* structure: *[callback, ...]*
-        - callback signature: *func(msg)* where *msg* is a *pyjs8call.Message* object
-        - Called by pyjs8call.spotmonitor'''
+        - *station_spot* structure: *[callback, ...]*
+        - callback signature: *func(msg)* where *msg* is a *pyjs8call.message.Message* object
+        - Called by pyjs8call.spotmonitor
+        - See *Callbacks.register_station_spot* and *Callbacks.remove_station_spot*'''
         self.group_spot = []
         '''list: Watched group spot callback functions, defaults to empty list
-        *group_spot* structure: *[callback, ...]*
-        - callback signature: *func(msg)* where *msg* is a *pyjs8call.Message* object
-        - Called by pyjs8call.spotmonitor'''
+        - *group_spot* structure: *[callback, ...]*
+        - callback signature: *func(msg)* where *msg* is a *pyjs8call.message.Message* object
+        - Called by pyjs8call.spotmonitor
+        - See *Callbacks.register_group_spot* and *Callbacks.remove_group_spot*'''
         self.window = None
         '''func: JS8Call rx/tx window transition callback function, defaults to None
-        *window* callback signature: *func()*
+        - *window* callback signature: *func()*
         - Called by pyjs8call.windowmonitor'''
         self.inbox = None
         '''func: New inbox message callback function, defaults to None
-        *inbox* callback signature: *func(msgs)* where *msgs* is a list of *dict* message items
+        - *inbox* callback signature: *func(msgs)* where *msgs* is a list of *dict* message items
         - See *client.get_inbox_messages()* for message item *dict* key details
         - Called by pyjs8call.inboxmonitor'''
         self.schedule = None
         '''func: Schedule entry activation callback function, defaults to None
-        *schedule* callback signature: *func(sch)* where *sch* is a *pyjs8call.Schedule* object
-        - See *pyjs8call.Schedule* for object property details
+        - *schedule* callback signature: *func(sch)* where *sch* is a *pyjs8call.schedulemonitor.ScheduleEntry* object
         - Called by pyjs8call.schedulemonitor'''
         self.incoming = {
             Message.RX_DIRECTED: [],
         }
         '''dict: Mapping of *pyjs8call.Message* types to incoming message callback functions list
-        *incoming* structure: *{type: [callback, ...], ...}*
-        - *type* is an incoming  message type (see pyjs8call.Message for information on message types)
-        - *callback* signature: *func(msg)* where *msg* is a *pyjs8call.Message* object'''
+        - *incoming* structure: *{type: [callback, ...], ...}*
+            - *type* is an incoming  message type (see pyjs8call.message.Message for information on message types)
+        - *callback* signature: *func(msg)* where *msg* is a *pyjs8call.message.Message* object'''
         self.commands = {}
         '''dict: Mapping of custom commands strings to custom command callback functions list'''
 
     def register_incoming(self, callback, message_type=Message.RX_DIRECTED):
         '''Register incoming message callback function.
 
-        Incoming message callback functions are associated with specific message types. The directed message type is assumed unless otherwise specified. See pyjs8call.message for more information on message types.
+        Incoming message callback functions are associated with specific message types. The directed message type is assumed unless otherwise specified. See pyjs8call.message.Message for more information on message types.
 
         Note that pyjs8call internal modules may register callback functions for specific message type handling. Keep this in mind if minipulating registered callback functions directly.
 
@@ -108,13 +110,13 @@ class Callbacks:
             callback (func): Callback function object
             message_type (str): Associated message type, defaults to RX_DIRECTED
 
-        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message.Message object
 
         Raises:
             TypeError: An invaid message type is specified
         '''
         if message_type not in Message.RX_TYPES:
-            raise TypeError('Invalid message type \'' + str(message_type) + '\', see pyjs8call.Message.RX_TYPES')
+            raise TypeError('Invalid message type \'' + str(message_type) + '\', see pyjs8call.message.Message.RX_TYPES')
 
         if message_type not in self.incoming:
             self.incoming[message_type] = []
@@ -137,7 +139,7 @@ class Callbacks:
     def incoming_type(self, message_type=Message.RX_DIRECTED):
         '''Get incoming message callback functions.
         
-        See pyjs8call.message for more information on message types.
+        See pyjs8call.message.Message for more information on message types.
         
         Args:
             message_type (str): Message type, defaults to RX_DIRECTED
@@ -153,15 +155,15 @@ class Callbacks:
     def register_command(self, cmd, callback):
         '''Register command callback function.
 
-        Note: All JS8Call commands must have a leading space. Custom command strings also require a leading space for consistent internal handling. If the specified command string does not have a leading space, one will be added.
+        **Note:** All JS8Call commands must have a leading space. Custom command strings also require a leading space for consistent internal handling. If the specified command string does not have a leading space, one will be added.
 
-        Note: Custom commands are only processed for directed messages.
+        **Note:** Custom commands are only processed for directed messages.
 
         Args:
             cmd (str): Command string
             callback (func): Callback function object
 
-        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message.Message object
 
         Raises:
             ValueError: Specified command string is an exsiting JS8Call command
@@ -202,7 +204,7 @@ class Callbacks:
         Args:
             callback (func): Callback function object
             
-        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message.Message object
         '''
         if callback not in self.spots:
             self.spots.append(callback)
@@ -222,7 +224,7 @@ class Callbacks:
         Args:
             callback (func): Callback function object
             
-        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message.Message object
         '''
         if callback not in self.station_spot:
             self.station_spot.append(callback)
@@ -242,7 +244,7 @@ class Callbacks:
         Args:
             callback (func): Callback function object
             
-        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message object
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message.Message object
         '''
         if callback not in self.group_spot:
             self.group_spot.append(callback)

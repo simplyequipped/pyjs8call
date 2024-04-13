@@ -53,34 +53,7 @@ from pyjs8call import Message
 
 
 class Client:
-    '''JS8Call API client.
-    
-    **Caution**: Custom processing of messages is an advanced feature that can break internal message handling if implemented incorrectly. Use this feature only if you understand what you are doing.
-    **Note**: Any delay in *process_incoming* and *process_outgoing* functions will cause delays in internal incoming and outgoing message processing loops. Custom processing should be kept to a minimum to avoid cumulative delays.
-    
-    Custom Incoming Message Processing:
-    
-    If set, the *process_incoming* function is called after internal processing of an incoming message from the JS8Call application, but before adding the message to the incoming message queue.
-    
-    *process_incoming* should accept a *pyjs8call.message* object, and return a *pyjs8call.message* object. If an error occurs during processing, either:
-        - set the *msg.error* string before returning the message, which will cause the message to continue processing and be added to the incoming message queue
-        OR
-        - return None, which will cause the message to be dropped
-    
-    *process_incoming* function signatures:
-        `func(pyjs8call.Message) -> pyjs8call.Message`
-        `func(pyjs8call.Message) -> None`
-
-    Custom Outgoing Message Processing:
-    
-    If set, the *process_outgoing* function is called just after message creation in all outgoing message functions, such as *send_directed_message()*.
-    
-    *process_outgoing* should accept a *pyjs8call.message* object, and return a *pyjs8call.message* object. If an error occurs during processing:
-        - set the *msg.error* string, which will cause the message to be returned with a failed status (the message will not be sent)
-    
-    *process_outoing* function signature:
-        `func(pyjs8call.Message) -> pyjs8call.Message`
-    '''
+    '''JS8Call API client.'''
     
     OOB = 'OOB'
     '''str: Out-of-band designator'''
@@ -130,7 +103,7 @@ class Client:
         Returns:
             str: Band name like \'40m\'
             
-        Returned value is *Client.OOB* if frequency is outside known bands.
+        Returned value is Client.OOB if frequency is outside known bands.
         '''
         if freq is None:
             return Client.OOB
@@ -168,21 +141,21 @@ class Client:
 
         Registers the Client.stop function with the atexit module.
         
-        Initializes the following for access prior to starting:
+        Initializes the following modules for access prior to starting:
         - js8call (pyjs8call.js8call)
         - config (pyjs8call.confighandler)
-        - settings (pyjs8call.client.settings)
-        - callback (pyjs8call.client.callbacks)
+        - settings (pyjs8call.settings)
+        - callback (pyjs8call.callbacks)
         - notifications (pyjs8call.notifications)
 
         Args:
-            settings_path (str): pyjs8call settings file path, defaults to None (see pyjs8call.settings.load() for more information)
+            settings_path (str): pyjs8call settings file path, defaults to None (see pyjs8call.settings.Settings.load for more information)
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
             port (int): JS8Call TCP port setting, defaults to 2442
             config_path (str): Non-standard JS8Call.ini configuration file path, defaults to None
 
         Returns:
-            pyjs8call.Client: Constructed client object
+            pyjs8call.client.Client: Constructed client object
 
         Raises:
             RuntimeError: JS8Call application not installed
@@ -196,9 +169,38 @@ class Client:
         self.restarting = False
         '''bool: True if the JS8Call application is currently being restarted, False otherwise'''
         self.process_incoming = None
-        '''func: Function to call for custom processing of incoming messages, defaults to None'''
+        '''func: Function to call for custom processing of incoming messages, defaults to None
+        
+        **Caution**: Custom processing of messages is an advanced feature that can break internal message handling if implemented incorrectly. Use this feature only if you understand what you are doing.
+        
+        **Note**: Any delay in custom processing functions will cause delays in internal incoming and outgoing message processing loops. Custom processing should be kept to a minimum to avoid cumulative delays.
+        
+        If set, the Client.process_incoming function is called after internal processing of an incoming message from the JS8Call application, but before adding the message to the incoming message queue.
+        
+        Client.process_incoming should accept a pyjs8call.message.Message.Message object, and return a pyjs8call.message.Message.Message object. If an error occurs during processing, either:
+        - set the *msg.error* string before returning the message, which will cause the message to continue processing and be added to the incoming message queue
+        OR
+        - return None, which will cause the message to be dropped
+        
+        Client.process_incoming function signatures:
+        - `func(pyjs8call.message.Message.Message) -> pyjs8call.message.Message.Message`
+        - `func(pyjs8call.message.Message.Message) -> None`
+        '''
         self.process_outgoing = None
-        '''func: Function to call for custom processing of outgoing messages, defaults to None'''
+        '''func: Function to call for custom processing of outgoing messages, defaults to None
+
+        **Caution**: Custom processing of messages is an advanced feature that can break internal message handling if implemented incorrectly. Use this feature only if you understand what you are doing.
+
+        **Note**: Any delay in custom processing functions will cause delays in internal incoming and outgoing message processing loops. Custom processing should be kept to a minimum to avoid cumulative delays.
+        
+        If set, the Client.process_outgoing function is called just after message creation in all outgoing message functions, such as Client.send_directed_message().
+        
+        Client.process_outgoing should accept a pyjs8call.message.Message.Message object, and return a pyjs8call.message.Message.Message object. If an error occurs during processing:
+        - set the *msg.error* string, which will cause the message to be returned with a failed status (the message will not be sent)
+        
+        Client.process_outgoing function signature:
+        - `func(pyjs8call.message.Message.Message) -> pyjs8call.message.Message.Message`
+        '''
         self.clean_directed_text = True
         '''bool: Remove JS8Call callsign structure from incoming messages, defaults to True'''
         self.autodetect_outgoing_directed_command = True
@@ -304,7 +306,7 @@ class Client:
 
         Args:
             headless (bool): Run JS8Call headless via xvfb (Linux only)
-            args (list): Command line arguments (see appmonitor.start()), defaults to None
+            args (list): Command line arguments (see pyjs8call.appmonitor.AppMonitor.start), defaults to None
             debugging (bool): Print message data to the console, defaults to False
             logging (bool): Print message data to ~/pyjs8call.log, defaults to False
 
@@ -475,7 +477,7 @@ class Client:
         
         This function is non-blocking due to the use of *threading.Thread* internally.
         
-        See *pyjs8call.js8call.activity()* for more details.
+        See pyjs8call.js8call.JS8Call.activity for more details.
         
         Args:
             age (int): Maximum age in seconds of outgoing activity to consider active, defaults to 0
@@ -490,7 +492,13 @@ class Client:
         self.restart()
         
     def set_profile_on_exit(self, profile):
-        '''
+        '''Set JS8Call configuration profile on exit
+
+        Args:
+            profile (str): Profile name to set on exit
+
+        Raises:
+            ValueError: Specified configuration profile does not exist
         '''
         if profile not in self.config.get_profile_list():
             raise ValueError('Config profile \'' + profile + ' \' does not exist')
@@ -500,7 +508,7 @@ class Client:
     def activity(self, age=0):
         '''Whether there is outgoing activity.
 
-        This is a convenience function that calls *pyjs8call.js8call.activity()*.
+        This is a convenience function that calls pyjs8call.js8call.JS8Call.activity.
         
         Args:
             age (int): Maximum age of outgoing activity to consider active, defaults to 0 (disabled)
@@ -558,10 +566,10 @@ class Client:
     def msg_is_to_me(self, msg):
         '''Determine if specified message is addressed to local station.
         
-        Utilizes *msg.is_directed_to()* and *client.identities()* internally.
+        Utilizes pyjs8call.message.Message.is_directed_to and Client.identities internally.
         
         Args:
-            msg (pyjs8call.message): Message object to evaluate
+            msg (pyjs8call.message.Message): Message object to evaluate
             
         Returns:
             bool: True if *msg* is addressed to the local station, False otherwise
@@ -582,15 +590,15 @@ class Client:
 
         Remove origin callsign, destination callsign or group (including relays), whitespace, and end-of-message characters. This leaves only the message text.
         
-        The *pyjs8call.message.text* attribute stores the cleaned text while the *pyjs8call.message.value* attribute is unchanged.
+        The pyjs8call.message.Message.text attribute stores the cleaned text while the pyjs8call.message.Message.value attribute is unchanged.
 
-        Custom commands are also parsed out of message text. If a custom command is found, *pyjs8call.message.cmd* is set in the returned message.
+        Custom commands are also parsed out of message text. If a custom command is found, pyjs8call.message.Message.cmd is set in the returned message.
 
         Args:
-            message (pyjs8call.message): Message object to clean
+            message (pyjs8call.message.Message): Message object to clean
 
         Returns:
-            pyjs8call.message: Cleaned message object
+            pyjs8call.message.Message: Cleaned message object
         '''
         if msg is None:
             return msg
@@ -636,15 +644,15 @@ class Client:
         
         Message format: *MESSAGE*
         
-        *Client.process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
+        Client.process_outgoing is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(value = message, origin = self.settings.get_station_callsign())
@@ -670,16 +678,16 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
         
-        *Client.process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
+        Client.process_outgoing is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
             message (bytes): Bytes to decode and send as JS8Call text
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
         msg = Message(destination, origin = self.settings.get_station_callsign())
@@ -707,13 +715,13 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
         
-        *Client.process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
+        Client.process_outgoing is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
-            command (str): Command to include in message (see *pyjs8call.message* static commands)
+            command (str): Command to include in message (see pyjs8call.message.Message.Message static commands)
             message (str): Message text to send, defaults to None
         '''
         # msg.type = Message.TX_SEND_MESSAGE by default
@@ -740,18 +748,18 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
         
-        *Client.process_outgoing* is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
+        Client.process_outgoing is called just after message object creation, if set. If *msg.error* is set after custom processing, the message object is returned with a failed status and without being sent.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *Client.monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
-        **Version 0.2.3:** *Client.autodetect_outgoing_directed_command* indicates that outgoing directed messages will be analyzed for JS8Call commands. If a command is found, a command message is constructed automatically. This simplifies outgoing message handling for applications built on top of pyjs8call.
+        **Version 0.2.3:** Client.autodetect_outgoing_directed_command indicates that outgoing directed messages will be analyzed for JS8Call commands. If a command is found, a command message is constructed automatically. This simplifies outgoing message handling for applications built on top of pyjs8call.
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         cmd_found = False
         
@@ -792,19 +800,19 @@ class Client:
     def send_heartbeat(self, grid=None):
         '''Send a JS8Call heartbeat message.
 
-        Note that JS8Call will only transmit API messages at the selected offset. Heartbeat messages can still be sent, but will not be in the heartbeat sub-band.
+        Note that JS8Call will only transmit API messages at the selected offset. Heartbeat messages can still be sent, but will not be in the heartbeat sub-band. See pyjs8call.hbnetwork for more information on automatically sending heartbeat messages in the heartbeat sub-band without interfacing with the JS8Call user interface.
 
         Message format: @HB HEARTBEAT *GRID*
 
         If no grid square is given the configured JS8Call grid square is used.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             grid (str): Grid square (truncated to 4 characters), defaults to None
 
         Returns:
-            pyjs8call.message: Constructed messsage object
+            pyjs8call.message.Message: Constructed messsage object
         '''
         if grid is None:
             grid = self.settings.get_station_grid()
@@ -824,13 +832,13 @@ class Client:
 
         If no grid square is given the configured JS8Call grid square is used.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             grid (str): Grid square (trucated to 4 characters), defaults to None
 
         Returns:
-            pyjs8call.message: Constructed messsage object
+            pyjs8call.message.Message: Constructed messsage object
 
         Raises:
             ValueError: Grid square not specified and JS8Call grid square not set
@@ -849,14 +857,14 @@ class Client:
         
         Message format: @APRSIS CMD :SMSGATE&nbsp;&nbsp;&nbsp;:@1234567890 *MESSAGE*
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             phone (str): Phone number to send SMS message to
             message (str): Message to be sent via SMS message
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         phone = str(phone).replace('-', '').replace('.', '').replace('(', '').replace(')', '')
         message = ':SMSGATE   :@' + phone + ' ' + message
@@ -867,14 +875,14 @@ class Client:
         
         Message format: @APRSIS CMD :EMAIL-2&nbsp;&nbsp;&nbsp;:EMAIL@DOMAIN.COM *MESSAGE*
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             email (str): Email address to send message to
             message (str): Message to be sent via email
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         message = ':EMAIL-2   :' + email + ' ' + message
         return self.send_directed_command_message('@APRSIS', Message.CMD_CMD, message)
@@ -886,7 +894,7 @@ class Client:
 
         JS8Call configured callsign is used if no callsign is given.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             park (str): Name of park being activated
@@ -896,7 +904,7 @@ class Client:
             callsign (str): Callsign of operator activating the park, defaults to None
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         if callsign is None:
             callsign = self.settings.get_station_callsign()
@@ -908,7 +916,7 @@ class Client:
         '''Get JS8Call inbox messages.
 
         Args:
-            unread (bool): Get unread messages only if True, all messages if False
+            unread (bool): Get unread messages only if True, all messages if False, defaults to True
 
         Each inbox message is a *dict* with the following keys:
 
@@ -950,14 +958,14 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the message to
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_directed_command_message(destination, Message.CMD_MSG, message)
 
@@ -968,7 +976,7 @@ class Client:
 
         If *remote* is a list of callsigns they will be joined in the specified order and sent as a relay.
         
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             remote (str, list): Callsign of intermediate station storing the message
@@ -976,7 +984,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         message = destination + ' ' + message
         return self.send_directed_command_message(remote, Message.CMD_MSG_TO, message)
@@ -989,7 +997,7 @@ class Client:
             message (str): Message text to send
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         msg = Message()
         msg.set('type', Message.INBOX_STORE_MESSAGE)
@@ -1005,14 +1013,14 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             callsign (str): Callsign to query for
             destination (str, list): Callsign(s) to direct the query to, defaults to @ALLCALL
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         message = callsign + Message.CMD_Q
         return self.send_directed_command_message(destination, Message.CMD_QUERY_CALL, message)
@@ -1024,13 +1032,13 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to, defaults to '@ALLCALL'
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_directed_command_message(destination, Message.CMD_QUERY_MSGS)
 
@@ -1041,14 +1049,14 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
             msg_id (str): Message ID to query for
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_directed_command_message(destination, Message.CMD_QUERY, 'MSG {}'.format(msg_id))
 
@@ -1059,13 +1067,13 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_directed_command_message(destination, Message.CMD_HEARING_Q)
 
@@ -1076,13 +1084,13 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_directed_command_message(destination, Message.CMD_SNR_Q)
 
@@ -1093,13 +1101,13 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_directed_command_message(destination, Message.CMD_GRID_Q)
 
@@ -1110,13 +1118,13 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
 
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_directed_command_message(destination, Message.CMD_INFO_Q)
 
@@ -1127,13 +1135,13 @@ class Client:
 
         If *destination* is a list of callsigns they will be joined in the specified order and sent as a relay.
         
-        The constructed message object is passed to pyjs8call.outgoingmonitor internally if *monitor_outgoing* is True (default).
+        The constructed message object is passed to pyjs8call.outgoingmonitor internally if Client.monitor_outgoing is True (default).
 
         Args:
             destination (str, list): Callsign(s) to direct the query to
 
         Returns:
-            pyjs8call.message: Constructed message object
+            pyjs8call.message.Message: Constructed message object
         '''
         return self.send_directed_command_message(destination, Message.CMD_STATUS_Q)
 
@@ -1143,8 +1151,6 @@ class Client:
         To get or set JS8Call callsign activity aging from the configuration file:
         `client.config.get('Configuration', 'CallsignAging', int)`
         `client.config.set('Configuration', 'CallsignAging', 120) # 120 minutes`
-
-        Specify a different age for hearing and heard_by activity by setting *hearing_age*. If *hearing_age* is None (default), *hearing_age* is set to *age*.
 
         Each call activity item is a dictionary with the following keys:
 
@@ -1165,6 +1171,7 @@ class Client:
 
         Args:
             age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
+            hearing_age (int): Maximum hearing and heard_by activity age in minutes, defaults to *age*
 
         Returns:
             list: Call activity items, sorted decending by *timestamp* (recent first)
@@ -1222,13 +1229,11 @@ class Client:
     def get_call_activity_from_spots(self, age=None, hearing_age=None):
         '''Get JS8Call call activity.
 
-        Similar to *client.get_call_activity()* except that stored spots are processed locally instead of using the JS8Call API. This function has better performance than *client.get_call_activity()*.
+        Similar to *Client.get_call_activity* except that stored spots are processed locally instead of using the JS8Call API. This function has better performance than *Client.get_call_activity*.
 
         To get or set JS8Call callsign activity aging from the configuration file:
         `client.config.get('Configuration', 'CallsignAging', int)`
         `client.config.set('Configuration', 'CallsignAging', 120) # 120 minutes`
-
-        Specify a different age for hearing and heard_by activity by setting *hearing_age*. If *hearing_age* is None (default), *hearing_age* is set to *age*.
 
         Each call activity item is a dictionary with the following keys:
 
@@ -1249,7 +1254,7 @@ class Client:
 
         Args:
             age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
-            hearing_age (int, None): Maximum hearing age in minutes, defaults to None
+            hearing_age (int, None): Maximum hearing and heard_by activity age in minutes, defaults to *age*
 
         Returns:
             list: Call activity items, sorted decending by *timestamp* (recent first)
@@ -1378,8 +1383,8 @@ class Client:
         '''Get JS8Call selected callsign.
 
         Returns:
-            str: Callsign selected on the JS8Call user interface
-            None: No callsign selected
+        - str: Callsign selected on the JS8Call user interface
+        - None: No callsign selected
         '''
         msg = Message()
         msg.type = Message.RX_GET_SELECTED_CALL
@@ -1533,14 +1538,14 @@ class Client:
     def hearing(self, age=None, spots=None):
         '''Stations other stations are hearing.
 
-        If calling both *client.spots.filter()* and *client.hearing()*, it is more efficient to pass the result of *client.spots.filter()* to *client.hearing()*. Otherwise, *client.hearing()* will call *client.spots.filter()* again internally.
+        If calling both pyjs8call.spotmonitor.SpotMonitor.filter and Client.hearing, it is more efficient to pass the result of pyjs8call.spotmonitor.SpotMonitor.filter to Client.hearing. Otherwise, Client.hearing will call pyjs8call.spotmonitor.SpotMonitor.filter again internally.
 
         Args:
             age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
 
         Returns:
             dict: Example format `{'station': ['station', ...], ...}`
-            spots: Spots to process (ex. from *client.spots.filter()*), defaults to None
+            spots: Spots to process (ex. from pyjs8call.spotmonitor.SpotMonitor.filter), defaults to None
         '''
         if age is None:
             age = self.config.get('Configuration', 'CallsignAging', int)
@@ -1590,7 +1595,7 @@ class Client:
     def station_hearing(self, station=None, age=None):
         '''Stations the specified station is hearing.
         
-        See *client.hearing()* for more information.
+        See Client.hearing for more information.
 
         Args:
             station (str): Station callsign to get hearing data for, defaults to local station callsign
@@ -1612,13 +1617,13 @@ class Client:
     def heard_by(self, age=None, hearing=None):
         '''Stations other stations are heard by.
 
-        *client.heard_by()* is the inverse of *client.hearing()*.
+        Client.heard_by is the inverse of Client.hearing.
 
-        If calling both *client.hearing()* and *client.heard_by*, it is more efficient to pass the result of *client.hearing()* to *client.heard_by()*. Otherwise, *client.heard_by()* will call *client.hearing()* again internally.
+        If calling both Client.hearing and Client.heard_by, it is more efficient to pass the result of Client.hearing to Client.heard_by. Otherwise, Client.heard_by() will call Client.hearing again internally.
 
         Args:
             age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
-            hearing (dict): Result of *client.hearing()*, defaults to result of *client.hearing()*
+            hearing (dict): Result of Client.hearing, defaults to result of Client.hearing
 
         Returns:
             dict: Example format `{'station': ['station', ...], ...}`
@@ -1644,12 +1649,12 @@ class Client:
     def station_heard_by(self, station=None, age=None, hearing=None):
         '''Stations the specified station is heard by.
 
-        See *client.heard_by()* for more information.
+        See Client.heard_by for more information.
         
         Args:
             station (str): Station callsign to get heard by data for, defaults to local station callsign
             age (int): Maximum message age in minutes, defaults to JS8Call callsign activity aging
-            hearing (dict): Result of *client.hearing()*, defaults to result of *client.hearing()*
+            hearing (dict): Result of Client.hearing, defaults to result of Client.hearing
 
         Returns:
             list: Station callsigns heard by the specified station
@@ -1697,7 +1702,7 @@ class Client:
         Returns:
             tuple (int, str, int): Distance, distance units, and bearing in degrees (ex. (1194, 'mi', 312)).
             
-            Distance units match JS8Call distance units, see *client.settings.get_distance_units()*.
+            Distance units match JS8Call distance units, see pyjs8call.settings.Settings.get_distance_units.
 
         Raises:
             ValueError: *grid_b* is *None* and JS8Call grid square is not set

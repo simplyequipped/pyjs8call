@@ -59,6 +59,7 @@ class AppMonitor:
         '''list: Command line arguments passed to JS8Call, defaults to empty list'''
         self.restart = False
         '''bool: Whether to restart the JS8Call application if it stops, defaults to False
+
         If the JS8Call application is closed and *restart* is *False*, pyjs8call will exit. If *restart* is *True* pyjs8call will continue to run and JS8Call will be restarted.'''
         self.terminate_js8call = True
         '''bool: Whether to terminate the JS8Call application when stopping the app monitor, defaults to True'''
