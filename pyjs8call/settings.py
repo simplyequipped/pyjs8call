@@ -1149,4 +1149,26 @@ class Settings:
             
         self._client.schedule.remove(start_time, self._daily_restart_schedule)
         self._daily_restart_schedule = None
+
+    def daily_restart_enabled(self):
+        '''Whether daily JS8Call restart is enabled.
+
+        Returns:
+            bool: True if associated schedule entry is set, False otherwise
+        '''
+        if self._daily_restart_schedule is not None:
+            return True
+        else:
+            return False
+
+    def get_daily_restart_time(self):
+        '''Get daily JS8Call restart time.
+
+        Returns:
+            str or None: Local restart time in 24-hour format (ex. '23:30'), or None if not enabled
+        '''
+        if self._daily_restart_schedule is None:
+            return
+
+        return self._daily_restart_schedule.start.strftime('%H:%M')
     
