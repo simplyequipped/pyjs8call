@@ -79,10 +79,10 @@ All functionality is supported on all major platforms as of version 0.2.0. Runni
     sudo apt install xvfb
     ```
 
-2. Install pyjs8call using pip3 (or pip, if python3 is the default on your system)
+2. Install pyjs8call using pip (or pip3, if python3 is not the default on your system)
     
     ```
-    pip3 install pyjs8call
+    pip install pyjs8call
     ```
 
     This will also install *psutil* for cross platform process management.
