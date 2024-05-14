@@ -3,20 +3,26 @@
 **0.2.3**
 - Add *pyjs8call.settings.Settings.load()* to load settings from an ini file (see example *settings.ini* in repo)
 - Add CLI support for usage like *python -m pyjs8call* (try *--help* for options)
-- Add RNS PipeInterface support using *python -m pyjs8call --rns* (see other CLI options)
+- Add CLI documentation to README
+- Add RNS PipeInterface support using *python -m pyjs8call --rns* CLI option
 - Add *restore_on_exit* argument to *pyjs8call.settings.Settings.set_profile()*
-- Add *pyjs8call.message.Message.encode()* and *pyjs8call.message.Message.decode()*
+- Add *pyjs8call.message.Message.encode()* and *pyjs8call.message.Message.decode()* for handling byte data
 - Add notification type enable/disable functions in *pyjs8call.notifications*
 - Add *terminate_js8call* argument to *pyjs8call.client.Client.stop()*
 - Add *pyjs8call.settings.Settings.create_new_profile()*
 - Add *create* argument to *pyjs8call.settings.Settings.set_profile()*
 - Add *normalize_snr* argument to *propagation* functions
 - Add *pyjs8call.client.Client.get_call_activity_from_spots()* to improve processing speed
-- Separate *pyjs8call.settings.Settings* and *pyjs8call.callbacks.Callbacks* into modules
+- Separate *pyjs8call.settings.Settings* and *pyjs8call.callbacks.Callbacks* into separate modules
+- Add *restart* attribute to *pyjs8call.schedulemonitor.ScheduleEntry* objects to allow forced restart on a schedule
 - Remove JS8Call *timer.out* file when starting (or restarting) to avoid large file size over time
+- Add *pyjs8call.settings.Settings* functions related to daily application restart (to remove *timer.out*)
+- Add *best_band_for_grid()* and *best_band_for_origin()* functions to *pyjs8call.propagation.Propagation*
+- Add *client.Client.heard_freq_bands()* function
+- Enable JS8Call heartbeat networking when pyjs8call heartbeat networking is enabled
+- Enable JS8Call heartbeat networking when heartbeat acknowledgements are enabled
 - Automatically detect JS8Call commands in outgoing messages to simplify app development
-- Minor documentation improvements
-- Minor bug fixes
+- Documentation improvements
 
 **0.2.2**
 - Add *pyjs8call.propagation* module
