@@ -35,6 +35,7 @@ Examples:
     js8call.schedule.add('18:30') # use current freq, speed, and profile
     js8call.schedule.add('8:00', 7078000, 'normal', 'Field Ops')
     js8call.schedule.remove('18:30')
+    js8call.schedule.add('2:00', restart=True) # restart application daily at 2am
     ```
 '''
 
@@ -52,7 +53,7 @@ class ScheduleEntry:
 
     Do not use this object to create a schedule entry directly. See ScheduleMonitor.add().
 
-    This object is passed to the *client.callback.schedule* callback function when a schedule entry is activated.
+    This object is passed to the *callbacks.Callbacks.schedule* callback function when a schedule entry is activated.
     
     String (str) format:
         {time}L | {state: <8} | {freq_mhz: <11} | {speed: <6} | {profile}
@@ -69,7 +70,7 @@ class ScheduleEntry:
             '<ScheduleEntry 10:00L : 14.078 MHz : fast : FT857>'
     '''
 
-    def __init__(self, start, freq, speed, profile):
+    def __init__(self, start, freq, speed, profile, restart):
         '''Initialize schedule entry.
 
         Args:
@@ -77,6 +78,7 @@ class ScheduleEntry:
             freq (int): Dial frequency in Hz
             speed (str): Modem speed ('slow', 'normal', 'fast', 'turbo')
             profile (str): Configuration profile name
+            restart (bool): Whether to forece application restart
 
         Returns:
             pyjs8call.schedulemonitor.ScheduleEntry: Constructed schedule entry
@@ -85,6 +87,7 @@ class ScheduleEntry:
         self.start = start
         self.freq = freq
         self.speed = speed
+        self.restart = restart
         self.active = False
         self.run = False
     
@@ -94,11 +97,12 @@ class ScheduleEntry:
         Returns:
             Dictionary of schedule entry object with the following keys:
             - start (datetime.time)
-            - time (str): local time in 24-hour format, ex. '18:30'
+            - time (str): Local time in 24-hour format, ex. '18:30'
             - freq (int): Frequency in Hz, ex. 7078000
-            - freq_mhz (str): frequency in MHz with 3 decimal places, ex. '7.078 MHz'
+            - freq_mhz (str): Frequency in MHz with 3 decimal places, ex. '7.078 MHz'
             - speed (str): Modem speed, ('slow', 'normal', 'fast', or 'turbo')
-            - profile (str): configuration profile name, ex. 'Default'
+            - restart (bool): Whether application is forced to restart
+            - profile (str): Configuration profile name, ex. 'Default'
             - active (bool): True if entry is the active schedule, False otherwise
             - state (str): 'active' if self.active is True, 'inactive' otherwise
             - run (bool): True if entry has been run today, False otherwise
@@ -109,6 +113,7 @@ class ScheduleEntry:
             'freq': self.freq,
             'freq_mhz': '{:.3f} MHz'.format(self.freq / 1000000),
             'speed': self.speed,
+            'restart': self.restart
             'profile': self.profile,
             'active': self.active,
             'state': 'active' if self.active else 'inactive',
@@ -121,16 +126,17 @@ class ScheduleEntry:
             self.profile == schedule.profile and
             self.start == schedule.start and
             self.freq == schedule.freq and
-            self.speed == schedule.speed
+            self.speed == schedule.speed and
+            self.restart == schedule.restart
         )
     
     def __repr__(self):
         '''Get schedule entry object representation.'''
-        return '<ScheduleEntry {0[time]}L : {0[freq_mhz]} : {0[speed]} : {0[profile]}>'.format(self.dict())
+        return '<ScheduleEntry {0[time]}L : {0[freq_mhz]} : {0[speed]} : {0[profile]} : {0[restart]}>'.format(self.dict())
             
     def __str__(self):
         '''Get schedule entry string.'''
-        return '{0[time]}L | {0[state]: <8} | {0[freq_mhz]: <11} | {0[speed]: <6} | {0[profile]}'.format(self.dict())
+        return '{0[time]}L | {0[state]: <8} | {0[freq_mhz]: <11} | {0[speed]: <6} | {0[restart] <5} | {0[profile]}'.format(self.dict())
 
 
 class ScheduleMonitor:
@@ -221,7 +227,7 @@ class ScheduleMonitor:
         '''Resume schedule monitoring.'''
         self._paused = False
 
-    def add(self, start_time, freq=None, speed=None, profile=None):
+    def add(self, start_time, freq=None, speed=None, profile=None, restart=False):
         '''Add new schedule entry.
 
         Args:
@@ -229,6 +235,10 @@ class ScheduleMonitor:
             freq (int): Dial frequency in Hz, defaults to current frequency
             speed (str): Modem speed ('slow', 'normal', 'fast', 'turbo'), defaults to current speed
             profile (str): Configuration profile name, defaults to the current profile
+            restart (bool): Whether to force an application restart, defaults to False
+
+        Returns:
+            ScheduleEntry: New schedule entry object
         '''
         start_time = datetime.datetime.strptime(start_time, '%H:%M').time()
         now = datetime.datetime.now().time()
@@ -242,31 +252,35 @@ class ScheduleMonitor:
         if profile is None:
             profile = self._client.settings.get_profile()
 
-        new_schedule = ScheduleEntry(start_time, int(freq), speed, profile)
+        new_schedule = ScheduleEntry(start_time, int(freq), speed, profile, restart)
 
         # avoid running past schedule entry immediately after creation
         if new_schedule.start < now:
             new_schedule.run = True
 
         if new_schedule in self._schedule:
-            return
+            return new_schedule
 
         with self._schedule_lock:
             self._schedule.append(new_schedule)
 
         self._save_to_config()
+        return new_schedule
 
-    def remove(self, start_time=None, profile=None):
+    def remove(self, start_time=None, profile=None, schedule=None):
         '''Remove existing schedule entry.
 
-        If *start_time* is not given, all schedule entries with profile name *profile* are removed.
-
-        if *profile* is not given, all schedule entries with start time *start_time* are removed.
+        If *start_time* is not given, all schedule entries with profile name *profile* are removed. If *profile* is not given, all schedule entries with start time *start_time* are removed. If *schedule* is set to a *schedulemonitor.ScheduleEntry* object, *start_time* and *profile* are set via *schedule*.
 
         Args:
             start_time (str): Local start time in 24-hour format (ex. '18:30'), defaults to None
             profile (str): Configuration profile name, defaults to None
+            schedule (ScheduleEntry): Schedule entry object to source *start_time* and *profile* from, defaults to None
         '''
+        if schedule is not None and isinstance(schedule, ScheduleEntry):
+            start_time = schedule.start.strftime('%H:%M')
+            profile = schedule.profile
+        
         if start_time is not None:
             start_time = datetime.datetime.strptime(start_time, '%H:%M').time()
 
@@ -287,7 +301,7 @@ class ScheduleMonitor:
         Schedule entries are sorted by start time.
 
         Returns:
-            list: list of Schedule objects (see pyjs8call.schedulemonitor.Schedule)
+            list: list of Schedule objects (see schedulemonitor.Schedule)
         '''
         with self._schedule_lock:
             schedule = self._schedule.copy()
@@ -298,7 +312,7 @@ class ScheduleMonitor:
     def _save_to_config(self):
         '''Save schedule to configuration file.'''
         with self._schedule_lock:
-            schedule = [ [sch.start.strftime('%H:%M'), sch.freq, sch.speed, sch.profile] for sch in self._schedule]
+            schedule = [ [sch.start.strftime('%H:%M'), sch.freq, sch.speed, sch.profile, sch.restart] for sch in self._schedule]
             
         schedule = json.dumps(schedule)
         self._client.config.set('Configuration', 'pyjs8callSchedule', schedule)
@@ -357,7 +371,7 @@ class ScheduleMonitor:
                         continue
 
                     if not schedule.run and not schedule.active and schedule.start < now:
-                        if self._restart_required(schedule, self._active_schedule):
+                        if schedule.restart or self._restart_required(schedule, self._active_schedule):
                             # window duration based on current speed setting
                             window = self._client.settings.get_window_duration()
                             
