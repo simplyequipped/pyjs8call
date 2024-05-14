@@ -87,7 +87,7 @@ def _rns_read_stdin():
             return
 
         if len(byte) == 0:
-            # EOL reached, pipe closed
+            # EOF reached, pipe closed
             js8call.stop()
             break
 
