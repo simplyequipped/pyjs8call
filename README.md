@@ -151,7 +151,50 @@ Parses stored spots into datasets of individual or median SNR values for grid sq
 **Notifications** (pyjs8call.notifications)
 Send an email message (including email-to-text) via an existing SMTP server when a message directed to the local station is received.
 
-&nbsp;  
+&nbsp;
+
+### Command Line Interface (CLI)
+
+A command line interface is available for the *pyjs8call* module as of version 0.2.3. CLI usage is as follows:
+
+```
+USAGE: python -m pyjs8call [OPTIONS]
+
+OPTIONS:
+    --rns
+        Utilize IO buffers to support the RNS PipeInterface, set configuration profile to 'RNS',
+        allow free text, and add group @RNS (*)
+    --freq
+        Set radio frequency in Hz
+    --grid
+        Set station grid square
+    --speed
+        Set speed of JS8Call modem, defaults to 'fast'
+    --profile
+        Set JS8Call configuration profile (**)
+    --callsign
+        Set station callsign
+    --settings
+        File path to pyjs8call settings file (NOT JS8CALL CONFIG FILE), see pyjs8call.settings.Settings.load
+        for more information
+    --headless
+        Run JS8Call headless using xvfb (only available on Linux platforms)
+    --heartbeat
+        Enable pyjs8call heartbeat networking
+
+
+(*)    RNS PipeInterface must be configured and enabled in the Reticulum config file, see below example:
+
+       [[Pipe Interface]]
+       type = PipeInterface
+       interface_enabled = True
+       command = python -m pyjs8call --rns --settings ~/.config/pyjs8call_rns.ini
+       respawn_delay = 5
+
+(**)   If the specified profile does not exist, it is created by copying the 'Default' profile
+```
+
+&nbsp;
 
 ### Examples
 
