@@ -193,6 +193,7 @@ OPTIONS:
 
 (**)   If the specified profile does not exist, it is created by copying the 'Default' profile
 ```
+See [RNS PipeInterface](https://markqvist.github.io/Reticulum/manual/interfaces.html#pipe-interface) for more information on configuring a RNS PipeInterface.
 
 &nbsp;
 
