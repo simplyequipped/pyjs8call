@@ -49,6 +49,7 @@ class Settings:
             pyjs8call.client.Settings: Constructed setting object
         '''
         self._client = client
+        self._daily_restart_schedule = None
         self.loaded_settings = None
         '''Loaded settings container (see python3 configparser for more information)'''
 
@@ -61,7 +62,8 @@ class Settings:
                 'frequency': lambda value: self.set_freq(value),
                 'offset': lambda value: self.set_offset(value),
                 'info': lambda value: self.set_station_info(value),
-                'append_pyjs8call_info': lambda value: self.append_pyjs8call_to_station_info()
+                'append_pyjs8call_info': lambda value: self.append_pyjs8call_to_station_info(),
+                'daily_restart': lambda value: self.enable_daily_restart(value) if value else self.disable_daily_restart()
             },
             'general': {
                 'groups': lambda value: self.set_groups(value),
@@ -107,6 +109,7 @@ class Settings:
             }
         }
 
+        # settings set via js8call config file
         self._pre_start_settings = {
             'station' : [
                 'callsign',
@@ -158,9 +161,10 @@ class Settings:
         grid=EM19
         speed=normal
         freq=7078000
-        offset=1500
+        offset=1750
         info=QDX 5W, DIPOLE 30FT
         append_pyjs8call_info=true
+        daily_restart=02:00
 
         [general]
 
@@ -268,7 +272,7 @@ class Settings:
             return True
         elif value.lower() in ['false', 'no']:
             return False
-        elif value.lower() in ('none', '', 'nill', 'null'):
+        elif value.lower() in ('none', '', 'nil', 'nill', 'null'):
             return None
         elif value.isnumeric():
             return int(value)
@@ -1121,4 +1125,28 @@ class Settings:
 
         duration = {'slow': 30, 'normal': 15, 'fast': 10, 'turbo': 6, 'ultra':4}
         return duration[speed]
+
+    def enable_daily_restart(self, restart_time):
+        '''Enable daily JS8Call restart at specified time.
+
+        The intended use of this function is to allow the removal of the *timer.out* file, which grows in size until it consumes all available disk space. This file cannot be removed while the application is running, but is automatically removed during the pyjs8call restart process.
+
+        This function adds a schedule entry. See *pyjs8call.schedulemonitor* for more information.
+
+        Args:
+            restart_time (str): Local restart time in 24-hour format (ex. '23:30')
+        '''
+        # add schedule entry to restart application daily with no settings changes
+        self._daily_restart_schedule = self._client.schedule.add(restart_time, restart=True)
+
+    def disable_daily_restart(self):
+        '''Disable daily JS8Call restart.
+        
+        This function removes the schedule entry created by *enable_daily_restart*. See *pyjs8call.schedulemonitor* for more information.
+        '''
+        if self._daily_restart_schedule is None:
+            return
+            
+        self._client.schedule.remove(start_time, self._daily_restart_schedule)
+        self._daily_restart_schedule = None
     
