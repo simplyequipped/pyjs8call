@@ -13,7 +13,7 @@ This software is currently in a beta state. This means that the software will li
 &nbsp;
 
 ### Responsibility
-It is the station operator's reponsibility to ensure compliance with local laws.
+It is the station operator's responsibility to ensure compliance with local laws.
 
 &nbsp;
 
@@ -87,7 +87,7 @@ All functionality is supported on all major platforms as of version 0.2.0. Runni
 
     This will also install *psutil* for cross platform process management.
 
-3. Launch JS8Call to configure audio and CAT interface settings as needed. Launching the application and exiting normally will also initilize the configuration file, which is required by *pyjs8call*.
+3. Launch JS8Call to configure audio and CAT interface settings as needed. Launching the application and exiting normally will also initialize the configuration file, which is required by *pyjs8call*.
 
 &nbsp;
 
