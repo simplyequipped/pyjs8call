@@ -377,7 +377,7 @@ class JS8Call:
     def process_freq_change(self, previous_freq, current_freq=None):
         '''Manage last incoming/outgoing timestamps on band change.
 
-        This function is called internally when the local frequency state is updated. If a band change has occured, last incoming and outgoing timestamps for the previous band are stored, and last incoming and outgoing timestamps for the current band of loaded (if available).
+        This function is called internally when the local frequency state is updated. If a band change has occured, last incoming and outgoing timestamps for the previous band are stored, and last incoming and outgoing timestamps for the current band are loaded (if available).
 
         Note: Changing from one out-of-band frequency to another out-of-band frequency is not considered a band change.
 
@@ -419,7 +419,7 @@ class JS8Call:
         Returns:
             list: Frequency band designators like \'40m\'
         '''
-        return self._last_incoming_by_band.keys()
+        return list(self._last_incoming_by_band.keys())
 
     def activity(self, age=0):
         '''Whether there is outgoing activity.
