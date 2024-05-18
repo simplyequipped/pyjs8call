@@ -256,17 +256,17 @@ class Client:
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
         self.notifications = pyjs8call.Notifications(self)
 
-        if self.config.get('Configuration', 'pyjs8callCleanDirectedText') is not None:
+        if self.config.get('Configuration', 'pyjs8callCleanDirectedText') not in [None, 'None']:
             config_clean_directed_text = self.config.get('Configuration', 'pyjs8callCleanDirectedText', bool)
             if config_clean_directed_text is not None:
                 self.clean_directed_text = config_clean_directed_text
 
-        if self.config.get('Configuration', 'pyjs8callMonitorOutgoing') is not None:
+        if self.config.get('Configuration', 'pyjs8callMonitorOutgoing') not in [None, 'None']:
             config_monitor_outgoing = self.config.get('Configuration', 'pyjs8callMonitorOutgoing', bool, fallback=self.monitor_outgoing)
             if config_monitor_outgoing is not None:
                 self.monitor_outgoing = config_monitor_outgoing
 
-        if self.config.get('Configuration', 'pyjs8callMaxSpotAge') is not None:
+        if self.config.get('Configuration', 'pyjs8callMaxSpotAge') not in [None, 'None']:
             config_max_spot_age = self.config.get('Configuration', 'pyjs8callMaxSpotAge', int, fallback=self.max_spot_age)
             if config_max_spot_age is not None:
                 self.max_spot_age = config_max_spot_age
