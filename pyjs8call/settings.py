@@ -1126,7 +1126,7 @@ class Settings:
         duration = {'slow': 30, 'normal': 15, 'fast': 10, 'turbo': 6, 'ultra':4}
         return duration[speed]
 
-    def enable_daily_restart(self, restart_time):
+    def enable_daily_restart(self, restart_time='02:00'):
         '''Enable daily JS8Call restart at specified time.
 
         The intended use of this function is to allow the removal of the *timer.out* file, which grows in size until it consumes all available disk space. This file cannot be removed while the application is running, but is automatically removed during the pyjs8call restart process.
@@ -1134,7 +1134,7 @@ class Settings:
         This function adds a schedule entry. See *pyjs8call.schedulemonitor* for more information.
 
         Args:
-            restart_time (str): Local restart time in 24-hour format (ex. '23:30')
+            restart_time (str): Local restart time in 24-hour format (ex. '23:30'), defaults to '02:00'
         '''
         # add schedule entry to restart application daily with no settings changes
         self._daily_restart_schedule = self._client.schedule.add(restart_time, restart=True)
@@ -1147,7 +1147,7 @@ class Settings:
         if self._daily_restart_schedule is None:
             return
             
-        self._client.schedule.remove(start_time, self._daily_restart_schedule)
+        self._client.schedule.remove(self._daily_restart_schedule.dict()['time'], schedule=self._daily_restart_schedule)
         self._daily_restart_schedule = None
 
     def daily_restart_enabled(self):
