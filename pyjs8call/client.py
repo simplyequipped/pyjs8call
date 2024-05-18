@@ -583,7 +583,7 @@ class Client:
         Returns:
             list: Frequency band designators like \'40m\'
         '''
-        return self._js8call.heard_freq_bands()
+        return self.js8call.heard_freq_bands()
 
     def clean_rx_message_text(self, msg):
         '''Clean incoming message text.
