@@ -628,7 +628,7 @@ class JS8Call:
         '''
         with self._spots_lock:
             if append:
-                self._spots.append(spots)
+                self._spots.extend(spots)
             else:
                 self._spots = spots
 
