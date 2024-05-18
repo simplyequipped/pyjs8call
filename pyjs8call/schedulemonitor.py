@@ -113,7 +113,7 @@ class ScheduleEntry:
             'freq': self.freq,
             'freq_mhz': '{:.3f} MHz'.format(self.freq / 1000000),
             'speed': self.speed,
-            'restart': self.restart
+            'restart': self.restart,
             'profile': self.profile,
             'active': self.active,
             'state': 'active' if self.active else 'inactive',
@@ -198,7 +198,7 @@ class ScheduleMonitor:
             freq = self._client.settings.get_freq()
             speed = self._client.settings.get_speed()
 
-            self._active_schedule = ScheduleEntry(None, freq, speed, profile)
+            self._active_schedule = ScheduleEntry(None, freq, speed, profile, False)
 
         # prevent running past schedule entries when re-enabled
         with self._schedule_lock:
