@@ -160,7 +160,8 @@ class ScheduleMonitor:
 
         config_schedules = self._client.config.get('Configuration', 'pyjs8callSchedule')
 
-        if config_schedules is not None:
+        if config_schedules is not None and config_schedules != 'None':
+            config_schedules = config_schedules.replace('""', '"')
             config_schedules = json.loads(config_schedules)
 
             for schedule in config_schedules:
@@ -314,7 +315,7 @@ class ScheduleMonitor:
         with self._schedule_lock:
             schedule = [ [sch.start.strftime('%H:%M'), sch.freq, sch.speed, sch.profile, sch.restart] for sch in self._schedule]
             
-        schedule = json.dumps(schedule)
+        schedule = json.dumps(schedule).replace('"', '""')
         self._client.config.set('Configuration', 'pyjs8callSchedule', schedule)
 
     def _restart_required(self, schedule_a, schedule_b):
