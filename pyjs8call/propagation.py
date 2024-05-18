@@ -231,8 +231,13 @@ class Propagation:
             str or None: Frequency band designator (ex. \'40m\') with highest SNR for *grid*, or None if no spots from *grid*
         '''
         heard_freq_bands = self._client.heard_freq_bands()
+        last_heard_spot = self._client.spots.last_heard()
         best_band = None
         best_snr = -100
+
+        # if no band change has occurred, use the last heard band
+        if len(heard_freq_bands) == 0 and len(last_heard_spot) > 0:
+            heard_freq_bands.append(self._client.freq_to_band(last_heard_spot[0].freq))
         
         for band in heard_freq_bands:
             #TODO improve performance by processing all grid spots directly instead of looping through all spots for each band using self.grid_median_snr
@@ -425,8 +430,13 @@ class Propagation:
             str or None: Frequency band designator (ex. \'40m\') with highest SNR for *origin*, or None if no spots for *origin*
         '''
         heard_freq_bands = self._client.heard_freq_bands()
+        last_heard_spot = self._client.spots.last_heard()
         best_band = None
         best_snr = -100
+
+        # if no band change has occurred, use the last heard band
+        if len(heard_freq_bands) == 0 and len(last_heard_spot) > 0:
+            heard_freq_bands.append(self._client.freq_to_band(last_heard_spot[0].freq))
         
         for band in heard_freq_bands:
             #TODO improve performance by processing all origin spots directly instead of looping through all spots for each band using self.origin_median_snr
