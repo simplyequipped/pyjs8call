@@ -405,7 +405,7 @@ class Client:
         self.online = False
         self.exit_tasks()
 
-        self.js8call.terminate_js8call = terminate_js8call
+        self.js8call.app.terminate_js8call = terminate_js8call
             
         try:
             return self.js8call.stop()
