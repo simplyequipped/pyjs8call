@@ -37,7 +37,7 @@ from datetime import datetime, timezone
 
 
 BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-'''Base64 characters for maping to JS8Call supported characters'''
+'''Base64 characters for mapping to JS8Call supported characters'''
 JS8CALL_BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ,.-"?!)(~:_&$%#@*><[]{}|;^0123456789+/'
 '''JS8Call supported characters for mapping to Base64 characters'''
 BASE64_TO_JS8CALL_TRANSLATION_TABLE = str.maketrans(BASE64_ALPHABET, JS8CALL_BASE64_ALPHABET)
