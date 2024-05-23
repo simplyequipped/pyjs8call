@@ -84,12 +84,19 @@ class ScheduleEntry:
             pyjs8call.schedulemonitor.ScheduleEntry: Constructed schedule entry
         '''
         self.profile = profile
+        '''str: JS8Call configuration profile to set when activated'''
         self.start = start
+        '''datetime.time: Local start time'''
         self.freq = freq
+        '''int: Frequency in Hz to set when activated'''
         self.speed = speed
+        '''str: JS8Call modem speed to set when activated'''
         self.restart = restart
+        '''bool: Whether to force a restart of JS8Call when activated'''
         self.active = False
+        '''bool: Whether this schedule entry is currently activated'''
         self.run = False
+        '''bool: Whether this schedule entry has been run today'''
     
     def dict(self):
         '''Get dictionary representation of shedule entry.
