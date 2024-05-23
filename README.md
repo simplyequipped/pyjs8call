@@ -155,43 +155,45 @@ Send an email message (including email-to-text) via an existing SMTP server when
 
 ### Command Line Interface (CLI)
 
-A command line interface is available for the *pyjs8call* module as of version 0.2.3. CLI usage is as follows:
+A command line interface is available for the *pyjs8call* module as of version 0.2.3. CLI usage:
 
 ```
 USAGE: python -m pyjs8call [OPTIONS]
 
 OPTIONS:
-    --rns
-        Utilize IO buffers to support the RNS PipeInterface, set configuration profile to 'RNS',
-        allow free text, and add group @RNS (*)
-    --freq
-        Set radio frequency in Hz
-    --grid
-        Set station grid square
-    --speed
-        Set speed of JS8Call modem, defaults to 'fast'
-    --profile
-        Set JS8Call configuration profile (**)
-    --callsign
-        Set station callsign
-    --settings
-        File path to pyjs8call settings file (NOT JS8CALL CONFIG FILE), see pyjs8call.settings.Settings.load
-        for more information
-    --headless
-        Run JS8Call headless using xvfb (only available on Linux platforms)
-    --heartbeat
-        Enable pyjs8call heartbeat networking
+--rns
+    Utilize IO buffers to support the RNS PipeInterface, set configuration profile
+    to 'RNS', allow free text, and add group @RNS (*)
+--freq
+    Set radio frequency in Hz
+--grid
+    Set station grid square
+--speed
+    Set speed of JS8Call modem, defaults to 'fast'
+--profile
+    Set JS8Call configuration profile (**)
+--callsign
+    Set station callsign
+--settings
+    File path to pyjs8call settings file (NOT JS8CALL CONFIG FILE),
+    see pyjs8call.settings.Settings.load
+    for more information
+--headless
+    Run JS8Call headless using xvfb (only available on Linux platforms)
+--heartbeat
+    Enable pyjs8call heartbeat networking
 
 
-(*)    RNS PipeInterface must be configured and enabled in the Reticulum config file, see below example:
+(*) RNS PipeInterface must be configured and enabled in the Reticulum config file,
+    see below example:
 
-       [[Pipe Interface]]
-       type = PipeInterface
-       interface_enabled = True
-       command = python -m pyjs8call --rns --settings ~/.config/pyjs8call_rns.ini
-       respawn_delay = 5
+    [[Pipe Interface]]
+    type = PipeInterface
+    interface_enabled = True
+    command = python -m pyjs8call --rns --settings ~/.config/pyjs8call_rns.ini
+    respawn_delay = 5
 
-(**)   If the specified profile does not exist, it is created by copying the 'Default' profile
+(**) If the specified profile does not exist, it is created by copying 'Default'
 ```
 See [RNS PipeInterface](https://markqvist.github.io/Reticulum/manual/interfaces.html#pipe-interface) for more information on configuring a RNS PipeInterface.
 
@@ -265,6 +267,7 @@ js8call_qdx = pyjs8call.Client(port=2444)
 # specify the rig name as a command line argument
 js8call_qdx.start(args=['--rig-name', 'QDX'])
 ```
+**Note:** radio interface and audio devices should be configured manually in each JS8Call instance
 
 Using the spot monitor:
 ```
@@ -356,6 +359,8 @@ Using heartbeat networking:
 import pyjs8call
 
 js8call = pyjs8call.Client()
+# set heartbeat interval via config file
+js8call.settings.set_heartbeat_interval(15)
 js8call.start()
 
 # interval based on JS8Call settings
