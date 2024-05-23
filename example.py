@@ -37,15 +37,16 @@ def send_message():
 # function to show JS8Call inbox messages
 def show_inbox():
     global js8call
-    messages = js8call.get_inbox_messages()
+    messages = js8call.inbox.messages()
     print('\n--- Inbox Messages: {}'.format(len(messages)))
 
     if len(messages) > 0:
         print('')
         for msg in messages:
-            print('\tFrom: {}\t\tTo: {}\t\tPath: {}'.format(msg.origin, msg.destination, msg.path))
-            print('\tData/Time: {}'.format(time.strftime('%c', msg.timestamp)))
-            print('\tMessage: {}\n'.format(msg.text))
+            print('\tFrom: {}\t\tTo: {}\t\tPath: {}'.format(msg['origin'], msg['destination'], msg['path']))
+            #print('\tData/Time: {}'.format(time.strftime('%c', msg['time'])))
+            print('\tData/Time: {} UTC'.format(msg['time']))
+            print('\tMessage: {}\n'.format(msg['text']))
     else:
         print('')
 
