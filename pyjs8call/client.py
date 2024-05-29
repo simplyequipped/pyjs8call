@@ -472,6 +472,9 @@ class Client:
 
         self.restarting = False
 
+        if callable(self.callback.restart_complete):
+            self.callback.restart_complete()
+
     def restart_when_inactive(self, age=0):
         '''Restart the JS8Call application once there is no outgoing activity.
         
