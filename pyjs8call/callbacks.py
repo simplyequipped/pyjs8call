@@ -96,6 +96,11 @@ class Callbacks:
         - *incoming* structure: *{type: [callback, ...], ...}*
             - *type* is an incoming  message type (see pyjs8call.message.Message for information on message types)
         - *callback* signature: *func(msg)* where *msg* is a *pyjs8call.message.Message* object'''
+        self.restart_complete = None
+        '''func: JS8Call application restart complete callback function, defaults to None
+        - *restart_complete* callback signature: *func()*
+        - Called by pyjs8call.client
+        '''
         self.commands = {}
         '''dict: Mapping of custom commands strings to custom command callback functions list'''
 
