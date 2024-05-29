@@ -14,6 +14,7 @@
 - Add *normalize_snr* argument to *propagation* functions
 - Add *pyjs8call.client.Client.get_call_activity_from_spots()* to improve processing speed
 - Separate *pyjs8call.settings.Settings* and *pyjs8call.callbacks.Callbacks* into separate modules
+- Add *pyja8call.callbacks.restart_complete* callback function
 - Add *restart* attribute to *pyjs8call.schedulemonitor.ScheduleEntry* objects to allow forced restart on a schedule
 - Remove JS8Call *timer.out* file when starting (or restarting) to avoid large file size over time
 - Add *pyjs8call.settings.Settings* functions related to daily application restart (to remove *timer.out*)
@@ -22,6 +23,7 @@
 - Enable JS8Call heartbeat networking when pyjs8call heartbeat networking is enabled
 - Enable JS8Call heartbeat networking when heartbeat acknowledgements are enabled
 - Automatically detect JS8Call commands in outgoing messages to simplify app development
+- Fix bug preventing setting of station info
 - Documentation improvements
 
 **0.2.2**
