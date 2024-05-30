@@ -130,7 +130,9 @@ class InboxMonitor:
         | offset | *int* | 
         | snr | *int* |
         | speed | *int* |
-        | time | *str* |
+        | time | *int* | * UTC timestamp
+        | timestamp | *int* | * local timestamp
+        | local_time_str | *str* | * local time string
         | origin | *str* |
         | destination | *str* |
         | path | *str* |
@@ -166,7 +168,9 @@ class InboxMonitor:
             'offset' : blob['params']['OFFSET'],
             'snr' : blob['params']['SNR'],
             'speed' : blob['params']['SUBMODE'],
-            'time' : blob['params']['UTC'],
+            'time' : int(blob['params']['UTC']) / 1000, # milliseconds to seconds
+            'timestamp' : time.mktime(time.localtime(int(blob['params']['UTC']) / 1000)), # milliseconds to seconds
+            'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(int(blob['params']['UTC']) / 1000))), # milliseconds to seconds
             'origin' : blob['params']['FROM'],
             'destination' : blob['params']['TO'],
             'path' : blob['params']['PATH'],
@@ -191,7 +195,9 @@ class InboxMonitor:
         | offset | *int* | 
         | snr | *int* |
         | speed | *int* |
-        | time | *str* |
+        | time | *int* | * UTC timestamp
+        | timestamp | *int* | * local timestamp
+        | local_time_str | *str* | * local time string
         | origin | *str* |
         | destination | *str* |
         | path | *str* |
@@ -224,7 +230,9 @@ class InboxMonitor:
                 'offset' : blob['params']['OFFSET'],
                 'snr' : blob['params']['SNR'],
                 'speed' : blob['params']['SUBMODE'],
-                'time' : blob['params']['UTC'],
+                'time' : int(blob['params']['UTC']) / 1000, # milliseconds to seconds
+                'timestamp' : time.mktime(time.localtime(int(blob['params']['UTC']) / 1000)), # milliseconds to seconds
+                'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(int(blob['params']['UTC']) / 1000))), # milliseconds to seconds
                 'origin' : blob['params']['FROM'],
                 'destination' : blob['params']['TO'],
                 'path' : blob['params']['PATH'],
