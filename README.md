@@ -97,7 +97,7 @@ Some setup (i.e. setting callback functions) is required to use certain module f
 
 **Client** (pyjs8call.client)
 
-The main JS8Call API interface. Includes many functions for reading and writting settings as well as sending various types of messages.
+The main JS8Call API interface. Includes functions for sending various types of messages.
 
 **JS8Call** (pyjs8call.js8call)
 
@@ -113,7 +113,7 @@ Reads from and writes to the JS8Call.ini config file to change virtually any set
 
 **Spot Monitor** (pyjs8call.spotmonitor)
 
-Monitors recent station spots. Spot data can be queried for various uses, and spot callbacks can be set for all heard stations and/or for specific stations.
+Monitors recent station spots. Spot data can be queried for various uses, and spot callbacks can be set for all heard stations and/or for specific stations and groups.
 
 **Window Monitor** (pyjs8call.windowmonitor)
 
@@ -121,7 +121,7 @@ Monitors the next rx/tx window transition. JS8Call API messages associated with 
 
 **Offset Monitor** (pyjs8call.offsetmonitor)
 
-Manages JS8Call offset frequency based on activity in the pass band. The offset frequency is automatically moved to an unsed portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the modem speed of each heard signal. Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
+Manages JS8Call offset frequency based on activity in the pass band. The offset frequency is automatically moved to an unused portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the modem speed of each heard signal. Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
 
 **Outgoing Monitor** (pyjs8call.outgoingmonitor)
 
@@ -141,15 +141,21 @@ Time master functionality is also implemented which sends outgoing messages on a
 
 Monitors the local inbox. Notification of new messages is handled via callback function.
 
+Automatic periodic syncing of remote messages from a specified source (@ALLCALL by default) is also supported. Be aware of your local laws regarding unattended stations when using this feature.
+
+*NOTE: enabling syncing of remote messages will cause the local station to transmit immediately*
+
 **Schedule Monitor** (pyjs8call.schedulemonitor)
 
-Monitors configured schedule entries and applies the necessary setting changes at the scheduled time. Settings that can be changed on a schedule include frequency, modem speed, and configuration profile.
+Monitors configured schedule entries and applies the necessary setting changes at the scheduled time. Settings that can be changed on a schedule include frequency, modem speed, and configuration profile. The JS8Call application can also be restarted on a schedule.
 
 **Propagation** (pyjs8call.propagation)
-Parses stored spots into datasets of individual or median SNR values for grid squares or callsigns. This information can be used to infer general propagation conditions between the local station and a specific station, or the local station and a specific grid square.
+
+Parses stored spot data into datasets of individual or median SNR values for grid squares or callsigns. This information can be used to infer general propagation conditions between the local station and a specific station, or the local station and a specific grid square.
 
 **Notifications** (pyjs8call.notifications)
-Send an email message (including email-to-text) via an existing SMTP server when a message directed to the local station is received.
+
+Send an email message (including email-to-text) via a specified SMTP server when a message directed to the local station is received, or when a specific station or group is spotted.
 
 &nbsp;
 
