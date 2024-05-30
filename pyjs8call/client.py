@@ -930,7 +930,9 @@ class Client:
         | offset | *int* | 
         | snr | *int* |
         | speed | *int* |
-        | time | *str* |
+        | time | *int* | * UTC timestamp
+        | timestamp | *int* | * local timestamp
+        | local_time_str | *str* | * local time string
         | origin | *str* |
         | destination | *str* |
         | path | *str* |
