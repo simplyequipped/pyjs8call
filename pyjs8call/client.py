@@ -592,10 +592,10 @@ class Client:
         '''Clean incoming message text.
 
         Remove origin callsign, destination callsign or group (including relays), whitespace, and end-of-message characters. This leaves only the message text.
-        
-        The pyjs8call.message.Message.text attribute stores the cleaned text while the pyjs8call.message.Message.value attribute is unchanged.
 
-        Custom commands are also parsed out of message text. If a custom command is found, pyjs8call.message.Message.cmd is set in the returned message.
+        Custom commands are also identified in the message text. If a custom command is found, *msg.cmd* is set in the returned message.
+        
+        The *msg.text* attribute stores the cleaned text while the *msg.value* attribute is unchanged.
 
         Args:
             msg (pyjs8call.message.Message): Message object to clean
