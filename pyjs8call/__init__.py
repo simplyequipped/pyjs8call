@@ -23,6 +23,7 @@
 '''
 .. include:: ../README.md
 .. include:: ../VERSION.md
+.. include:: ../ROADMAP.md
 '''
 
 __docformat__ = 'google'
