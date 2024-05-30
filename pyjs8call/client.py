@@ -203,8 +203,6 @@ class Client:
         '''
         self.clean_directed_text = True
         '''bool: Remove JS8Call callsign structure from incoming messages, defaults to True'''
-        self.prepend_cmd_to_cleaned_text = True
-        '''bool: Prepend command to message text when cleaning incoming directed text, defaults to True (added in version 0.2.3)'''
         self.autodetect_outgoing_directed_command = True
         '''bool: Autodetect and handle commands in outgoing directed messages, defaults to True (added in version 0.2.3)'''
         self.monitor_outgoing = True
@@ -594,8 +592,6 @@ class Client:
         '''Clean incoming message text.
 
         Remove origin callsign, destination callsign or group (including relays), whitespace, and end-of-message characters. This leaves only the message text.
-
-        If *prepend_cmd_to_cleaned_text* is *True* and *msg.cmd* is set, *msg.cmd* is prepended to the cleaned message text.
         
         The pyjs8call.message.Message.text attribute stores the cleaned text while the pyjs8call.message.Message.value attribute is unchanged.
 
@@ -639,10 +635,6 @@ class Client:
 
         if msg.cmd in (None, '', ' ') and cmd in self.callback.commands:
             msg.set('cmd', cmd)
-
-        # prepend cmd to message text if cmd is set and cmd not already in message text
-        if self.prepend_cmd_to_cleaned_text and msg.cmd not in (None, '', ' ') and not message.startswith(msg.cmd):
-            message = '{} {}'.format(msg.cmd, message)
 
         # strip spaces and end-of-message symbol
         message = message.strip(' ' + Message.EOM)
