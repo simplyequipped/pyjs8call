@@ -11,7 +11,9 @@
 - Add *terminate_js8call* argument to *pyjs8call.client.Client.stop()*
 - Add *pyjs8call.settings.Settings.create_new_profile()*
 - Add *create* argument to *pyjs8call.settings.Settings.set_profile()*
+- Add support for user home directory (~/) in JS8Call configuration file path
 - Add *normalize_snr* argument to *propagation* functions
+- Add lat/lon to grid-based datasets in *propagation*
 - Add *pyjs8call.client.Client.get_call_activity_from_spots()* to improve processing speed
 - Separate *pyjs8call.settings.Settings* and *pyjs8call.callbacks.Callbacks* into separate modules
 - Add *pyja8call.callbacks.restart_complete* callback function
@@ -20,10 +22,13 @@
 - Add *pyjs8call.settings.Settings* functions related to daily application restart (to remove *timer.out*)
 - Add *best_band_for_grid()* and *best_band_for_origin()* functions to *pyjs8call.propagation.Propagation*
 - Add *client.Client.heard_freq_bands()* function
-- Enable JS8Call heartbeat networking when pyjs8call heartbeat networking is enabled
+- Enable JS8Call heartbeat networking when *pyjs8call* heartbeat networking is enabled
 - Enable JS8Call heartbeat networking when heartbeat acknowledgements are enabled
-- Automatically detect JS8Call commands in outgoing messages to simplify app development
+- Add *pyjs8call.client.Client.autodetect_outgoing_directed_command* to simplify app development
+- @TIME group no longer added by default
 - Fix bug preventing setting of station info
+- Fix bug causing comma in empty groups field
+- Fix bug causing *pyjs8call* exit tasks to be run when restarting JS8Call application
 - Documentation improvements
 
 **0.2.2**
