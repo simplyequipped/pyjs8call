@@ -8,8 +8,8 @@ Generally in order of priority, but priorities may change over time. You can mak
 - Bundle docs with pip installed package
 - Automatic relay path discovery to specified station using QUERY CALL iteratively
 - JS8Call CAT and audio device configuration via JS8Call configuration file
-- Improve support for multi-band ALE-ish usage (see *schedulemonitor*, *hbnetwork*, and *propagation* modules)
+- Improve support for multi-band ALE-ish usage
   - *schedulemonitor* to change bands
   - *hbnetwork* for sounding on each band
-  - *propagation* *best_band_for_grid()* and *best_band_for_origin()* functions to analyze spot data
+  - *propagation.best_band_for_grid()* and *best_band_for_origin()* functions to analyze spot data
 - Dynamic JS8Call modem speed adjustment based on SNR of specified station
