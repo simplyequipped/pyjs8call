@@ -550,15 +550,19 @@ class Message:
             self.messages = []
             
             for message in msg['params']['MESSAGES']:
+                utc_timestamp = int(message['params']['UTC']) / 1000 # milliseconds to seconds
+                local_time_struct = time.localtime(utc_timestamp)
+                local_timestamp = time.mktime(local_time_struct)
+
                 self.messages.append({
                     'cmd' : message['params']['CMD'],
                     'freq' : message['params']['DIAL'],
                     'offset' : message['params']['OFFSET'],
                     'snr' : message['params']['SNR'],
                     'speed' : message['params']['SUBMODE'],
-                    'time' : int(message['params']['UTC']) / 1000, # milliseconds to seconds
-                    'timestamp' : time.mktime(time.localtime(int(message['params']['UTC']) / 1000)), # milliseconds to seconds
-                    'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(int(message['params']['UTC']) / 1000))), # milliseconds to seconds
+                    'time' : utc_timestamp,
+                    'timestamp' : local_timestamp,
+                    'local_time_str' : '{}L'.format(time.strftime('%X', local_time_struct)),
                     'origin' : message['params']['FROM'],
                     'destination' : message['params']['TO'],
                     'path' : message['params']['PATH'],

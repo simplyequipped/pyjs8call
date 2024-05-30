@@ -932,7 +932,7 @@ class Client:
         | speed | *int* |
         | time | *int* | * UTC timestamp
         | timestamp | *int* | * local timestamp
-        | local_time_str | *str* | * local time string
+        | local_time_str | *str* |
         | origin | *str* |
         | destination | *str* |
         | path | *str* |
@@ -1247,8 +1247,8 @@ class Client:
         | origin | str |
         | grid | str |
         | snr | int |
-        | time (UTC) | int |
-        | timestamp (local) | int |
+        | time (UTC) | int | * UTC timestamp
+        | timestamp (local) | int | * local timestamp
         | local_time_str | str |
         | speed | str |
         | hearing | list |

@@ -132,7 +132,7 @@ class InboxMonitor:
         | speed | *int* |
         | time | *int* | * UTC timestamp
         | timestamp | *int* | * local timestamp
-        | local_time_str | *str* | * local time string
+        | local_time_str | *str* |
         | origin | *str* |
         | destination | *str* |
         | path | *str* |
@@ -161,6 +161,10 @@ class InboxMonitor:
 
         msg_id, blob = msg
         blob = json.loads(blob)
+        utc_timestamp = time.mktime(time.strptime(blob['params']['UTC'], '%Y-%m-%d %H:%M:%S'))
+        local_time_struct = time.localtime(utc_timestamp)
+        local_timestamp = time.mktime(time.localtime(utc_timestamp))
+
         msg = {
             'id': int(msg_id),
             'cmd' : blob['params']['CMD'],
@@ -168,9 +172,9 @@ class InboxMonitor:
             'offset' : blob['params']['OFFSET'],
             'snr' : blob['params']['SNR'],
             'speed' : blob['params']['SUBMODE'],
-            'time' : int(blob['params']['UTC']) / 1000, # milliseconds to seconds
-            'timestamp' : time.mktime(time.localtime(int(blob['params']['UTC']) / 1000)), # milliseconds to seconds
-            'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(int(blob['params']['UTC']) / 1000))), # milliseconds to seconds
+            'time' : utc_timestamp,
+            'timestamp' : local_timestamp,
+            'local_time_str' : '{}L'.format(time.strftime('%X', local_time_struct)),
             'origin' : blob['params']['FROM'],
             'destination' : blob['params']['TO'],
             'path' : blob['params']['PATH'],
@@ -197,7 +201,7 @@ class InboxMonitor:
         | speed | *int* |
         | time | *int* | * UTC timestamp
         | timestamp | *int* | * local timestamp
-        | local_time_str | *str* | * local time string
+        | local_time_str | *str* |
         | origin | *str* |
         | destination | *str* |
         | path | *str* |
@@ -223,6 +227,10 @@ class InboxMonitor:
         msgs = []
         for msg_id, blob in inbox:
             blob = json.loads(blob)
+            utc_timestamp = time.mktime(time.strptime(blob['params']['UTC'], '%Y-%m-%d %H:%M:%S'))
+            local_time_struct = time.localtime(utc_timestamp)
+            local_timestamp = time.mktime(time.localtime(utc_timestamp))
+
             msgs.append({
                 'id': int(msg_id),
                 'cmd' : blob['params']['CMD'],
@@ -230,9 +238,9 @@ class InboxMonitor:
                 'offset' : blob['params']['OFFSET'],
                 'snr' : blob['params']['SNR'],
                 'speed' : blob['params']['SUBMODE'],
-                'time' : int(blob['params']['UTC']) / 1000, # milliseconds to seconds
-                'timestamp' : time.mktime(time.localtime(int(blob['params']['UTC']) / 1000)), # milliseconds to seconds
-                'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(int(blob['params']['UTC']) / 1000))), # milliseconds to seconds
+                'time' : utc_timestamp,
+                'timestamp' : local_timestamp,
+                'local_time_str' : '{}L'.format(time.strftime('%X', local_time_struct)),
                 'origin' : blob['params']['FROM'],
                 'destination' : blob['params']['TO'],
                 'path' : blob['params']['PATH'],
