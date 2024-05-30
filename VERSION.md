@@ -30,6 +30,7 @@
 - Fix bug preventing setting of station info
 - Fix bug causing comma in empty groups field
 - Fix bug causing *pyjs8call* exit tasks to be run when restarting JS8Call application
+- Fix bug in inbox message timestamp parsing
 - Documentation improvements
 
 **0.2.2**
