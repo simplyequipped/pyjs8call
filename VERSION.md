@@ -1,6 +1,7 @@
 ### Versions
 
 **0.2.3**
+- Add ROADMAP.md (included in documentation)
 - Add *pyjs8call.settings.Settings.load()* to load settings from an ini file (see example *settings.ini* in repo)
 - Add CLI support for usage like *python -m pyjs8call* (try *--help* for options)
 - Add CLI documentation to README
