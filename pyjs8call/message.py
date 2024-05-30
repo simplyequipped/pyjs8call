@@ -556,9 +556,9 @@ class Message:
                     'offset' : message['params']['OFFSET'],
                     'snr' : message['params']['SNR'],
                     'speed' : message['params']['SUBMODE'],
-                    'time' : message['params']['UTC'] / 1000, # milliseconds to seconds
-                    'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
-                    'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))), # milliseconds to seconds
+                    'time' : int(message['params']['UTC']) / 1000, # milliseconds to seconds
+                    'timestamp' : time.mktime(time.localtime(int(message['params']['UTC']) / 1000)), # milliseconds to seconds
+                    'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(int(message['params']['UTC']) / 1000))), # milliseconds to seconds
                     'origin' : message['params']['FROM'],
                     'destination' : message['params']['TO'],
                     'path' : message['params']['PATH'],
@@ -579,9 +579,9 @@ class Message:
                     'origin' : key,
                     'grid' : value['GRID'].strip(),
                     'snr' : value['SNR'],
-                    'time' : value['UTC'] / 1000, # milliseconds to seconds
-                    'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
-                    'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))) # milliseconds to seconds
+                    'time' : int(value['UTC']) / 1000, # milliseconds to seconds
+                    'timestamp' : time.mktime(time.localtime(int(value['UTC']) / 1000)), # milliseconds to seconds
+                    'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(int(value['UTC']) / 1000))) # milliseconds to seconds
                 })
 
         elif self.type == Message.RX_BAND_ACTIVITY:
