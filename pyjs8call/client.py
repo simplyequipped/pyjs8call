@@ -451,6 +451,7 @@ class Client:
         # stop
         self.online = False
         self.js8call.stop()
+        time.sleep(1)
 
         # start
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
