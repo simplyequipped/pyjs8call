@@ -773,6 +773,8 @@ class Client:
             for cmd in msg_cmds:
                 if message.startswith(cmd):
                     cmd_found = True
+                    # preserve original message text
+                    message_text = message
                     message = message.replace(cmd, '').strip()
                     if len(message) == 0:
                         message = None
@@ -781,6 +783,8 @@ class Client:
         # msg.type = Message.TX_SEND_MESSAGE by default
         if cmd_found:
             msg = Message(destination, cmd, message, self.settings.get_station_callsign())
+            # preserve original message text
+            msg.set('text', message_text)
         else:
             msg = Message(destination, value = message, origin = self.settings.get_station_callsign())
         
