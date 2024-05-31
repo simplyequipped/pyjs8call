@@ -13,12 +13,8 @@ This software is currently in a beta state. This means that the software will li
 &nbsp;
 
 ### Responsibility
-<<<<<<< HEAD
 
 It is the station operator's reponsibility to ensure compliance with local laws.
-=======
-It is the station operator's responsibility to ensure compliance with local laws.
->>>>>>> develop
 
 &nbsp;
 
