@@ -53,7 +53,7 @@ All functionality is supported on all major platforms as of version 0.2.0. Runni
     sudo apt install js8call
     ```
 
-    Otherwise, see the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
+    Otherwise, see the <a href="http://files.js8call.com/latest.html">JS8Call downloads</a> page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
     
     On Raspberry Pi OS:
     ```
