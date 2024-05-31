@@ -265,7 +265,14 @@ class JS8Call:
             timer_out_path = os.path.join(os.path.expanduser('~'), '.local/share/JS8Call/timer.out')
             
         if os.path.exists(timer_out_path):
-            os.remove(timer_out_path)
+            # allow processes to release file handle on restart
+            timeout = time.time() + 10 # 10 seconds
+            while time.time() < timeout:
+                try:
+                    os.remove(timer_out_path)
+                    break
+                except PermissionError:
+                    time.sleep(0.5)
         
         self.online = True
         self.app.start(headless=headless, args = args)
