@@ -1034,18 +1034,25 @@ class Settings:
     def set_station_info(self, info):
         '''Set JS8Call station information.
 
+        *info* updated via API (if connected) and set in JS8Call configuration file.
+
         Args:
             info (str): Station information
 
         Returns:
             str: JS8Call configured station information
         '''
-        msg = Message()
-        msg.type = Message.STATION_SET_INFO
-        msg.value = info
-        self._client.js8call.send(msg)
-        time.sleep(self._client._set_get_delay)
-        return self.get_station_info(update = True)
+        if self._client.online:
+            msg = Message()
+            msg.type = Message.STATION_SET_INFO
+            msg.value = info
+            self._client.js8call.send(msg)
+            time.sleep(self._client._set_get_delay)
+            info = self.get_station_info(update = True)
+
+        # save to config file to preserve over restart
+        self._client.config.set('Configuration', 'MyInfo', info)
+        return info
 
     def append_pyjs8call_to_station_info(self):
         '''Append pyjs8call info to station info
