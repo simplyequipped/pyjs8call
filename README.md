@@ -53,13 +53,7 @@ All functionality is supported on all major platforms as of version 0.2.0. Runni
     sudo apt install js8call
     ```
 
-    Otherwise, see the <a href="http://files.js8call.com/latest.html">JS8Call downloads</a> page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
-    
-    On Raspberry Pi OS:
-    ```
-    wget http://files.js8call.com/2.2.0/js8call_2.2.0_armhf.deb
-    sudo dpkg -i js8call_2.2.0_armhf.deb
-    ```
+    Otherwise, see the [JS8Call downloads](http://files.JS8Call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
 
     **NOTE:** When installing JS8Call on Windows be sure to select the option to add JS8Call to the PATH variable during the installation process. This will allow *pyjs8call* to locate the JS8Call executable.
 
@@ -70,8 +64,6 @@ All functionality is supported on all major platforms as of version 0.2.0. Runni
     sudo systemctl stop ModemManager.service
     sudo systemctl mask ModemManager.service
     ```
-    
-    &nbsp;
 
     b. Install xvfb if running headless (not supported on Windows or MacOS)
     
