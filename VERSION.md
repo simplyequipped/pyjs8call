@@ -27,6 +27,7 @@
 - Enable JS8Call heartbeat networking when heartbeat acknowledgements are enabled
 - Add *pyjs8call.client.Client.autodetect_outgoing_directed_command* to simplify app development
 - @TIME group no longer added by default
+- Replace *pyjs8call.message.Message.time* with *pyjs8call.message.Message.utc_time_str*
 - Fix bug preventing setting of station info
 - Fix bug causing comma in empty groups field
 - Fix bug causing *pyjs8call* exit tasks to be run when restarting JS8Call application
