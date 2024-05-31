@@ -44,8 +44,6 @@ import time
 import shutil
 import atexit
 import threading
-import configparser
-from datetime import datetime, timezone
 from math import radians, sin, cos, acos, atan2, pi
 
 import pyjs8call
@@ -930,8 +928,8 @@ class Client:
         | offset | *int* | 
         | snr | *int* |
         | speed | *int* |
-        | time | *int* | * UTC timestamp
-        | timestamp | *int* | * local timestamp
+        | timestamp | *float* |
+        | utc_time_str | *str* |
         | local_time_str | *str* |
         | origin | *str* |
         | destination | *str* |
@@ -1161,18 +1159,18 @@ class Client:
 
         | Key | Value Type |
         | -------- | -------- |
-        | origin | str |
-        | grid | str |
-        | snr | int |
-        | time (UTC) | int |
-        | timestamp (local) | int |
-        | local_time_str | str |
-        | speed | str |
-        | hearing | list |
-        | heard_by | list |
-        | distance | int |
-        | distance_units | str |
-        | bearing | int |
+        | origin | *str* |
+        | grid | *str* |
+        | snr | *int* |
+        | timestamp | *float* |
+        | utc_time_str | *str* |
+        | local_time_str | *str* |
+        | speed | *str* |
+        | hearing | *list* |
+        | heard_by | *list* |
+        | distance | *int* |
+        | distance_units | *str* |
+        | bearing | *int* |
 
         Args:
             age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
@@ -1244,18 +1242,18 @@ class Client:
 
         | Key | Value Type |
         | -------- | -------- |
-        | origin | str |
-        | grid | str |
-        | snr | int |
-        | time (UTC) | int | * UTC timestamp
-        | timestamp (local) | int | * local timestamp
-        | local_time_str | str |
-        | speed | str |
-        | hearing | list |
-        | heard_by | list |
-        | distance | int |
-        | distance_units | str |
-        | bearing | int |
+        | origin | *str* |
+        | grid | *str* |
+        | snr | *int* |
+        | timestamp | *float* |
+        | utc_time_str | *str* |
+        | local_time_str | *str* |
+        | speed | *str* |
+        | hearing | *list* |
+        | heard_by | *list* |
+        | distance | *int* |
+        | distance_units | *str* |
+        | bearing | *int* |
 
         Args:
             age (int): Maximum activity age in minutes, defaults to JS8Call callsign activity aging
@@ -1300,8 +1298,8 @@ class Client:
                 activity['origin'] = spot.origin
                 activity['grid'] = spot.grid
                 activity['snr'] = spot.snr
-                activity['time'] = spot.time
                 activity['timestamp'] = spot.timestamp
+                activity['utc_time_str'] = spot.utc_time_str
                 activity['local_time_str'] = spot.local_time_str
                 activity['distance'] = spot.distance
                 activity['distance_units'] = spot.distance_units
@@ -1341,13 +1339,13 @@ class Client:
 
         | Key | Value Type |
         | -------- | -------- |
-        | freq (Hz) | int |
-        | offset (Hz) | int |
-        | snr | int |
-        | time (UTC) | int |
-        | timestamp (local) | int |
-        | local_time_str | str |
-        | text | str |
+        | freq (Hz) | *int* |
+        | offset (Hz) | *int* |
+        | snr | *int* |
+        | timestamp | *float* |
+        | utc_time_str | *str* |
+        | local_time_str | *str* |
+        | text | *str* |
 
         Args:
             age (int): Maximum activity age in minutes, defaults to JS8Call band activity aging

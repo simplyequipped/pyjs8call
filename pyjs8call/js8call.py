@@ -34,6 +34,7 @@ import json
 import psutil
 import socket
 import threading
+from datetime import datetime
 
 import pyjs8call
 from pyjs8call import Message
@@ -675,7 +676,8 @@ class JS8Call:
         elif msg.type in Message.RX_TYPES:
             msg_type = 'RX'
 
-        msg_time = time.strftime('%x %X', time.localtime(msg.timestamp))
+        dt_msg = datetime.utcfromtimestamp(msg.timestamp)
+        msg_time = dt_msg.astimezone().strftime('%x %X')
 
         with self._log_queue_lock:
             self._log_queue += msg_time + '  ' + msg_type + '  ' + msg.dump() + '\n'

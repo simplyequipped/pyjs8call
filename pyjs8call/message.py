@@ -55,9 +55,9 @@ class Message:
         type (str): Message type (see static types), defaults to TX_SEND_MESSAGE
         destination (str): Destination callsign
         value (str): Message contents
-        time (float): UTC timestamp (see *datetime.now(timezone.utc).timestamp*)
-        timestamp (float): Local timestamp (see *time.time*)
-        local_time_str (str): Local time string (see *time.strftime('%X', time.localtime())*)
+        timestamp (float): Epoch timestamp (always referenced to UTC)
+        utc_time_str (float): UTC time string (ex. '21:42 UTC')
+        local_time_str (str): Local time string (ex. '21:42L')
         tdrift (float): Time drift specified by JS8call, defaults to None
         params (dict): Message parameters used by certain JS8Call API messages
         attributes (list): Attributes for internal use (see *Message.set*)
@@ -73,7 +73,7 @@ class Message:
         snr (str): Signal-to-noise ratio, defaults to None
         from (str): Origin callsign, defaults to None
         origin (str): Origin callsign, defaults to None
-        utc (str): UTC timestamp, defaults to None
+        utc (str): UTC date/time string, defaults to None
         cmd (str): JS8Call command (see static commands), defaults to None
         text (str): Used by certain JS8Call API messages, defaults to None
         speed (str): JS8Call modem speed of received signal
@@ -341,15 +341,17 @@ class Message:
         for attribute in common:
             self.set(attribute, None)
         
+        dt_utc = datetime.now(timezone.utc)
+
         self.set('id', secrets.token_urlsafe(16))
         self.set('type', Message.TX_SEND_MESSAGE)
         self.set('destination', destination)
         self.set('cmd', cmd)
         self.set('value', value)
         self.set('origin', origin)
-        self.set('time', datetime.now(timezone.utc).timestamp())
-        self.set('timestamp', time.time())
-        self.set('local_time_str', '{}L'.format(time.strftime('%X', time.localtime(self.get('timestamp')))))
+        self.set('timestamp', dt_utc.timestamp())
+        self.set('utc_time_str', '{} UTC'.format(dt_utc.strftime('%X')))
+        self.set('local_time_str', '{}L'.format(dt_utc.astimezone().strftime('%X')))
         self.set('params', {})
         self.set('status', Message.STATUS_CREATED)
 
@@ -483,8 +485,9 @@ class Message:
         - origin
         - cmd
         - from
-        - time
         - timestamp
+        - utc_time_str
+        - local_time_str
         - text
         - status
         - profile
@@ -502,7 +505,7 @@ class Message:
         if exclude is None:
             exclude = [] 
 
-        exclude.extend(['id', 'destination', 'cmd', 'time', 'timestamp', 'from', 'origin', 'text', 'status', 'profile', 'error'])
+        exclude.extend(['id', 'destination', 'cmd', 'timestamp', 'utc_time_str', 'local_time_str', 'from', 'origin', 'text', 'status', 'profile', 'error'])
 
         self.packed_dict = self.dict(exclude = exclude)
         # convert dict to json string
@@ -550,9 +553,7 @@ class Message:
             self.messages = []
             
             for message in msg['params']['MESSAGES']:
-                utc_timestamp = int(message['params']['UTC']) / 1000 # milliseconds to seconds
-                local_time_struct = time.localtime(utc_timestamp)
-                local_timestamp = time.mktime(local_time_struct)
+                dt_utc = datetime.strptime(message['params']['UTC'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
 
                 self.messages.append({
                     'cmd' : message['params']['CMD'],
@@ -560,9 +561,9 @@ class Message:
                     'offset' : message['params']['OFFSET'],
                     'snr' : message['params']['SNR'],
                     'speed' : message['params']['SUBMODE'],
-                    'time' : utc_timestamp,
-                    'timestamp' : local_timestamp,
-                    'local_time_str' : '{}L'.format(time.strftime('%X', local_time_struct)),
+                    'timestamp' : dt_utc.timestamp(),
+                    'utc_time_str': '{} UTC'.format(dt_utc.strftime('%X')),
+                    'local_time_str' : '{}L'.format(dt_utc.astimezone().strftime('%X')),
                     'origin' : message['params']['FROM'],
                     'destination' : message['params']['TO'],
                     'path' : message['params']['PATH'],
@@ -579,13 +580,15 @@ class Message:
                 if key == '_ID' or value is None:
                     continue
 
+                dt_utc = datetime.utcfromtimestamp(value['UTC'] / 1000) # milliseconds to seconds
+
                 self.call_activity.append({
                     'origin' : key,
                     'grid' : value['GRID'].strip(),
                     'snr' : value['SNR'],
-                    'time' : int(value['UTC']) / 1000, # milliseconds to seconds
-                    'timestamp' : time.mktime(time.localtime(int(value['UTC']) / 1000)), # milliseconds to seconds
-                    'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(int(value['UTC']) / 1000))) # milliseconds to seconds
+                    'timestamp' : dt_utc.timestamp(),
+                    'utc_time_str' : '{} UTC'.format(dt_utc.strftime('%X')),
+                    'local_time_str' : '{}L'.format(dt_utc.astimezone().strftime('%X'))
                 })
 
         elif self.type == Message.RX_BAND_ACTIVITY:
@@ -595,13 +598,15 @@ class Message:
                     # skip if key is not a freq offset (int)
                     int(key)
 
+                    dt_utc = datetime.utcfromtimestamp(value['UTC'] / 1000) # milliseconds to seconds
+
                     self.band_activity.append({
                         'freq' : value['DIAL'],
                         'offset' : value['OFFSET'],
                         'snr' : value['SNR'],
-                        'time' : value['UTC'] / 1000, # milliseconds to seconds
-                        'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
-                        'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))), # milliseconds to seconds
+                        'timestamp' : dt_utc.timestamp(),
+                        'utc_time_str' : '{} UTC'.format(dt_utc.strftime('%X')),
+                        'local_time_str' : '{}L'.format(dt_utc.astimezone().strftime('%X')),
                         'text' : value['TEXT']
                     })
                 except ValueError:

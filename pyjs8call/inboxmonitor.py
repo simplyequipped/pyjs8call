@@ -37,6 +37,7 @@ import time
 import json
 import sqlite3
 import threading
+from datetime import datetime, timezone
 
 from pyjs8call import Message
 
@@ -130,8 +131,8 @@ class InboxMonitor:
         | offset | *int* | 
         | snr | *int* |
         | speed | *int* |
-        | time | *int* | * UTC timestamp
-        | timestamp | *int* | * local timestamp
+        | timestamp | *float* |
+        | utc_time_str | *str* |
         | local_time_str | *str* |
         | origin | *str* |
         | destination | *str* |
@@ -161,9 +162,7 @@ class InboxMonitor:
 
         msg_id, blob = msg
         blob = json.loads(blob)
-        utc_timestamp = time.mktime(time.strptime(blob['params']['UTC'], '%Y-%m-%d %H:%M:%S'))
-        local_time_struct = time.localtime(utc_timestamp)
-        local_timestamp = time.mktime(time.localtime(utc_timestamp))
+        dt_utc = datetime.strptime(blob['params']['UTC'], '%Y-%m-%d %H:%M:%S').replace(tzinfo = timezone.utc)
 
         msg = {
             'id': int(msg_id),
@@ -172,9 +171,9 @@ class InboxMonitor:
             'offset' : blob['params']['OFFSET'],
             'snr' : blob['params']['SNR'],
             'speed' : blob['params']['SUBMODE'],
-            'time' : utc_timestamp,
-            'timestamp' : local_timestamp,
-            'local_time_str' : '{}L'.format(time.strftime('%X', local_time_struct)),
+            'timestamp' : dt_utc.timestamp(),
+            'utc_time_str' : '{} UTC'.format(dt_utc.strftime('%X')),
+            'local_time_str' : '{}L'.format(dt_utc.astimezone().strftime('%X')),
             'origin' : blob['params']['FROM'],
             'destination' : blob['params']['TO'],
             'path' : blob['params']['PATH'],
@@ -199,8 +198,8 @@ class InboxMonitor:
         | offset | *int* | 
         | snr | *int* |
         | speed | *int* |
-        | time | *int* | * UTC timestamp
-        | timestamp | *int* | * local timestamp
+        | timestamp | *float* |
+        | utc_time_str | *str* |
         | local_time_str | *str* |
         | origin | *str* |
         | destination | *str* |
@@ -227,9 +226,7 @@ class InboxMonitor:
         msgs = []
         for msg_id, blob in inbox:
             blob = json.loads(blob)
-            utc_timestamp = time.mktime(time.strptime(blob['params']['UTC'], '%Y-%m-%d %H:%M:%S'))
-            local_time_struct = time.localtime(utc_timestamp)
-            local_timestamp = time.mktime(time.localtime(utc_timestamp))
+            dt_utc = datetime.strptime(blob['params']['UTC'], '%Y-%m-%d %H:%M:%S').replace(tzinfo = timezone.utc)
 
             msgs.append({
                 'id': int(msg_id),
@@ -238,9 +235,9 @@ class InboxMonitor:
                 'offset' : blob['params']['OFFSET'],
                 'snr' : blob['params']['SNR'],
                 'speed' : blob['params']['SUBMODE'],
-                'time' : utc_timestamp,
-                'timestamp' : local_timestamp,
-                'local_time_str' : '{}L'.format(time.strftime('%X', local_time_struct)),
+                'timestamp' : dt_utc.timestamp(),
+                'utc_time_str' : '{} UTC'.format(dt_utc.strftime('%X')),
+                'local_time_str' : '{}L'.format(dt_utc.astimezone().strftime('%X')),
                 'origin' : blob['params']['FROM'],
                 'destination' : blob['params']['TO'],
                 'path' : blob['params']['PATH'],
