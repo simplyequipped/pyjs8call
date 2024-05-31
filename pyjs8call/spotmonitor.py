@@ -116,7 +116,7 @@ class SpotMonitor:
             distance (int): Maximum message grid square distance, defaults to 0 (zero)
             age (int): Maximum message age in seconds, defaults to 0 (zero)
             count (int): Number of most recent spot messages to return, defaults to 0 (zero)
-            profile (str): Configuration profile at the time spot was sent or received, defaults to None
+            profile (str): Configuration profile at the time spot was received, defaults to None
             dial_freq (int): Dial frequency in Hz to match, defaults to None
             band (str): Frequency band (ex. \'40m\') to match, defaults to None
 
@@ -125,7 +125,7 @@ class SpotMonitor:
         '''
         spots = []
         
-        for spot in self._client.js8call.get_spots():
+        for spot in self.all():
             if (
                 (age == 0 or spot.age() <= age) and
                 (grid is None or grid.upper() == spot.grid) and
@@ -143,6 +143,21 @@ class SpotMonitor:
             spots = spots[count:]
 
         return spots
+
+    def get_origin_grid(self, origin):
+        '''Get grid square for specified origin callsign.
+
+        Args:
+            origin (str): Origin callsign to match
+
+        Returns:
+            str, None: Most recent grid square spotted for *origin*, or None if not found
+        '''
+        for spot in self.all():
+            if spot.origin == origin.upper() and spot.grid not in (None, ''):
+                return spot.grid
+
+        return None
 
     def last_heard(self, count=1):
         '''Get last heard spot messages.
@@ -206,6 +221,17 @@ class SpotMonitor:
         '''
         return self._station_watch_list
 
+    def set_watched_stations(self, stations):
+        '''Set watched stations.
+
+        Args:
+            stations (list): List of station callsigns to watch for
+        '''
+        if isinstance(stations, str):
+            stations = [station.strip() for station in stations.split(',')]
+
+        self._station_watch_list = stations
+
     def get_watched_groups(self):
         '''Get watched groups.
 
@@ -213,6 +239,18 @@ class SpotMonitor:
             list: Watched group designators
         '''
         return self._group_watch_list
+
+    def set_watched_groups(self, groups):
+        '''Set watched groups.
+
+        Args:
+            groups (list): List of group designators to watch for
+        '''
+        if isinstance(groups, str):
+            groups = [group.strip() for group in groups.split(',')]
+
+        self._groups_watch_list = groups
+
 
     def _callback(self, spots):
         '''New spots callback function handling.

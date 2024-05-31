@@ -31,8 +31,10 @@ __docformat__ = 'google'
 import os
 import time
 import json
+import psutil
 import socket
 import threading
+from datetime import datetime
 
 import pyjs8call
 from pyjs8call import Message
@@ -49,10 +51,6 @@ class JS8Call:
     
     Attributes:
         app (pyjs8call.appmonitor): Application monitor object
-        connected (bool): Whether the JS8Call TCP socket is connected
-        last_incoming (float): Timestamp of last incoming user message, defaults to 0 (zero)
-        last_outgoing (float): Timestamp of last outgoing user message, defaults to 0 (zero)
-        last_band_change (float): Timestamp of last frequency band change
     '''
 
     def __init__(self, client, host='127.0.0.1', port=2442):
@@ -62,9 +60,6 @@ class JS8Call:
             client (pyjs8call.client): Parent client object
             host (str): JS8Call TCP address setting, defaults to '127.0.0.1'
             port (int): JS8Call TCP port setting, defaults to 2442
-
-        Returns:
-            pyjs8call.js8call: Constructed js8call object
         '''
         self._client = client
         self._host = host
@@ -76,6 +71,7 @@ class JS8Call:
         self._socket = None
         self._socket_ping_delay = 60 # seconds
         self.connected = False
+        '''bool: Whether the JS8Call TCP socket is connected'''
 
         self._debug = False
         self._debug_all = False
@@ -101,8 +97,11 @@ class JS8Call:
         self._last_incoming_by_band = dict()
         self._last_outgoing_by_band = dict()
         self.last_incoming = 0
+        '''float: Timestamp of last incoming user message, defaults to 0 (zero)'''
         self.last_outgoing = 0
+        '''float: Timestamp of last outgoing user message, defaults to 0 (zero)'''
         self.last_band_change = time.time()
+        '''float: Timestamp of last frequency band change'''
         self._last_incoming_api_msg = 0
         
         self._watching = None
@@ -227,13 +226,22 @@ class JS8Call:
         }
         
         self.app = pyjs8call.AppMonitor(self)
+        '''pyjs8call.appmonitor: Application monitor object'''
 
-    def start(self, headless=False, args = None):
+    def start(self, headless=False, args=None):
         '''Start the JS8Call application.
 
-        This function is blocking until the JS8Call application responds to a network command which ensures that the application is operational before continuing. This handles slower computers such as Raspberry Pi.
+        This function is blocking until the JS8Call application responds to a network command, which ensures that the application is operational before continuing. This supports slower computers such as Raspberry Pi 3 where starting the application may take several seconds.
 
-        Used internally by client.start().
+        The *timer.out* file continues to grow while the application is running, eventually consuming all available disk space and causing application errors. If the *timer.out* file exists, it is removed before starting the application. The *timer.out* file can be removed during extended operation by calling *client.restart()*, which calls this function. The *timer.out* base path is QT5 *QStandardPaths::DataLocation*:
+    
+        | Platform | timer.out File Path |
+        | -------- | -------- |
+        | Windows | C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call\\timer.out |
+        | Mac OS | ~/Library/Application Support/timer.out |
+        | Unix | ~/.local/share/JS8Call/timer.out |
+
+        This function is called internally by client.start().
 
         Args:
             headless (bool): Run JS8Call headless using xvfb (Linux only), defaults to False
@@ -244,6 +252,27 @@ class JS8Call:
         '''
         if args is None:
             args = []
+
+        # remove timer.out file when starting, if exists
+        # timer.out file grows continuously until it fills entire disk space and causes an application error
+        # restarting via client.restart() will remove the time.out file
+        # paths based on QT5 writable path QStandardPaths::DataLocation
+        if psutil.WINDOWS:
+            timer_out_path = os.path.expandvars('C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call\\timer.out')
+        elif psutil.MACOS:
+            timer_out_path = os.path.join(os.path.expanduser('~'), 'Library/Application Support/JS8Call/timer.out')
+        else:
+            timer_out_path = os.path.join(os.path.expanduser('~'), '.local/share/JS8Call/timer.out')
+            
+        if os.path.exists(timer_out_path):
+            # allow processes to release file handle on restart
+            timeout = time.time() + 10 # 10 seconds
+            while time.time() < timeout:
+                try:
+                    os.remove(timer_out_path)
+                    break
+                except PermissionError:
+                    time.sleep(0.5)
         
         self.online = True
         self.app.start(headless=headless, args = args)
@@ -356,7 +385,7 @@ class JS8Call:
     def process_freq_change(self, previous_freq, current_freq=None):
         '''Manage last incoming/outgoing timestamps on band change.
 
-        This function is called internally when the local frequency state is updated. If a band change has occured, last incoming and outgoing timestamps for the previous band are stored, and last incoming and outgoing timestamps for the current band of loaded (if available).
+        This function is called internally when the local frequency state is updated. If a band change has occured, last incoming and outgoing timestamps for the previous band are stored, and last incoming and outgoing timestamps for the current band are loaded (if available).
 
         Note: Changing from one out-of-band frequency to another out-of-band frequency is not considered a band change.
 
@@ -391,6 +420,14 @@ class JS8Call:
             self.last_outgoing = self._last_outgoing_by_band[current_band]
         else:
             self.last_outgoing = 0
+
+    def heard_freq_bands(self):
+        '''Get frequency bands with incoming messages.
+
+        Returns:
+            list: Frequency band designators like \'40m\'
+        '''
+        return list(self._last_incoming_by_band.keys())
 
     def activity(self, age=0):
         '''Whether there is outgoing activity.
@@ -599,7 +636,7 @@ class JS8Call:
         '''
         with self._spots_lock:
             if append:
-                self._spots.append(spots)
+                self._spots.extend(spots)
             else:
                 self._spots = spots
 
@@ -646,7 +683,8 @@ class JS8Call:
         elif msg.type in Message.RX_TYPES:
             msg_type = 'RX'
 
-        msg_time = time.strftime('%x %X', time.localtime(msg.timestamp))
+        dt_msg = datetime.utcfromtimestamp(msg.timestamp)
+        msg_time = dt_msg.astimezone().strftime('%x %X')
 
         with self._log_queue_lock:
             self._log_queue += msg_time + '  ' + msg_type + '  ' + msg.dump() + '\n'

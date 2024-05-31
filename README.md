@@ -13,8 +13,12 @@ This software is currently in a beta state. This means that the software will li
 &nbsp;
 
 ### Responsibility
+<<<<<<< HEAD
 
 It is the station operator's reponsibility to ensure compliance with local laws.
+=======
+It is the station operator's responsibility to ensure compliance with local laws.
+>>>>>>> develop
 
 &nbsp;
 
@@ -48,7 +52,12 @@ All functionality is supported on all major platforms as of version 0.2.0. Runni
     
     a. Install JS8Call
     
-    See the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
+    On some platforms, such as Raspberry Pi OS, JS8Call can be installed with the package manager:
+    ```
+    sudo apt install js8call
+    ```
+
+    Otherwise, see the [JS8Call downloads](http://files.js8call.com/latest.html) page for OS-specific packages as well as source files. If you are compiling from source for Linux be sure to read the INSTALL file at the top level of the JS8Call repo.
     
     On Raspberry Pi OS:
     ```
@@ -58,9 +67,13 @@ All functionality is supported on all major platforms as of version 0.2.0. Runni
 
     **NOTE:** When installing JS8Call on Windows be sure to select the option to add JS8Call to the PATH variable during the installation process. This will allow *pyjs8call* to locate the JS8Call executable.
 
-    **NOTE:** When installing JS8Call on MacOS be sure to read the readme file included in the dmg image for information on the fix for the JS8Call shared memory error. The following directory must also be added to the PATH variable to allow *pyjs8call* to locate the JS8Call executable: /Applications/js8call.app/Contents/MacOS
+    **NOTE:** When installing JS8Call on MacOS be sure to read the readme file included in the dmg image for information on the fix for the JS8Call shared memory error. The following directory must also be added to the PATH variable to allow *pyjs8call* to locate the JS8Call executable: `/Applications/js8call.app/Contents/MacOS`
     
-    **NOTE:** When using a QRPLabs QDX tranceiver on Linux consider masking the ModemManager service to prevent CAT control dropouts. See [this post from QRPLabs](https://groups.io/g/QRPLabs/topic/87048220#74634) for more information.
+    **NOTE:** When using a QRPLabs QDX tranceiver on Linux, consider masking the ModemManager service using the below commands to prevent CAT control dropouts (aka rig control errors). See [this post from QRPLabs](https://groups.io/g/QRPLabs/topic/87048220#74634) for more information.
+    ```
+    sudo systemctl stop ModemManager.service
+    sudo systemctl mask ModemManager.service
+    ```
     
     &nbsp;
 
@@ -71,15 +84,15 @@ All functionality is supported on all major platforms as of version 0.2.0. Runni
     sudo apt install xvfb
     ```
 
-2. Install pyjs8call using pip3 (or pip, if python3 is the default on your system)
+2. Install pyjs8call using pip (or pip3, if python3 is not the default on your system)
     
     ```
-    pip3 install pyjs8call
+    pip install pyjs8call
     ```
 
     This will also install *psutil* for cross platform process management.
 
-3. Launch JS8Call to configure audio and CAT interface settings as needed. Launching the application and exiting normally will also initilize the configuration file, which is required by *pyjs8call*.
+3. Launch JS8Call to configure audio and CAT interface settings as needed. Launching the application and exiting normally will also initialize the configuration file, which is required by *pyjs8call*.
 
 &nbsp;
 
@@ -89,7 +102,7 @@ Some setup (i.e. setting callback functions) is required to use certain module f
 
 **Client** (pyjs8call.client)
 
-The main JS8Call API interface. Includes many functions for reading and writting settings as well as sending various types of messages.
+The main JS8Call API interface. Includes functions for sending various types of messages.
 
 **JS8Call** (pyjs8call.js8call)
 
@@ -105,7 +118,7 @@ Reads from and writes to the JS8Call.ini config file to change virtually any set
 
 **Spot Monitor** (pyjs8call.spotmonitor)
 
-Monitors recent station spots. Spot data can be queried for various uses, and spot callbacks can be set for all heard stations and/or for specific stations.
+Monitors recent station spots. Spot data can be queried for various uses, and spot callbacks can be set for all heard stations and/or for specific stations and groups.
 
 **Window Monitor** (pyjs8call.windowmonitor)
 
@@ -113,7 +126,7 @@ Monitors the next rx/tx window transition. JS8Call API messages associated with 
 
 **Offset Monitor** (pyjs8call.offsetmonitor)
 
-Manages JS8Call offset frequency based on activity in the pass band. The offset frequency is automatically moved to an unsed portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the modem speed of each heard signal. Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
+Manages JS8Call offset frequency based on activity in the pass band. The offset frequency is automatically moved to an unused portion of the pass band if a recently heard signal overlaps with the current offset. Signal bandwidth is calculated based on the modem speed of each heard signal. Only decoded signal data is available from the JS8Call API so other QRM cannot be handled.
 
 **Outgoing Monitor** (pyjs8call.outgoingmonitor)
 
@@ -121,7 +134,7 @@ Monitors JS8Call outgoing message text. Notification of a message status change 
 
 **Heartbeat Networking** (pyjs8call.hbnetwork)
 
-Sends a heartbeat message in the heartbeat sub-band on a time interval.
+Sends a heartbeat message in the heartbeat sub-band on a time interval. This module is useful for enabling heatbeat networking programmatically and without using the JS8Call interface (i.e. running headless).
 
 **Time Monitor** (pyjs8call.timemonitor)
 
@@ -133,17 +146,69 @@ Time master functionality is also implemented which sends outgoing messages on a
 
 Monitors the local inbox. Notification of new messages is handled via callback function.
 
+Automatic periodic syncing of remote messages from a specified source (@ALLCALL by default) is also supported. Be aware of your local laws regarding unattended stations when using this feature.
+
+*NOTE: enabling syncing of remote messages will cause the local station to transmit immediately*
+
 **Schedule Monitor** (pyjs8call.schedulemonitor)
 
-Monitors configured schedule entries and applies the necessary setting changes at the scheduled time. Settings that can be changed on a schedule include frequency, modem speed, and configuration profile.
+Monitors configured schedule entries and applies the necessary setting changes at the scheduled time. Settings that can be changed on a schedule include frequency, modem speed, and configuration profile. The JS8Call application can also be restarted on a schedule.
 
 **Propagation** (pyjs8call.propagation)
-Parses stored spots into datasets of individual or median SNR values for grid squares or callsigns. This information can be used to infer general propagation conditions between the local station and a specific station, or the local station and a specific grid square.
+
+Parses stored spot data into datasets of individual or median SNR values for grid squares or callsigns. This information can be used to infer general propagation conditions between the local station and a specific station, or the local station and a specific grid square.
 
 **Notifications** (pyjs8call.notifications)
-Send an email message (including email-to-text) via an existing SMTP server when a message directed to the local station is received.
 
-&nbsp;  
+Send an email message (including email-to-text) via a specified SMTP server when a message directed to the local station is received, or when a specific station or group is spotted.
+
+&nbsp;
+
+### Command Line Interface (CLI)
+
+A command line interface is available for the *pyjs8call* module as of version 0.2.3. CLI usage:
+
+```
+USAGE: python -m pyjs8call [OPTIONS]
+
+OPTIONS:
+--rns
+    Utilize IO buffers to support the RNS PipeInterface, set configuration profile
+    to 'RNS', allow free text, and add group @RNS (*)
+--freq
+    Set radio frequency in Hz
+--grid
+    Set station grid square
+--speed
+    Set speed of JS8Call modem, defaults to 'fast'
+--profile
+    Set JS8Call configuration profile (**)
+--callsign
+    Set station callsign
+--settings
+    File path to pyjs8call settings file (NOT JS8CALL CONFIG FILE),
+    see pyjs8call.settings.Settings.load
+    for more information
+--headless
+    Run JS8Call headless using xvfb (only available on Linux platforms)
+--heartbeat
+    Enable pyjs8call heartbeat networking
+
+
+(*) RNS PipeInterface must be configured and enabled in the Reticulum config file,
+    see below example:
+
+    [[Pipe Interface]]
+    type = PipeInterface
+    interface_enabled = True
+    command = python -m pyjs8call --rns --settings ~/.config/pyjs8call_rns.ini
+    respawn_delay = 5
+
+(**) If the specified profile does not exist, it is created by copying 'Default'
+```
+See [RNS PipeInterface](https://markqvist.github.io/Reticulum/manual/interfaces.html#pipe-interface) for more information on configuring a RNS PipeInterface.
+
+&nbsp;
 
 ### Examples
 
@@ -192,7 +257,7 @@ js8call.spots.filter(distance = 1000)
 max_age = 15 * 60 # convert minutes to seconds
 js8call.spots.filter(age = max_age)
 
-# get a list of the 10 most recent spot messages from regional stations in the last hour on the 40m band
+# get a list of the 10 most recent spot messages from regional stations on the 40m band
 js8call.spots.filter(distance = 500, band = '40m', count = 10)
 ```
 
@@ -213,6 +278,7 @@ js8call_qdx = pyjs8call.Client(port=2444)
 # specify the rig name as a command line argument
 js8call_qdx.start(args=['--rig-name', 'QDX'])
 ```
+**Note:** radio interface and audio devices should be configured manually in each JS8Call instance
 
 Using the spot monitor:
 ```
@@ -265,8 +331,16 @@ js8call = pyjs8call.Client()
 js8call.callback.inbox = new_inbox_msg
 js8call.start()
 
-# enable local inbox monitoring and periodic remote inbox message query
+# enable local inbox monitoring
 js8call.inbox.enable()
+
+# enable local inbox monitoring and periodic remote inbox message query
+# to @ALLCALL every 60 minutes
+js8call.inbox.enable(query=True)
+
+# enable local inbox monitoring and periodic remote inbox message query
+# to @MYGROUP every 30 minutes
+js8call.inbox.enable(query=True, destination='@MYGROUP', interval=30)
 ```
 
 Using the outgoing message monitor:
@@ -296,6 +370,8 @@ Using heartbeat networking:
 import pyjs8call
 
 js8call = pyjs8call.Client()
+# set heartbeat interval via config file
+js8call.settings.set_heartbeat_interval(15)
 js8call.start()
 
 # interval based on JS8Call settings
@@ -336,6 +412,7 @@ import pyjs8call
 js8call = pyjs8call.Client()
 
 # set config file settings before starting
+# see pyjs8call.settings for many more settings options
 js8call.settings.enable_heartbeat_acknowledgements()
 js8call.settings.set_heartbeat_interval(15)
 js8call.settings.enable_reporting()
@@ -357,8 +434,8 @@ for station in regional_stations:
     print('{}: {} {} at {}\N{DEGREE SIGN}'.format(station.origin, station.distance, station.distance_units, station.bearing))
 
 # access message attributes directly
-# this requires the message to contain grid square data
-last_heartbeat = js8call.spots.filter(destination='@HB')[-1]
+# this requires the message to contain grid square data (ex. heartbeat message)
+last_heartbeat = js8call.spots.filter(destination='@HB', count=1)[-1]
 distance = last_heartbeat.distance
 bearing = last_heartbeat.bearing
 
@@ -438,6 +515,15 @@ js8call.notifications.set_email_destination('2018675309@vtext.com')
 # enable automatic notifications for incoming directed messages
 js8call.notifications.enable()
 
+# set stations to watch
+js8call.spots.add_station_watch('KT7RUN')
+# enable station spot notifications
+js8call.notifications.enable_station_spots()
+
+# set groups to watch
+js8call.spots.add_group_watch('@TTP')
+# enable station spot notifications
+js8call.notifications.enable_group_spots()
 ```
 
 &nbsp;

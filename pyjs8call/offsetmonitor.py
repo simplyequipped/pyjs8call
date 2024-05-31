@@ -38,14 +38,7 @@ from pyjs8call import Message
 
 
 class OffsetMonitor:
-    '''Monitor offset frequency based on activity in the pass band.
-
-    Attributes:
-        min_offset (int): Minimum offset for adjustment and recent activity monitoring, defaults to 1000
-        max_offset (int): Maximum offset for adjustment and recent activity monitoring, defaults to 2500
-        bandwidth_safety_factor (float): Safety factor to apply around outgoing signal bandwith, defaults to 1.25
-        activity_cycles (int, float): rx/tx cycles to consider recent activity, defaults to 2.5
-    '''
+    '''Monitor offset frequency based on activity in the pass band.'''
 
     def __init__(self, client, hb=False):
         '''Initialize offset monitor.
@@ -59,9 +52,13 @@ class OffsetMonitor:
         '''
         self._client = client
         self.min_offset = 1000
+        '''int: Minimum offset for adjustment and recent activity monitoring, defaults to 1000'''
         self.max_offset = 2500
+        '''int: Maximum offset for adjustment and recent activity monitoring, defaults to 2500'''
         self.activity_cycles = 2.5
+        '''int, float: rx/tx cycles to consider recent activity, defaults to 2.5'''
         self.bandwidth_safety_factor = 1.25
+        '''float: Safety factor to apply around outgoing signal bandwith, defaults to 1.25'''
         self._bandwidth = self._client.settings.get_bandwidth()
         self._offset = self._client.settings.get_offset()
         self._enabled = False

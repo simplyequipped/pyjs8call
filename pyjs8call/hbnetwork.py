@@ -81,6 +81,9 @@ class HeartbeatNetworking:
         if self._enabled:
             return
 
+        # enable js8call heartbeat networking
+        # heartbeat acknowledgements only function if heartbeat networking is enabled
+        self._client.settings.enable_heartbeat_networking()
         self._enabled = True
 
         self._offset = OffsetMonitor(self._client, hb = True)
@@ -98,7 +101,9 @@ class HeartbeatNetworking:
     def disable(self):
         '''Disable heartbeat networking.'''
         self._enabled = False
-        self._offset.disable()
+        
+        if self._offset is not None:
+            self._offset.disable()
 
     def pause(self):
         '''Pause heartbeat networking.'''

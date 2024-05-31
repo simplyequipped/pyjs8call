@@ -31,9 +31,19 @@ __docformat__ = 'google'
 import json
 import time
 import math
+import base64
 import secrets
 from datetime import datetime, timezone
 
+
+BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+'''Base64 characters for mapping to JS8Call supported characters'''
+JS8CALL_BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ,.-"?!)(~:_&$%#@*><[]{}|;^0123456789+/'
+'''JS8Call supported characters for mapping to Base64 characters'''
+BASE64_TO_JS8CALL_TRANSLATION_TABLE = str.maketrans(BASE64_ALPHABET, JS8CALL_BASE64_ALPHABET)
+'''Translation table from JS8Call supported characters to Base64 characters'''
+JS8CALL_TO_BASE64_TRANSLATION_TABLE = str.maketrans(JS8CALL_BASE64_ALPHABET, BASE64_ALPHABET)
+'''Translation table from Base64 characters to JS8Call supported characters'''
 
 class Message:
     '''Message object for incoming and outgoing messages.
@@ -45,9 +55,9 @@ class Message:
         type (str): Message type (see static types), defaults to TX_SEND_MESSAGE
         destination (str): Destination callsign
         value (str): Message contents
-        time (float): UTC timestamp (see *datetime.now(timezone.utc).timestamp*)
-        timestamp (float): Local timestamp (see *time.time*)
-        local_time_str (str): Local time string (see *time.strftime('%X', time.localtime())*)
+        timestamp (float): Epoch timestamp (always referenced to UTC)
+        utc_time_str (float): UTC time string (ex. '21:42 UTC')
+        local_time_str (str): Local time string (ex. '21:42L')
         tdrift (float): Time drift specified by JS8call, defaults to None
         params (dict): Message parameters used by certain JS8Call API messages
         attributes (list): Attributes for internal use (see *Message.set*)
@@ -63,7 +73,7 @@ class Message:
         snr (str): Signal-to-noise ratio, defaults to None
         from (str): Origin callsign, defaults to None
         origin (str): Origin callsign, defaults to None
-        utc (str): UTC timestamp, defaults to None
+        utc (str): UTC date/time string, defaults to None
         cmd (str): JS8Call command (see static commands), defaults to None
         text (str): Used by certain JS8Call API messages, defaults to None
         speed (str): JS8Call modem speed of received signal
@@ -91,8 +101,8 @@ class Message:
     TX_SET_TEXT             = 'TX.SET_TEXT'
     MODE_GET_SPEED          = 'MODE.GET_SPEED'
     MODE_SET_SPEED          = 'MODE.SET_SPEED'
-    STATION_GET_INFO        = 'STATION.SET_INFO'
-    STATION_SET_INFO        = 'STATION.GET_INFO'
+    STATION_GET_INFO        = 'STATION.GET_INFO'
+    STATION_SET_INFO        = 'STATION.SET_INFO'
     STATION_GET_GRID        = 'STATION.GET_GRID'
     STATION_SET_GRID        = 'STATION.SET_GRID'
     STATION_GET_CALLSIGN    = 'STATION.GET_CALLSIGN'
@@ -293,10 +303,13 @@ class Message:
         '''List of attributes set using Message.set()'''
         self.raw = None
         '''Raw incoming message string, defaults to None, not used for outgoing messages'''
+        self.is_packed = False
+        '''Whether message has been packed, defaults to False, not used for incoming messages'''
         self.packed = None
         '''Packed outgoing message string, defaults to None, not used for incoming messages'''
         self.packed_dict = None
         '''Packed outgoing message dictionary, defaults to None, not used for incoming messages'''
+        self._bytes = None
 
         # initialize common msg fields
         common = [
@@ -328,15 +341,17 @@ class Message:
         for attribute in common:
             self.set(attribute, None)
         
+        dt_utc = datetime.now(timezone.utc)
+
         self.set('id', secrets.token_urlsafe(16))
         self.set('type', Message.TX_SEND_MESSAGE)
         self.set('destination', destination)
         self.set('cmd', cmd)
         self.set('value', value)
         self.set('origin', origin)
-        self.set('time', datetime.now(timezone.utc).timestamp())
-        self.set('timestamp', time.time())
-        self.set('local_time_str', '{}L'.format(time.strftime('%X', time.localtime(self.get('timestamp')))))
+        self.set('timestamp', dt_utc.timestamp())
+        self.set('utc_time_str', '{} UTC'.format(dt_utc.strftime('%X')))
+        self.set('local_time_str', '{}L'.format(dt_utc.astimezone().strftime('%X')))
         self.set('params', {})
         self.set('status', Message.STATUS_CREATED)
 
@@ -388,7 +403,6 @@ class Message:
             
         elif attribute == 'destination' and isinstance(value, str):
             self.destination = value.upper()
-
 
     def get(self, attribute):
         '''Get message attribute value.
@@ -463,14 +477,17 @@ class Message:
     def pack(self, exclude=None):
         '''Pack message for transmission over TCP socket.
 
+        If message is already packed, packed value is returned without repacking.
+
         The following attributes are excluded by default:
         - id
         - destination
         - origin
         - cmd
         - from
-        - time
         - timestamp
+        - utc_time_str
+        - local_time_str
         - text
         - status
         - profile
@@ -482,20 +499,26 @@ class Message:
         Returns:
             UTF-8 encoded byte string. A dictionary representation of the message attributes is converted to a string using *json.dumps* before encoding.
         '''
+        if self.is_packed:
+            return self.packed
+            
         if exclude is None:
             exclude = [] 
 
-        exclude.extend(['id', 'destination', 'cmd', 'time', 'timestamp', 'from', 'origin', 'text', 'status', 'profile', 'error'])
+        exclude.extend(['id', 'destination', 'cmd', 'timestamp', 'utc_time_str', 'local_time_str', 'from', 'origin', 'text', 'status', 'profile', 'error'])
 
         self.packed_dict = self.dict(exclude = exclude)
         # convert dict to json string
         packed = json.dumps(self.packed_dict) + '\r\n'
         self.packed = packed.encode('utf-8')
-
+        self.is_packed = True
+        
         return self.packed
 
     def parse(self, msg_str):
         '''Load message string into message object.
+        
+        Supports usage like `Message().parse(raw_incoming_string)`
 
         *Message.parse* should be called inside a try/except block to handle parsing errors.
 
@@ -524,22 +547,23 @@ class Message:
 
             self.set(param, value)
         
-        
         # type handling
         
         if self.type == Message.INBOX_MESSAGES:
             self.messages = []
             
             for message in msg['params']['MESSAGES']:
+                dt_utc = datetime.strptime(message['params']['UTC'], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+
                 self.messages.append({
                     'cmd' : message['params']['CMD'],
                     'freq' : message['params']['DIAL'],
                     'offset' : message['params']['OFFSET'],
                     'snr' : message['params']['SNR'],
                     'speed' : message['params']['SUBMODE'],
-                    'time' : message['params']['UTC'] / 1000, # milliseconds to seconds
-                    'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
-                    'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))), # milliseconds to seconds
+                    'timestamp' : dt_utc.timestamp(),
+                    'utc_time_str': '{} UTC'.format(dt_utc.strftime('%X')),
+                    'local_time_str' : '{}L'.format(dt_utc.astimezone().strftime('%X')),
                     'origin' : message['params']['FROM'],
                     'destination' : message['params']['TO'],
                     'path' : message['params']['PATH'],
@@ -556,13 +580,15 @@ class Message:
                 if key == '_ID' or value is None:
                     continue
 
+                dt_utc = datetime.utcfromtimestamp(value['UTC'] / 1000) # milliseconds to seconds
+
                 self.call_activity.append({
                     'origin' : key,
                     'grid' : value['GRID'].strip(),
                     'snr' : value['SNR'],
-                    'time' : value['UTC'] / 1000, # milliseconds to seconds
-                    'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
-                    'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))) # milliseconds to seconds
+                    'timestamp' : dt_utc.timestamp(),
+                    'utc_time_str' : '{} UTC'.format(dt_utc.strftime('%X')),
+                    'local_time_str' : '{}L'.format(dt_utc.astimezone().strftime('%X'))
                 })
 
         elif self.type == Message.RX_BAND_ACTIVITY:
@@ -572,19 +598,20 @@ class Message:
                     # skip if key is not a freq offset (int)
                     int(key)
 
+                    dt_utc = datetime.utcfromtimestamp(value['UTC'] / 1000) # milliseconds to seconds
+
                     self.band_activity.append({
                         'freq' : value['DIAL'],
                         'offset' : value['OFFSET'],
                         'snr' : value['SNR'],
-                        'time' : value['UTC'] / 1000, # milliseconds to seconds
-                        'timestamp' : time.mktime(time.localtime(value['UTC'] / 1000)), # milliseconds to seconds
-                        'local_time_str' : '{}L'.format(time.strftime('%X', time.localtime(value['UTC'] / 1000))), # milliseconds to seconds
+                        'timestamp' : dt_utc.timestamp(),
+                        'utc_time_str' : '{} UTC'.format(dt_utc.strftime('%X')),
+                        'local_time_str' : '{}L'.format(dt_utc.astimezone().strftime('%X')),
                         'text' : value['TEXT']
                     })
                 except ValueError:
                     continue
 
-                
         # command handling
 
         if self.cmd == Message.CMD_GRID and self.text is not None and Message.ERR not in self.text:
@@ -597,7 +624,6 @@ class Message:
             # 0 = origin, 1 = destination, 2 = command, -1 = EOM
             hearing = self.text.split()[3:-1]
             self.set('hearing', hearing)
-
 
         # relay path handling
 
@@ -679,6 +705,79 @@ class Message:
         for attribute, value in json.loads(msg_str.strip()).items():
             self.set(attribute, value)
 
+        return self
+
+    def encode(self):
+        '''Encode incoming JS8Call compatible message value to bytes.
+
+        Due to the limited character set of JS8Call, a unique process is used to re-encode JS8Call compatible text back to bytes. The text to be re-encoded is derived by *Message.decode()*.
+        
+        Custom encoding process: `JS8Call compatible text -> translate to Base64 alphabet -> encode to byte string -> decode Base64 to bytes`
+
+        The *text* attribute is processed to support cleaning of incoming directed message text. If *text* is not set, and *value* is set, *value* is processed instead.
+        
+        Returns:
+            bytes: Message text converted to bytes
+        '''
+        global JS8CALL_TO_BASE64_TRANSLATION_TABLE
+
+        if self.get('text') is not None and len(self.get('text')) > 0:
+            # use msg.text if set
+            msg_value = self.text
+        elif self.get('value') is not None and len(self.get('value')) > 0:
+            # use msg.value if set
+            msg_value = self.value
+        else:
+            # set and return empty bytes string
+            self._bytes = b''
+            return self._bytes
+
+        try:
+            # translate js8call alphabet to base46 alphabet
+            base64_text = msg_value.translate(JS8CALL_TO_BASE64_TRANSLATION_TABLE)
+            # encode to bytes
+            base64_bytes = base64_text.encode()
+            # decode base64 to bytes
+            self._bytes = base64.b64decode(base64_bytes)
+        except Exception as e:
+            self._bytes = b''
+            
+        return self._bytes
+    
+    def decode(self, bytes_str):
+        '''Decode outgoing bytes to JS8Call compatible message value.
+
+        Due to the limited character set of JS8Call, a unique process is used to decode bytes into JS8Call compatible text. The decoded text can be re-encoded using *Message.encode()*.
+        
+        Custom decoding process: `bytes -> encode bytes to Base64 -> decode to string -> translate to JS8Call alphabet -> JS8Call compatible text`
+
+        Supports usage like `Message().decode(byte_string)`.
+
+        Args:
+            bytes_str (bytes): Byte string to decode into JS8Call compatible text
+
+        Returns:
+            pyjs8call.Message: Message object with *value* attribute set to decoded text string
+
+        Raises:
+            TypeError: *bytes_str* is not type bytes
+        '''
+        global BASE64_TO_JS8CALL_TRANSLATION_TABLE
+
+        if not isinstance(bytes_str, bytes):
+            raise TypeError('Only type \'bytes\' can be decoded')
+        
+        try:
+            # convert bytes to base64
+            base64_bytes = base64.b64encode(bytes_str)
+            # decode from bytes
+            base64_text = base64_bytes.decode()
+            # translate base64 alphabet to js8call alphabet
+            msg_value = base64_text.translate(BASE64_TO_JS8CALL_TRANSLATION_TABLE)
+            self.set('value', msg_value)
+        except Exception as e:
+            self.set('value', '')
+            
         return self
         
     def __eq__(self, msg):

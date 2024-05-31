@@ -54,17 +54,13 @@ import configparser
 class ConfigHandler:
     '''JS8Call.ini configuration file handler.
 
-    Default configuration file path is QT5 *QStandardPaths::ConfigLocation* file path.
+    Default configuration file base path is QT5 *QStandardPaths::ConfigLocation*:
 
     | Platform | Configuration File Path |
     | -------- | -------- |
     | Windows | C:\\Users\\$USERNAME\\AppData\\Local\\JS8Call\\JS8Call.ini |
-    | Mac OS | $HOME/Library/Preferences/JS8Call.ini |
-    | Unix | $HOME/.config/JS8Call.ini |
-
-    Attributes:
-        path (str): File path to the JS8Call config file
-        config (configparser.ConfigParser): Config parser object containing config file data
+    | Mac OS | ~/Library/Preferences/JS8Call.ini |
+    | Unix | ~/.config/JS8Call.ini |
     '''
 
     def __init__(self, config_path=None):
@@ -77,7 +73,13 @@ class ConfigHandler:
             FileNotFoundError: Config file not found at specified path
         '''
         self.file = 'JS8Call.ini'
+        '''str: JS8Call default configuration file name'''
+        self.path = None
+        '''str: JS8Call configuration file path'''
+        self.config = None
+        '''JS8Call configuration container (see python3 configparser for more information)'''
         self.rig = None
+        '''str: Rig name passed to JS8Call at application launch, defaults to None'''
 
         if config_path is not None:
             self.path, self.file = os.path.split(config_path)
@@ -360,7 +362,7 @@ class ConfigHandler:
 
         Args:
             new_profile (str): Name of new profile to create
-            copy_profile (str): Name of an existing profile to copy when creating the new profile
+            copy_profile (str): Name of an existing profile to copy when creating the new profile, defaults to 'Default'
 
         Raises:
             Exception: Specified profile to be copied does not exist
@@ -432,12 +434,11 @@ class ConfigHandler:
 
         if group not in self.get_groups():
             groups = self.config.get('Configuration', 'MyGroups')
-
-            if len(groups.strip()) > 0:
-                groups += ', '
-
+            groups = [g.strip() for g in groups.split(',')]
             # add second @ symbol to match config file formatting
-            groups += '@' + group
+            groups.append('@' + group)
+            groups = ','.join(groups)
+
             self.config.set('Configuration', 'MyGroups', groups)
 
     def remove_group(self, group):

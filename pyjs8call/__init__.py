@@ -23,10 +23,11 @@
 '''
 .. include:: ../README.md
 .. include:: ../VERSION.md
+.. include:: ../ROADMAP.md
 '''
 
 __docformat__ = 'google'
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 
 from pyjs8call.confighandler import ConfigHandler
@@ -46,6 +47,6 @@ from pyjs8call.outgoingmonitor import OutgoingMonitor
 from pyjs8call.hbnetwork import HeartbeatNetworking
 from pyjs8call.js8call import JS8Call
 from pyjs8call.client import Client
-from pyjs8call.client import Settings
-from pyjs8call.client import Callbacks
+from pyjs8call.settings import Settings
+from pyjs8call.callbacks import Callbacks
 

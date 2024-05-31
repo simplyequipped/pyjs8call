@@ -38,16 +38,6 @@ import psutil
 
 class AppMonitor:
     '''JS8Call application monitor.
-
-    If the JS8Call application is closed and *restart* is *False*, pyjs8call will exit. If *restart* is *True* pyjs8call will continue to run and JS8Call will be restarted.
-
-
-
-    Attributes:
-        headless (bool): Whether JS8Call is running headless using xvfb (see *start()*)
-        args (list): Sequence of command line arguments to be passed to JS8Call, defaults to empty list
-        restart (bool): Whether to restart the JS8Call application if it stops, defaults to False
-        terminate_js8call (bool): Whether to terminate the JS8Call application when stopping the app monitor
     '''
 
     def __init__(self, parent):
@@ -62,10 +52,17 @@ class AppMonitor:
         self._parent = parent
         self._xvfb_proc = None
         self._js8call_proc = None
+        self._js8_proc = None
         self.headless = False
+        '''bool: Whether JS8Call is running headless using xvfb'''
         self.args = []
+        '''list: Command line arguments passed to JS8Call, defaults to empty list'''
         self.restart = False
+        '''bool: Whether to restart the JS8Call application if it stops, defaults to False
+
+        If the JS8Call application is closed and *restart* is *False*, pyjs8call will exit. If *restart* is *True* pyjs8call will continue to run and JS8Call will be restarted.'''
         self.terminate_js8call = True
+        '''bool: Whether to terminate the JS8Call application when stopping the app monitor, defaults to True'''
 
     def start(self, headless=False, args=None):
         ''' Start JS8Call application.
@@ -150,13 +147,22 @@ class AppMonitor:
 
         if not self.terminate_js8call:
             return
-        
+
         self._js8call_proc.terminate()
+
+        if self._js8_proc is not None:
+            self._js8_proc.terminate()
 
         try:
             self._js8call_proc.wait(timeout = 2)
         except psutil.TimeoutExpired:
             self._js8call_proc.kill()
+
+        if self._js8_proc is not None:
+            try:
+                self._js8_proc.wait(timeout = 2)
+            except psutil.TimeoutExpired:
+                self._js8c_proc.kill()
 
         # remove zombie process when running headless
         if self._xvfb_proc is not None:
@@ -240,6 +246,9 @@ class AppMonitor:
             thread = threading.Thread(target=self._monitor)
             thread.daemon = True
             thread.start()
+
+            # find js8 process after js8call started and connected
+            self._find_running_js8_process()
         else:
             raise RuntimeError('JS8Call application failed to start')
 
@@ -281,12 +290,17 @@ class AppMonitor:
         for proc in xvfb_procs:
             if proc.status() == psutil.STATUS_ZOMBIE:
                 continue
-                
+
+            #TODO finding js8/js8.exe could be cleaner
             for child in proc.children():
                 if child.name().lower() == 'js8call':
                     # js8call found
                     self._xvfb_proc = proc
                     self._js8call_proc = child
+                elif child.name().lower() == 'js8':
+                    # js8 found
+                    self._xvfb_proc = proc
+                    self._js8_proc = child
                     return
 
     def _find_running_js8call_process(self):
@@ -298,6 +312,17 @@ class AppMonitor:
                 continue
                 
             self._js8call_proc = proc
+            return
+
+    def _find_running_js8_process(self):
+        '''Find running JS8 process.'''
+        js8_procs = [proc for proc in psutil.process_iter(['name']) if proc.info['name'].lower() in ('js8', 'js8.exe')]
+        
+        for proc in js8_procs:
+            if proc.status() == psutil.STATUS_ZOMBIE:
+                continue
+                
+            self._js8_proc = proc
             return
 
     def _monitor(self):

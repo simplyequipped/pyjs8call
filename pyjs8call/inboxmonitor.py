@@ -24,7 +24,7 @@
 
 **CAUTION: Enabling inbox monitoring will cause your radio to transmit almost immediately. Consider cabling and antenna connections prior to enabling inbox monitoring.**
 
-Autoreply on at startup must be enabled, and autoreply confirmation must be disabled, in order to allow periodic message queries or automatic responses to *MSG* commands.
+Autoreply (aka autoreply on at startup) must be enabled, and autoreply confirmation must be disabled, in order to allow periodic message queries or automatic responses to *MSG* commands.
 
 Set `client.callback.inbox` to receive new inbox messages as they arrive. See pyjs8call.client.Callbacks for *inbox* callback function details.
 '''
@@ -37,6 +37,7 @@ import time
 import json
 import sqlite3
 import threading
+from datetime import datetime, timezone
 
 from pyjs8call import Message
 
@@ -46,7 +47,6 @@ class InboxMonitor:
     Note that inbox functions in this class access the JS8Call sqlite3 inbox database directly.
     
     The JS8Call sqlite3 inbox database has the following schema:
-    
     ```
     CREATE TABLE inbox_v1 (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,7 +131,9 @@ class InboxMonitor:
         | offset | *int* | 
         | snr | *int* |
         | speed | *int* |
-        | time | *str* |
+        | timestamp | *float* |
+        | utc_time_str | *str* |
+        | local_time_str | *str* |
         | origin | *str* |
         | destination | *str* |
         | path | *str* |
@@ -160,6 +162,8 @@ class InboxMonitor:
 
         msg_id, blob = msg
         blob = json.loads(blob)
+        dt_utc = datetime.strptime(blob['params']['UTC'], '%Y-%m-%d %H:%M:%S').replace(tzinfo = timezone.utc)
+
         msg = {
             'id': int(msg_id),
             'cmd' : blob['params']['CMD'],
@@ -167,7 +171,9 @@ class InboxMonitor:
             'offset' : blob['params']['OFFSET'],
             'snr' : blob['params']['SNR'],
             'speed' : blob['params']['SUBMODE'],
-            'time' : blob['params']['UTC'],
+            'timestamp' : dt_utc.timestamp(),
+            'utc_time_str' : '{} UTC'.format(dt_utc.strftime('%X')),
+            'local_time_str' : '{}L'.format(dt_utc.astimezone().strftime('%X')),
             'origin' : blob['params']['FROM'],
             'destination' : blob['params']['TO'],
             'path' : blob['params']['PATH'],
@@ -192,7 +198,9 @@ class InboxMonitor:
         | offset | *int* | 
         | snr | *int* |
         | speed | *int* |
-        | time | *str* |
+        | timestamp | *float* |
+        | utc_time_str | *str* |
+        | local_time_str | *str* |
         | origin | *str* |
         | destination | *str* |
         | path | *str* |
@@ -218,6 +226,8 @@ class InboxMonitor:
         msgs = []
         for msg_id, blob in inbox:
             blob = json.loads(blob)
+            dt_utc = datetime.strptime(blob['params']['UTC'], '%Y-%m-%d %H:%M:%S').replace(tzinfo = timezone.utc)
+
             msgs.append({
                 'id': int(msg_id),
                 'cmd' : blob['params']['CMD'],
@@ -225,7 +235,9 @@ class InboxMonitor:
                 'offset' : blob['params']['OFFSET'],
                 'snr' : blob['params']['SNR'],
                 'speed' : blob['params']['SUBMODE'],
-                'time' : blob['params']['UTC'],
+                'timestamp' : dt_utc.timestamp(),
+                'utc_time_str' : '{} UTC'.format(dt_utc.strftime('%X')),
+                'local_time_str' : '{}L'.format(dt_utc.astimezone().strftime('%X')),
                 'origin' : blob['params']['FROM'],
                 'destination' : blob['params']['TO'],
                 'path' : blob['params']['PATH'],

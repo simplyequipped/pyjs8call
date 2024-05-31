@@ -63,18 +63,7 @@ import pyjs8call
 
 
 class Notifications:
-    '''Send email notifiations via SMTP server.
-    
-    Attributes:
-        incoming_enabled (bool): Process incoming directed messages if True, ignore otherwise, defaults to True
-        spots_enabled (bool): Process spots if True, ignore otherwise, defaults to False
-        station_spots_enabled (bool): Process watched station spot if True, ignore otherwise, defaults to False
-        group_spots_enabled (bool): Process watched group spot if True, ignore otherwise, defaults to False
-        notify_on_incoming_if_callsign_selected (bool): Process incoming messages while a callsign is selected on the UI if True, ignore otherwise, defaults to False
-        commands (list): Commands matching incoming *Message.cmd* to notify for, defaults to MSG and freetext
-
-    See pyjs8call.Message for more information on message commands.
-    '''
+    '''Send email notifiations via SMTP server.'''
     def __init__(self, client):
         '''Initialize notifications.
 
@@ -91,12 +80,17 @@ class Notifications:
         self._email_subject = None
 
         self.incoming_enabled = True
+        '''bool: Notify on incoming directed messages if True, ignore otherwise, defaults to True'''
         self.spots_enabled = False
+        '''bool: Notify on all spots if True, ignore otherwise, defaults to False'''
         self.station_spots_enabled = False
+        '''bool: Notify on watched station spot (see *pyjs8call.spotmonitor.add_station_watch*) if True, ignore otherwise, defaults to False'''
         self.group_spots_enabled = False
+        '''bool: Notify on watched group spot (see *pyjs8call.spotmonitor.add_group_watch*) if True, ignore otherwise, defaults to False'''
         self.notify_on_incoming_if_callsign_selected = False
-
+        '''bool: Process incoming messages while a callsign is selected on the JC8Call UI if True, ignore otherwise, defaults to False'''
         self.commands = [pyjs8call.Message.CMD_MSG, pyjs8call.Message.CMD_FREETEXT]
+        '''list: *pyjs8call.Message* commands to notify for, defaults to MSG and free text (single space, includes directed messages)'''
 
     def enabled(self):
         '''Get enabled status.
@@ -127,6 +121,38 @@ class Notifications:
         self._client.callback.remove_spots(self.process_spots)
         self._client.callback.remove_station_spot(self.process_station_spots)
         self._client.callback.remove_group_spot(self.process_group_spots)
+
+    def enable_incoming(self):
+        '''Enable incoming directed message handling.'''
+        self.incoming_enabled = True
+
+    def disable_incoming(self):
+        '''Disable incoming directed message handling.'''
+        self.incoming_enabled = False
+
+    def enable_spots(self):
+        '''Enable spot handling.'''
+        self.spots_enabled = True
+
+    def disable_spots(self):
+        '''Disable spot handling.'''
+        self.spots_enabled = False
+
+    def enable_station_spots(self):
+        '''Enable station spot handling.'''
+        self.station_spots_enabled = True
+
+    def disable_station_spots(self):
+        '''Disable station spot handling.'''
+        self.station_spots_enabled = False
+
+    def enable_group_spots(self):
+        '''Enable group spot handling.'''
+        self.group_spots_enabled = True
+
+    def disable_group_spots(self):
+        '''Disable group spot handling.'''
+        self.group_spots_enabled = False
 
     def process_incoming(self, msg):
         '''Process incoming directed messages.
@@ -189,6 +215,26 @@ class Notifications:
         self._smtp_email = email
         self.__smtp_password = password
 
+    def set_smtp_email_address(self, email):
+        '''Set SMTP server account email address.
+
+        Note: Credentials are not written to disk and must be set each time *pyjs8call* is started. Credentials are stored in plain text internally in a variable. This variable is destroyed when the program is closed.
+
+        Args:
+            email (str): SMTP server username (email address)
+        '''
+        self._smtp_email = email
+
+    def set_smtp_password(self, password):
+        '''Set SMTP server account password.
+
+        Note: Credentials are not written to disk and must be set each time *pyjs8call* is started. Credentials are stored in plain text internally in a variable. This variable is destroyed when the program is closed.
+
+        Args:
+            password (str): SMTP server password
+        '''
+        self.__smtp_password = password
+
     def set_smtp_server(self, server, port = None):
         '''Set SMTP server domain.
 
@@ -208,6 +254,14 @@ class Notifications:
             email (str): Destination (aka "to") email address
         '''
         self._email_destination = email
+
+    def set_smtp_server_port(self, port):
+        '''Set SMTP server port.
+
+        Args:
+            port (int): SMTP server port
+        '''
+        self._smtp_port = int(port)
 
     def set_email_subject(self, subject):
         '''Set email subject.
