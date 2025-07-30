@@ -4,120 +4,101 @@ import pyjs8call
 import us
 
 
-# send short-form weather forecast based on given grid square
+# send weather forecast for specified grid square
 def cmd_wx(msg):
+    # only respond to messages directed to local station
+    if not msg.is_directed_to(js8call.settings.get_station_callsign()):
+        return
+    
+    grid = None # grid square like EM19ES
+    num_days = 1 # number of days after today/tonight
+    synopsis = False # whether to return synopsis instead of forecast
+    
     try:
-        cmd, grid = msg.text.strip().split()
-    except ValueError:
-        # no grid square given
+        msg_parts = msg.text.strip().split()
+        if len(msg_parts) == 2:
+            # ex. ' WX EM19ES'
+            grid = msg_parts[1]
+        elif len(msg_parts) == 3:
+            # ex. ' WX EM19ES 3'
+            grid = msg_parts[1]
+
+            if msg_parts[2].isnumeric():
+                num_days = int(msg_parts[2])
+                num_days = min(num_days, 5) # 5 days max
+            else:
+                # any value after grid square that is not an integer will result in synopsis
+                synopsis = True
+        else:
+            # ignore incorrect message structure
+            return
+    except:
+        # ignore incorrect message structure
         return
 
     lat, lon = js8call.grid_to_lat_lon(grid)
-    location = get_location_name(lat, lon)
 
+    if synopsis:
+        forecast = get_area_synopsis(lat, lon)
+    else:
+        forecast = get_forecast(lat, lon, num_days)
+        
+    # send message with weather forecast
+    js8call.send_directed_message(msg.origin, forecast)
+
+# get day/night forecasts for given coordinates
+def get_forecast(lat, lon, num_days):
+    location = get_location_name(lat, lon)
+    
     points_data = requests.get(f'https://api.weather.gov/points/{lat},{lon}').json()
     forecast_url = points_data['properties']['forecast']
+    forecast = requests.get(forecast_url).json()['properties']['periods']
     stations_url = points_data['properties']['observationStations']
-
     station_id = requests.get(stations_url).json()['features'][0]['properties']['stationIdentifier']
     observations_url = f'https://api.weather.gov/stations/{station_id}/observations/latest'
     observations = requests.get(observations_url).json()['properties']
-
     temp_c = int(round(observations['temperature']['value']))
     temp_f = round(temp_c * 9/5 + 32) if temp_c is not None else '??'
     conditions = observations['textDescription']
 
-    forecast = requests.get(forecast_url).json()['properties']['periods']
-    today = None
-    tonight = None
-    tomorrow = None
-    tomorrow_night = None
+    forecasts = []
+    day_start_index = 1
 
-    if forecast[0]['name'].lower() == 'today':
-        today = forecast[0]
-    elif forecast[0]['name'].lower() in ('tonight', 'overnight'):
-        tonight = forecast[0]
+    def build_forecast(forecast):
+        name = forecast['name']
+        temp = forecast["temperature"]
+        precip = forecast["probabilityOfPrecipitation"]["value"]
+        conditions = shorten_conditions(forecast["shortForecast"])
 
+        if name.lower() not in ['today', 'tonight', 'overnight']:
+            # convert days like "Sunday" to "Sun"
+            name_parts = name.split()
+            name = name_parts[0][0:3]
+            if len(name_parts) > 1:
+                name += name_parts[1]
+        
+        return f'{name}: {precip}%, {conditions}'
+
+    # location and current conditions
+    forecasts.append(f'{location}: {temp_f}F, {shorten_conditions(conditions)}')
+    # today, tonight, or overnight forecast
+    forecasts.append(build_forecast(forecast[0]))
+
+    # handle case where both 'today' and 'tonight' are included in forecast
     if forecast[1]['name'].lower() in ('tonight', 'overnight'):
-        tonight = forecast[1]
+        forecasts.append(build_forecast(forecast[1]))
+        day_start_index = 2
 
-    if today is None:
-        tomorrow = forecast[1]
-        tomorrow_night = forecast[2]
-    else:
-        tomorrow = forecast[2]
-        tomorrow_night = forecast[3]
+    # days forecasts
+    for i in range(day_start_index, day_start_index + (num_days * 2)):
+        forecasts.append(build_forecast(forecast[i]))
     
-    wx_now = f'{location}: {temp_f}F, {shorten_conditions(conditions)}'
-    wx_today = f'Today: {today["temperature"]}F, {today["probabilityOfPrecipitation"]["value"]}%, {shorten_conditions(today["shortForecast"])}' if today is not None else None
-    wx_tonight = f'Tonight: {tonight["temperature"]}F, {tonight["probabilityOfPrecipitation"]["value"]}%, {shorten_conditions(tonight["shortForecast"])}' if tonight is not None else None
-    wx_tomorrow = f'{tomorrow["name"][0:3]}: {tomorrow["temperature"]}F, {tomorrow["probabilityOfPrecipitation"]["value"]}%, {shorten_conditions(tomorrow["shortForecast"])}'
-    wx_tomorrow_night = f'{tomorrow["name"][0:3]} Night: {tomorrow_night["temperature"]}F, {tomorrow_night["probabilityOfPrecipitation"]["value"]}%, {shorten_conditions(tomorrow_night["shortForecast"])}'
+    return '\n'.join(forecasts)
 
-    lines = [wx_now, wx_today, wx_tonight, wx_tomorrow, wx_tomorrow_night]
-    lines = [line for line in lines if line is not None]
-    wx = '\n'.join(lines)
-
-    # send message with weather forecast
-    js8call.send_directed_message(msg.origin, wx)
-
-# send long-form weather forecast based on given grid square
-def cmd_wxl(msg):
-    try:
-        cmd, grid = msg.text.strip().split()
-    except ValueError:
-        # no grid square given
-        return
-
-    lat, lon = js8call.grid_to_lat_lon(grid)
+# get area weather synopsis for given coordinates
+def get_area_synopsis(lat, lon):
     location = get_location_name(lat, lon)
-
-    points_data = requests.get(f'https://api.weather.gov/points/{lat},{lon}').json()
-    forecast_url = points_data['properties']['forecast']
-    forecast = requests.get(forecast_url).json()['properties']['periods']
-    today = None
-    tonight = None
-    tomorrow = None
-    tomorrow_night = None
     
-    if forecast[0]['name'].lower() == 'today':
-        today = forecast[0]
-    elif forecast[0]['name'].lower() in ('tonight', 'overnight'):
-        tonight = forecast[0]
-
-    if forecast[1]['name'].lower() in ('tonight', 'overnight'):
-        tonight = forecast[1]
-
-    if today is None:
-        tomorrow = forecast[1]
-        tomorrow_night = forecast[2]
-    else:
-        tomorrow = forecast[2]
-        tomorrow_night = forecast[3]
-    
-    wx_today = f'Today: {today["detailedForecast"]}' if today is not None else None
-    wx_tonight = f'Tonight: {tonight["detailedForecast"]}' if tonight is not None else None
-    wx_tomorrow = f'{tomorrow["name"][0:3]}: {tomorrow["detailedForecast"]}'
-    wx_tomorrow_night = f'{tomorrow["name"][0:3]} Night: {tomorrow_night["detailedForecast"]}'
-
-    lines = [location, wx_today, wx_tonight, wx_tomorrow, wx_tomorrow_night]
-    lines = [line for line in lines if line is not None]
-    wxl = '\n'.join(lines)
-
-    # send message with weather forecast
-    js8call.send_directed_message(msg.origin, wxl)
-
-# send weather synopsis based on given grid square
-def cmd_wxs(msg):
-    try:
-        cmd, grid = msg.text.strip().split()
-    except ValueError:
-        # no grid square given
-        return
-
-    lat, lon = js8call.grid_to_lat_lon(grid)
-    location = get_location_name(lat, lon)
-
     points_data = requests.get(f'https://api.weather.gov/points/{lat},{lon}').json()
     office = points_data['properties']['forecastOffice'].split('/')[-1]
     afd = requests.get(f'https://api.weather.gov/products/types/AFD/locations/{office}').json()
@@ -132,8 +113,7 @@ def cmd_wxs(msg):
         bullets = [bullet.strip() for bullet in bullets if len(bullet) > 1]
         synopsis = '\n' + '. '.join(bullets)
 
-    # send message with weather forecast
-    js8call.send_directed_message(msg.origin, synopsis)
+    return '\n'.join([location, synopsis])
 
 def shorten_conditions(forecast):
     forecast = forecast.lower()
@@ -179,21 +159,21 @@ def get_location_name(lat, lon):
 
 # init js8call client and register wx commands
 js8call = pyjs8call.Client()
-js8call.callback.register_command(' WX', cmd_wx)
-js8call.callback.register_command(' WXL', cmd_wxl)
-js8call.callback.register_command(' WXS', cmd_wxs)
+js8call.callback.register_command(' WX?', cmd_wx)
 js8call.start()
 
-# simulate received requests for each weather command
-#msg = pyjs8call.Message(destination='ABC123', cmd=' WX', value=' WX EM19ES', origin='CBA321')
+# simulate received weather command
+#msg = pyjs8call.Message(destination='ABC123', cmd=' WX?', value=' WX? EM19ES', origin='CBA321')
 #msg.set('type', pyjs8call.Message.RX_DIRECTED)
 #js8call.js8call.append_to_rx_queue(msg)
 #
-#msg = pyjs8call.Message(destination='ABC123', cmd=' WXL', value=' WXL EM19ES', origin='CBA321')
+# simulate received weather command for 3 days
+#msg = pyjs8call.Message(destination='ABC123', cmd=' WX?', value=' WX? EM19ES 3', origin='CBA321')
 #msg.set('type', pyjs8call.Message.RX_DIRECTED)
 #js8call.js8call.append_to_rx_queue(msg)
 #
-#msg = pyjs8call.Message(destination='ABC123', cmd=' WXS', value=' WXS EM19ES', origin='CBA321')
+# simulate received weather command for synopsis
+#msg = pyjs8call.Message(destination='ABC123', cmd=' WX?', value=' WX? EM19ES DETAIL', origin='CBA321')
 #msg.set('type', pyjs8call.Message.RX_DIRECTED)
 #js8call.js8call.append_to_rx_queue(msg)
 
