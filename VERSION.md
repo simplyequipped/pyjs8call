@@ -1,5 +1,9 @@
 ### Versions
 
+**0.2.4**
+- Add *pyjs8call.commands.Commands* to load and process custom JS8Call command plugins (see docs for details)
+- Add built-in custom command ' WX?' to send weather forecast and area synopsis information upon request
+
 **0.2.3**
 - Add ROADMAP.md (included in documentation)
 - Add *pyjs8call.settings.Settings.load()* to load settings from an ini file (see example *settings.ini* in repo)
