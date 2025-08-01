@@ -1,6 +1,6 @@
 # MIT License
 # 
-# Copyright (c) 2022-2023 Simply Equipped
+# Copyright (c) 2022-2025 Simply Equipped
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -240,6 +240,8 @@ class Client:
         '''pyjs8call.propagation: Parse spots into propagation data'''
         self.notifications = None
         '''pyjs8call.notifications: Send email notifications via SMTP server'''
+        self.commands = None
+        '''pyjs8call.commands: Load custom command handlers and process associated messages'''
 
         # delay between setting value and getting updated value
         self._set_get_delay = 0.1 # seconds
@@ -253,6 +255,7 @@ class Client:
         self.callback = pyjs8call.Callbacks()
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
         self.notifications = pyjs8call.Notifications(self)
+        self.commands = pyjs8call.Commands(self)
 
         if self.config.get('Configuration', 'pyjs8callCleanDirectedText') not in [None, 'None']:
             config_clean_directed_text = self.config.get('Configuration', 'pyjs8callCleanDirectedText', bool)
@@ -275,6 +278,9 @@ class Client:
         # load settings if file path specified
         if settings_path is not None:
             self.settings.load(settings_path)
+
+        # load custom command entry point plugins
+        self.commands.load()
 
     def start(self, headless=False, args=None, debugging=False, logging=False):
         '''Start and connect to the the JS8Call application.
