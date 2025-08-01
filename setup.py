@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='pyjs8call',
-    version='0.2.3',
+    version='0.2.4',
     author='Simply Equipped LLC',
     author_email='howard@simplyequipped.com',
     description='Python package for interfacing with the JS8Call API',
@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/simplyequipped/pyjs8call',
     packages=setuptools.find_packages(),
-    install_requires=['psutil>=5.3'],
+    install_requires=['psutil>=5.3', 'us'],
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',
@@ -21,5 +21,10 @@ setuptools.setup(
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft :: Windows'
     ],
-    python_requires='>=3.6.1'
+    python_requires='>=3.8',
+    entry_points={
+        'pyjs8call.commands': [
+            'weather = pyjs8call.builtins.wx_command:WeatherCommand'
+        ]
+    }
 )
