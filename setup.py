@@ -24,7 +24,8 @@ setuptools.setup(
     python_requires='>=3.8',
     entry_points={
         'pyjs8call.commands': [
-            'weather = pyjs8call.builtins.wx_command:WeatherCommand'
+            'weather = pyjs8call.builtins.wx_command:WeatherCommand',
+            'news = pyjs8call.builtins.news_command:NewsCommand'
         ]
     }
 )
