@@ -75,34 +75,34 @@ class WeatherCommand(CustomCommand):
         num_days = 1 # number of days after today/tonight
         synopsis = False # whether to return synopsis instead of forecast
         
-        #try:
-        msg_parts = msg.text.strip().split()
-        if len(msg_parts) == 2:
-            # ex. ' WX EM19ES'
-            grid = msg_parts[1]
-        elif len(msg_parts) == 3:
-            # ex. ' WX EM19ES 3'
-            grid = msg_parts[1]
-
-            if msg_parts[2].isnumeric():
-                num_days = int(msg_parts[2])
-                num_days = min(num_days, 5) # 5 days max
+        try:
+            msg_parts = msg.text.strip().split()
+            if len(msg_parts) == 2:
+                # ex. ' WX EM19ES'
+                grid = msg_parts[1]
+            elif len(msg_parts) == 3:
+                # ex. ' WX EM19ES 3'
+                grid = msg_parts[1]
+    
+                if msg_parts[2].isnumeric():
+                    num_days = int(msg_parts[2])
+                    num_days = min(num_days, 5) # 5 days max
+                else:
+                    # any value after grid square that is not an integer will result in synopsis
+                    synopsis = True
             else:
-                # any value after grid square that is not an integer will result in synopsis
-                synopsis = True
-        else:
-            # ignore incorrect message structure
+                # ignore incorrect message structure
+                return
+    
+            lat, lon = pyjs8call_client.grid_to_lat_lon(grid)
+    
+            if synopsis:
+                forecast = self._get_area_synopsis(lat, lon)
+            else:
+                forecast = self._get_forecast(lat, lon, num_days)
+        except Exception:
+            # ignore incorrect message structure and web api request errors
             return
-
-        lat, lon = pyjs8call_client.grid_to_lat_lon(grid)
-
-        if synopsis:
-            forecast = self._get_area_synopsis(lat, lon)
-        else:
-            forecast = self._get_forecast(lat, lon, num_days)
-        #except Exception:
-        #    # ignore incorrect message structure and web api request errors
-        #    return
             
         # send message with weather forecast
         pyjs8call_client.send_directed_message(msg.origin, forecast)
