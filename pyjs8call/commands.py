@@ -112,7 +112,7 @@ class Commands:
                 command_class = ep.load()
                 self.set_command(command_class.command, command_class)
             except Exception as e:
-                print('Failed to load custom command: ' + e)
+                print('Failed to load custom command: ' + str(e))
 
     def process(self, msg):
         '''Process custom command message.

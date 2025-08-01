@@ -32,7 +32,7 @@ from pyjs8call import CustomCommand
 import us
 
 
-class WeatherCommand(CustomCommand)
+class WeatherCommand(CustomCommand):
     '''Custom command for location-specific weather forecasts and area synopsis.
 
     Note that only messages directed to the local station will be handled, and only if a callsign is *not* selected in the JS8Call application (active directed chat).
@@ -64,45 +64,45 @@ class WeatherCommand(CustomCommand)
             msg (pyjs8call.message.Message): received message object containing custom command
         '''
         # ignore if a callsign is selected on the js8call ui
-        if self._client.get_selected_call() is not None:
+        if pyjs8call_client.get_selected_call() is not None:
             return
         
         # only respond if message is directed to local station
-        if not msg.is_directed_to(js8call.settings.get_station_callsign()):
+        if not msg.is_directed_to(pyjs8call_client.settings.get_station_callsign()):
             return
         
         grid = None # grid square like EM19 or EM19ES
         num_days = 1 # number of days after today/tonight
         synopsis = False # whether to return synopsis instead of forecast
         
-        try:
-            msg_parts = msg.text.strip().split()
-            if len(msg_parts) == 2:
-                # ex. ' WX EM19ES'
-                grid = msg_parts[1]
-            elif len(msg_parts) == 3:
-                # ex. ' WX EM19ES 3'
-                grid = msg_parts[1]
-    
-                if msg_parts[2].isnumeric():
-                    num_days = int(msg_parts[2])
-                    num_days = min(num_days, 5) # 5 days max
-                else:
-                    # any value after grid square that is not an integer will result in synopsis
-                    synopsis = True
-            else:
-                # ignore incorrect message structure
-                return
-    
-            lat, lon = pyjs8call_client.grid_to_lat_lon(grid)
+        #try:
+        msg_parts = msg.text.strip().split()
+        if len(msg_parts) == 2:
+            # ex. ' WX EM19ES'
+            grid = msg_parts[1]
+        elif len(msg_parts) == 3:
+            # ex. ' WX EM19ES 3'
+            grid = msg_parts[1]
 
-            if synopsis:
-                forecast = self._get_area_synopsis(lat, lon)
+            if msg_parts[2].isnumeric():
+                num_days = int(msg_parts[2])
+                num_days = min(num_days, 5) # 5 days max
             else:
-                forecast = self._get_forecast(lat, lon, num_days)
-        except Exception:
-            # ignore incorrect message structure and web api request errors
+                # any value after grid square that is not an integer will result in synopsis
+                synopsis = True
+        else:
+            # ignore incorrect message structure
             return
+
+        lat, lon = pyjs8call_client.grid_to_lat_lon(grid)
+
+        if synopsis:
+            forecast = self._get_area_synopsis(lat, lon)
+        else:
+            forecast = self._get_forecast(lat, lon, num_days)
+        #except Exception:
+        #    # ignore incorrect message structure and web api request errors
+        #    return
             
         # send message with weather forecast
         pyjs8call_client.send_directed_message(msg.origin, forecast)
@@ -126,27 +126,27 @@ class WeatherCommand(CustomCommand)
 
         # convenience / consistency function
         def build_forecast(forecast):
-            name = forecast['name']
+            name = forecast['name'].replace('This', '').strip()
             temp = forecast["temperature"]
             precip = forecast["probabilityOfPrecipitation"]["value"]
             conditions = self._shorten_conditions(forecast["shortForecast"])
     
-            if name.lower() not in ['today', 'tonight', 'overnight']:
+            if name.lower() not in ('today', 'afternoon', 'tonight', 'overnight'):
                 # convert days like "Sunday" to "Sun"
                 name_parts = name.split()
                 name = name_parts[0][0:3]
                 if len(name_parts) > 1:
-                    name += name_parts[1]
+                    name += f' {name_parts[1]}'
             
-            return f'{name}: {precip}%, {conditions}'
+            return f'{name}: {temp}F, {precip}%, {conditions}'
     
         # location and current conditions
         forecasts.append(f'{location}: {temp_f}F, {self._shorten_conditions(conditions)}')
-        # today, tonight, or overnight forecast
+        # today, this afternoon, tonight, or overnight forecast
         forecasts.append(build_forecast(forecast[0]))
     
         # handle case where both 'today' and 'tonight' are included in forecast
-        if forecast[1]['name'].lower() in ('tonight', 'overnight'):
+        if forecast[1]['name'].lower() in ('this afternoon', 'tonight', 'overnight'):
             forecasts.append(build_forecast(forecast[1]))
             day_start_index = 2
     
