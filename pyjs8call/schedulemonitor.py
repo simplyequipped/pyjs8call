@@ -336,10 +336,11 @@ class ScheduleMonitor:
 
     def _callback(self, schedule):
         '''Callback handling function.'''
-        if self._client.callback.schedule is not None:
-            thread = threading.Thread(target=self._client.callback.schedule, args=(schedule,))
-            thread.daemon = True
-            thread.start()
+        if len(self._client.callback.schedule) > 0:
+            for callback in self._client.callback.schedule:
+                thread = threading.Thread(target=callback, args=(schedule,))
+                thread.daemon = True
+                thread.start()
 
     def _monitor(self):
         '''Schedule monitor loop.'''

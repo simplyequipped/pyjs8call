@@ -110,10 +110,11 @@ class WindowMonitor:
 
         Calls the *pyjs8call.client.callback.window* callback function using *threading.Thread*.
         '''
-        if self._client.callback.window is not None:
-            thread = threading.Thread(target = self._client.callback.window)
-            thread.daemon = True
-            thread.start()
+        if len(self._client.callback.window) > 0:
+            for callback in self._client.callback.window:
+                thread = threading.Thread(target=callback)
+                thread.daemon = True
+                thread.start()
 
     def process_rig_ptt(self, msg):
         '''Process rig ptt message.
