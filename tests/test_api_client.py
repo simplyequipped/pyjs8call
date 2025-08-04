@@ -165,12 +165,12 @@ def test_rest_api():
         # Test spots
         print("\n3. Testing spots...")
         spots = client.get_spots()
-        print(f"Spots (showing count): {spots['data']['count']} spots")
+        print(f"Spots (showing count): {spots['count']} spots")
         
         # Test inbox
         print("\n4. Testing inbox...")
         inbox = client.get_inbox_messages()
-        print(f"Inbox (showing count): {inbox['data']['count']} messages")
+        print(f"Inbox (showing count): {inbox['count']} messages")
         
         # Test message sending (commented out to avoid actual transmission)
         print("\n5. Testing message sending (skipped - would transmit)")
@@ -185,9 +185,9 @@ def test_rest_api():
             print("\n6. Testing Message deserialization...")
             try:
                 spots = client.get_spots()
-                if spots['data']['spots']:
+                if spots['spots']:
                     # Take first spot and convert to Message object
-                    spot_data = spots['data']['spots'][0]
+                    spot_data = spots['spots'][0]
                     msg = Message.load_from_api(spot_data)
                     
                     print(f"   Converted spot to Message object:")

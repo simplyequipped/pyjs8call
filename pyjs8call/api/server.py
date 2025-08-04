@@ -31,6 +31,7 @@ from collections import defaultdict, deque
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware import Middleware
 from fastapi.security import HTTPBearer
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import pyjs8call
@@ -80,7 +81,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not self.rate_limiter.is_allowed(client_ip):
             return JSONResponse(
                 status_code=429,
-                content={"detail": "Rate limit exceeded, try again later"}
+                content={
+                    "success": False,
+                    "error": "Rate limit exceeded, try again later"
+                }
             )
             
         response = await call_next(request)
@@ -308,13 +312,11 @@ def add_routes(app: FastAPI):
     @app.get('/api/js8call/connected')
     async def get_connection_status():
         client = app.state.client
-        return StatusResponse(
-            success=True,
-            data={
-                'connected': client.connected(),
-                'online': client.online
-            }
-        )
+        return {
+            'success': True,
+            'connected': client.connected(),
+            'online': client.online
+        }
     
     # send directed message
     @app.post('/api/message/directed')
@@ -322,13 +324,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.send_directed_message(request.destination, request.message)
-            return StatusResponse(
-                success=True,
-                message='Message queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Message queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # send heartbeat
     @app.post('/api/message/heartbeat')
@@ -336,13 +345,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.send_heartbeat(grid)
-            return StatusResponse(
-                success=True,
-                message='Heartbeat queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Heartbeat queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # send directed command message
     @app.post('/api/message/directed/command')
@@ -350,13 +366,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.send_directed_command_message(request.destination, request.command, request.message)
-            return StatusResponse(
-                success=True,
-                message='Command message queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Command message queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # send freetext message
     @app.post('/api/message/freetext')
@@ -364,13 +387,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.send_message(request.message)
-            return StatusResponse(
-                success=True,
-                message='Raw message queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Raw message queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # send directed bytes message
     @app.post('/api/message/directed/bytes')
@@ -380,13 +410,20 @@ def add_routes(app: FastAPI):
             import base64
             bytes_data = base64.b64decode(request.data)
             msg = client.send_directed_bytes_message(request.destination, bytes_data)
-            return StatusResponse(
-                success=True,
-                message='Bytes message queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Bytes message queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # send inbox message
     @app.post('/api/message/command/msg')
@@ -394,13 +431,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.send_inbox_message(request.destination, request.message)
-            return StatusResponse(
-                success=True,
-                message='Inbox message queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Inbox message queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # send inbox message (MSG command to destination)
     @app.post('/api/message/command/msg-to')
@@ -408,12 +452,18 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.send_inbox_message(request.destination, request.message)
-            return StatusResponse(
-                success=True,
-                message='Inbox message sent successfully'
-            )
+            return {
+                'success': True,
+                'message': 'Inbox message sent successfully'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # store local inbox message
     @app.post('/api/message/inbox/local')
@@ -421,12 +471,18 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             success = client.store_local_inbox_message(request.origin, request.destination, request.message, request.path)
-            return StatusResponse(
-                success=success,
-                message='Local inbox message stored successfully' if success else 'Failed to store local inbox message'
-            )
+            return {
+                'success': success,
+                'message': 'Local inbox message stored successfully' if success else 'Failed to store local inbox message'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # store remote inbox message  
     @app.post('/api/message/inbox/remote')
@@ -434,12 +490,18 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             success = client.store_remote_inbox_message(request.origin, request.destination, request.message, request.path)
-            return StatusResponse(
-                success=success,
-                message='Remote inbox message stored successfully' if success else 'Failed to store remote inbox message'
-            )
+            return {
+                'success': success,
+                'message': 'Remote inbox message stored successfully' if success else 'Failed to store remote inbox message'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # query callsign
     @app.post('/api/message/query/call')
@@ -447,13 +509,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.query_call(request.callsign, request.destination)
-            return StatusResponse(
-                success=True,
-                message='Callsign query queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Callsign query queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # query messages
     @app.post('/api/message/query/messages')
@@ -461,13 +530,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.query_messages(request.destination)
-            return StatusResponse(
-                success=True,
-                message='Messages query queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Messages query queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # query message id
     @app.post('/api/message/query/message-id')
@@ -475,13 +551,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.query_message_id(request.destination, request.message_id)
-            return StatusResponse(
-                success=True,
-                message='Message ID query queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Message ID query queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # query hearing
     @app.post('/api/message/query/hearing')
@@ -489,13 +572,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.query_hearing(request.callsign)
-            return StatusResponse(
-                success=True,
-                message='Hearing query queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Hearing query queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # query snr
     @app.post('/api/message/query/snr')
@@ -503,13 +593,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.query_snr(request.callsign)
-            return StatusResponse(
-                success=True,
-                message='SNR query queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'SNR query queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # query grid
     @app.post('/api/message/query/grid')
@@ -517,13 +614,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.query_grid(request.callsign)
-            return StatusResponse(
-                success=True,
-                message='Grid query queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Grid query queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # query info
     @app.post('/api/message/query/info')
@@ -531,13 +635,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.query_info(request.callsign)
-            return StatusResponse(
-                success=True,
-                message='Info query queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Info query queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # query status
     @app.post('/api/message/query/status')
@@ -545,13 +656,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.query_status(request.callsign)
-            return StatusResponse(
-                success=True,
-                message='Status query queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'Status query queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # send aprs grid
     @app.post('/api/message/aprs/grid')
@@ -559,13 +677,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.send_aprs_grid(request.grid)
-            return StatusResponse(
-                success=True,
-                message='APRS grid message queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'APRS grid message queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # send aprs sms
     @app.post('/api/message/aprs/sms')
@@ -573,13 +698,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.send_aprs_sms(request.phone, request.message)
-            return StatusResponse(
-                success=True,
-                message='APRS SMS message queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'APRS SMS message queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # send aprs email
     @app.post('/api/message/aprs/email')
@@ -587,13 +719,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.send_aprs_email(request.email, request.message)
-            return StatusResponse(
-                success=True,
-                message='APRS email message queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'APRS email message queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # send aprs pota spot
     @app.post('/api/message/aprs/pota')
@@ -601,13 +740,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             msg = client.send_aprs_pota_spot(request.park, request.freq, request.mode, request.message, request.callsign)
-            return StatusResponse(
-                success=True,
-                message='APRS POTA spot queued for transmission',
-                data=MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-            )
+            response = {
+                'success': True,
+                'message': 'APRS POTA spot queued for transmission'
+            }
+            response.update(MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True))
+            return response
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get frequency
     @app.get('/api/settings/frequency')
@@ -615,12 +761,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             freq = client.settings.get_freq()
-            return StatusResponse(
-                success=True,
-                data={'frequency': freq, 'restart': False}
-            )
+            return {
+                'success': True,
+                'frequency': freq,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set frequency
     @app.put('/api/settings/frequency')
@@ -628,13 +781,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             freq = client.settings.set_freq(request.frequency)
-            return StatusResponse(
-                success=True,
-                message='Frequency updated',
-                data={'frequency': freq, 'restart': False}
-            )
+            return {
+                'success': True,
+                'message': 'Frequency updated',
+                'frequency': freq,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get callsign
     @app.get('/api/settings/callsign')
@@ -642,12 +802,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             callsign = client.settings.get_station_callsign()
-            return StatusResponse(
-                success=True,
-                data={'callsign': callsign, 'restart': True}
-            )
+            return {
+                'success': True,
+                'callsign': callsign,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get grid
     @app.get('/api/settings/grid') 
@@ -655,12 +822,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             grid = client.settings.get_station_grid()
-            return StatusResponse(
-                success=True,
-                data={'grid': grid, 'restart': False}
-            )
+            return {
+                'success': True,
+                'grid': grid,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set callsign
     @app.put('/api/settings/callsign')
@@ -668,13 +842,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_station_callsign(request.callsign)
-            return StatusResponse(
-                success=True,
-                message='Station callsign updated',
-                data={'callsign': request.callsign, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'Station callsign updated',
+                'callsign': request.callsign,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set grid
     @app.put('/api/settings/grid')
@@ -682,13 +863,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_station_grid(request.grid)
-            return StatusResponse(
-                success=True,
-                message='Station grid updated',
-                data={'grid': request.grid, 'restart': False}
-            )
+            return {
+                'success': True,
+                'message': 'Station grid updated',
+                'grid': request.grid,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get offset
     @app.get('/api/settings/offset')
@@ -696,12 +884,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             offset = client.settings.get_offset()
-            return StatusResponse(
-                success=True,
-                data={'offset': offset, 'restart': False}
-            )
+            return {
+                'success': True,
+                'offset': offset,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set offset
     @app.put('/api/settings/offset')
@@ -709,13 +904,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             offset = client.settings.set_offset(request.offset)
-            return StatusResponse(
-                success=True,
-                message='Frequency offset updated',
-                data={'offset': offset, 'restart': False}
-            )
+            return {
+                'success': True,
+                'message': 'Frequency offset updated',
+                'offset': offset,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get speed
     @app.get('/api/settings/speed')
@@ -723,12 +925,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             speed = client.settings.get_speed()
-            return StatusResponse(
-                success=True,
-                data={'speed': speed, 'restart': True}
-            )
+            return {
+                'success': True,
+                'speed': speed,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set speed
     @app.put('/api/settings/speed')
@@ -736,13 +945,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_speed(request.speed)
-            return StatusResponse(
-                success=True,
-                message='Modem speed updated',
-                data={'speed': request.speed, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'Modem speed updated',
+                'speed': request.speed,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get station info
     @app.get('/api/settings/info')
@@ -750,12 +966,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             info = client.settings.get_station_info()
-            return StatusResponse(
-                success=True,
-                data={'info': info, 'restart': False}
-            )
+            return {
+                'success': True,
+                'info': info,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set station info
     @app.put('/api/settings/info')
@@ -763,13 +986,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_station_info(request.info)
-            return StatusResponse(
-                success=True,
-                message='Station info updated',
-                data={'info': request.info, 'restart': False}
-            )
+            return {
+                'success': True,
+                'message': 'Station info updated',
+                'info': request.info,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get heartbeat interval
     @app.get('/api/settings/heartbeat/interval')
@@ -777,12 +1007,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             interval = client.settings.get_heartbeat_interval()
-            return StatusResponse(
-                success=True,
-                data={'interval': interval, 'restart': True}
-            )
+            return {
+                'success': True,
+                'interval': interval,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set heartbeat interval
     @app.put('/api/settings/heartbeat/interval')
@@ -790,13 +1027,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_heartbeat_interval(request.interval)
-            return StatusResponse(
-                success=True,
-                message='Heartbeat interval updated',
-                data={'interval': request.interval, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'Heartbeat interval updated',
+                'interval': request.interval,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get idle timeout  
     @app.get('/api/settings/idle-timeout')
@@ -804,12 +1048,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             timeout = client.settings.get_idle_timeout()
-            return StatusResponse(
-                success=True,
-                data={'timeout': timeout, 'restart': True}
-            )
+            return {
+                'success': True,
+                'timeout': timeout,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set idle timeout
     @app.put('/api/settings/idle-timeout')
@@ -817,13 +1068,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_idle_timeout(request.timeout)
-            return StatusResponse(
-                success=True,
-                message='Idle timeout updated',
-                data={'timeout': request.timeout, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'Idle timeout updated',
+                'timeout': request.timeout,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get distance units
     @app.get('/api/settings/distance-units')
@@ -831,12 +1089,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             units_miles = client.settings.get_distance_units_miles()
-            return StatusResponse(
-                success=True,
-                data={'units_miles': units_miles, 'restart': False}
-            )
+            return {
+                'success': True,
+                'units_miles': units_miles,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set distance units
     @app.put('/api/settings/distance-units')
@@ -844,13 +1109,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_distance_units_miles(request.units_miles)
-            return StatusResponse(
-                success=True,
-                message='Distance units updated',
-                data={'units_miles': request.units_miles, 'restart': False}
-            )
+            return {
+                'success': True,
+                'message': 'Distance units updated',
+                'units_miles': request.units_miles,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get primary highlight words
     @app.get('/api/settings/highlights')
@@ -858,12 +1130,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             words = client.settings.get_primary_highlight_words()
-            return StatusResponse(
-                success=True,
-                data={'words': words, 'restart': True}
-            )
+            return {
+                'success': True,
+                'words': words,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get secondary highlight words
     @app.get('/api/settings/secondary-highlights')
@@ -871,12 +1150,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             words = client.settings.get_secondary_highlight_words()
-            return StatusResponse(
-                success=True,
-                data={'words': words, 'restart': True}
-            )
+            return {
+                'success': True,
+                'words': words,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set primary highlight words
     @app.put('/api/settings/highlights')
@@ -884,13 +1170,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_primary_highlight_words(request.words)
-            return StatusResponse(
-                success=True,
-                message='Primary highlight words updated',
-                data={'words': request.words, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'Primary highlight words updated',
+                'words': request.words,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set secondary highlight words
     @app.put('/api/settings/secondary-highlights')
@@ -898,13 +1191,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_secondary_highlight_words(request.words)
-            return StatusResponse(
-                success=True,
-                message='Secondary highlight words updated',
-                data={'words': request.words, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'Secondary highlight words updated',
+                'words': request.words,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get heartbeat networking
     @app.get('/api/settings/heartbeat/networking')
@@ -912,12 +1212,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             enabled = client.settings.get_heartbeat_networking()
-            return StatusResponse(
-                success=True,
-                data={'enabled': enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'enabled': enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # heartbeat networking
     @app.put('/api/settings/heartbeat/networking')
@@ -928,13 +1235,20 @@ def add_routes(app: FastAPI):
                 client.settings.enable_heartbeat_networking()
             else:
                 client.settings.disable_heartbeat_networking()
-            return StatusResponse(
-                success=True,
-                message=f'Heartbeat networking {"enabled" if request.enabled else "disabled"}',
-                data={'enabled': request.enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': f'Heartbeat networking {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get heartbeat acknowledgements
     @app.get('/api/settings/heartbeat/acknowledgements')
@@ -942,12 +1256,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             enabled = client.settings.get_heartbeat_acknowledgements()
-            return StatusResponse(
-                success=True,
-                data={'enabled': enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'enabled': enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # heartbeat acknowledgements
     @app.put('/api/settings/heartbeat/acknowledgements')
@@ -958,13 +1279,20 @@ def add_routes(app: FastAPI):
                 client.settings.enable_heartbeat_acknowledgements()
             else:
                 client.settings.disable_heartbeat_acknowledgements()
-            return StatusResponse(
-                success=True,
-                message=f'Heartbeat acknowledgements {"enabled" if request.enabled else "disabled"}',
-                data={'enabled': request.enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': f'Heartbeat acknowledgements {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get heartbeat during QSO
     @app.get('/api/settings/heartbeat/qso-pause')
@@ -972,12 +1300,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             paused = client.settings.heartbeat_during_qso_paused()
-            return StatusResponse(
-                success=True,
-                data={'paused': paused, 'restart': True}
-            )
+            return {
+                'success': True,
+                'paused': paused,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # heartbeat during QSO
     @app.put('/api/settings/heartbeat/qso-pause')
@@ -990,13 +1325,20 @@ def add_routes(app: FastAPI):
             else:
                 client.settings.allow_heartbeat_during_qso()
                 message = 'Heartbeat during QSO allowed'
-            return StatusResponse(
-                success=True,
-                message=message,
-                data={'paused': request.enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': message,
+                'paused': request.enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get multi decode
     @app.get('/api/settings/multi-decode')
@@ -1004,12 +1346,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             enabled = client.settings.get_multi_decode()
-            return StatusResponse(
-                success=True,
-                data={'enabled': enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'enabled': enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # multi decode
     @app.put('/api/settings/multi-decode')
@@ -1020,13 +1369,20 @@ def add_routes(app: FastAPI):
                 client.settings.enable_multi_decode()
             else:
                 client.settings.disable_multi_decode()
-            return StatusResponse(
-                success=True,
-                message=f'Multi decode {"enabled" if request.enabled else "disabled"}',
-                data={'enabled': request.enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': f'Multi decode {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get autoreply startup
     @app.get('/api/settings/autoreply-startup')
@@ -1034,12 +1390,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             enabled = client.settings.get_autoreply_startup()
-            return StatusResponse(
-                success=True,
-                data={'enabled': enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'enabled': enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # autoreply startup
     @app.put('/api/settings/autoreply-startup')
@@ -1050,13 +1413,20 @@ def add_routes(app: FastAPI):
                 client.settings.enable_autoreply_startup()
             else:
                 client.settings.disable_autoreply_startup()
-            return StatusResponse(
-                success=True,
-                message=f'Autoreply startup {"enabled" if request.enabled else "disabled"}',
-                data={'enabled': request.enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': f'Autoreply startup {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get autoreply confirmation
     @app.get('/api/settings/autoreply-confirmation')
@@ -1064,12 +1434,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             enabled = client.settings.get_autoreply_confirmation()
-            return StatusResponse(
-                success=True,
-                data={'enabled': enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'enabled': enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # autoreply confirmation
     @app.put('/api/settings/autoreply-confirmation')
@@ -1080,13 +1457,20 @@ def add_routes(app: FastAPI):
                 client.settings.enable_autoreply_confirmation()
             else:
                 client.settings.disable_autoreply_confirmation()
-            return StatusResponse(
-                success=True,
-                message=f'Autoreply confirmation {"enabled" if request.enabled else "disabled"}',
-                data={'enabled': request.enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': f'Autoreply confirmation {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get allcall
     @app.get('/api/settings/allcall')
@@ -1094,12 +1478,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             enabled = client.settings.get_allcall()
-            return StatusResponse(
-                success=True,
-                data={'enabled': enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'enabled': enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # allcall
     @app.put('/api/settings/allcall')
@@ -1110,13 +1501,20 @@ def add_routes(app: FastAPI):
                 client.settings.enable_allcall()
             else:
                 client.settings.disable_allcall()
-            return StatusResponse(
-                success=True,
-                message=f'Allcall {"enabled" if request.enabled else "disabled"}',
-                data={'enabled': request.enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': f'Allcall {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get reporting
     @app.get('/api/settings/reporting')
@@ -1124,12 +1522,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             enabled = client.settings.get_reporting()
-            return StatusResponse(
-                success=True,
-                data={'enabled': enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'enabled': enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # reporting
     @app.put('/api/settings/reporting')
@@ -1140,13 +1545,20 @@ def add_routes(app: FastAPI):
                 client.settings.enable_reporting()
             else:
                 client.settings.disable_reporting()
-            return StatusResponse(
-                success=True,
-                message=f'Reporting {"enabled" if request.enabled else "disabled"}',
-                data={'enabled': request.enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': f'Reporting {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get transmit
     @app.get('/api/settings/transmit')
@@ -1154,12 +1566,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             enabled = client.settings.get_transmit()
-            return StatusResponse(
-                success=True,
-                data={'enabled': enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'enabled': enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # transmit
     @app.put('/api/settings/transmit')
@@ -1170,13 +1589,20 @@ def add_routes(app: FastAPI):
                 client.settings.enable_transmit()
             else:
                 client.settings.disable_transmit()
-            return StatusResponse(
-                success=True,
-                message=f'Transmit {"enabled" if request.enabled else "disabled"}',
-                data={'enabled': request.enabled, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': f'Transmit {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get daily restart
     @app.get('/api/settings/daily-restart')
@@ -1184,12 +1610,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             enabled, restart_time = client.settings.get_daily_restart()
-            return StatusResponse(
-                success=True,
-                data={'enabled': enabled, 'restart_time': restart_time, 'restart': False}
-            )
+            return {
+                'success': True,
+                'enabled': enabled,
+                'restart_time': restart_time,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set daily restart
     @app.put('/api/settings/daily-restart')
@@ -1200,13 +1634,21 @@ def add_routes(app: FastAPI):
                 client.settings.enable_daily_restart(request.restart_time)
             else:
                 client.settings.disable_daily_restart()
-            return StatusResponse(
-                success=True,
-                message=f'Daily restart {"enabled" if request.enabled else "disabled"}',
-                data={'enabled': request.enabled, 'restart_time': request.restart_time if request.enabled else None, 'restart': False}
-            )
+            return {
+                'success': True,
+                'message': f'Daily restart {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'restart_time': request.restart_time if request.enabled else None,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get active profile
     @app.get('/api/settings/profile')
@@ -1214,12 +1656,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             profile = client.settings.get_profile()
-            return StatusResponse(
-                success=True,
-                data={'profile': profile, 'restart': True}
-            )
+            return {
+                'success': True,
+                'profile': profile,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get profile list
     @app.get('/api/settings/profiles')
@@ -1227,12 +1676,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             profiles = client.settings.get_profile_list()
-            return StatusResponse(
-                success=True,
-                data={'profiles': profiles, 'restart': False}
-            )
+            return {
+                'success': True,
+                'profiles': profiles,
+                'restart': False
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set active profile
     @app.put('/api/settings/profile')
@@ -1240,13 +1696,22 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_profile(request.profile, request.restore_on_exit, request.create)
-            return StatusResponse(
-                success=True,
-                message='Active profile updated',
-                data={'profile': request.profile, 'restore_on_exit': request.restore_on_exit, 'create': request.create, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'Active profile updated',
+                'profile': request.profile,
+                'restore_on_exit': request.restore_on_exit,
+                'create': request.create,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # create new profile
     @app.post('/api/settings/profiles')
@@ -1254,13 +1719,21 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.create_new_profile(request.new_profile, request.copy_profile)
-            return StatusResponse(
-                success=True,
-                message='New profile created',
-                data={'new_profile': request.new_profile, 'copy_profile': request.copy_profile, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'New profile created',
+                'new_profile': request.new_profile,
+                'copy_profile': request.copy_profile,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get groups
     @app.get('/api/settings/groups')
@@ -1268,12 +1741,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             groups = client.settings.get_groups_list()
-            return StatusResponse(
-                success=True,
-                data={'groups': groups, 'restart': True}
-            )
+            return {
+                'success': True,
+                'groups': groups,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set groups
     @app.put('/api/settings/groups')
@@ -1281,13 +1761,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.set_groups(request.groups)
-            return StatusResponse(
-                success=True,
-                message='Groups list updated',
-                data={'groups': request.groups, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'Groups list updated',
+                'groups': request.groups,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # add group
     @app.post('/api/settings/groups/add')
@@ -1295,13 +1782,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.add_group(request.group)
-            return StatusResponse(
-                success=True,
-                message='Group added',
-                data={'group': request.group, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'Group added',
+                'group': request.group,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # remove group
     @app.post('/api/settings/groups/remove')
@@ -1309,13 +1803,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.settings.remove_group(request.group)
-            return StatusResponse(
-                success=True,
-                message='Group removed',
-                data={'group': request.group, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': 'Group removed',
+                'group': request.group,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # heartbeat module control
     @app.put('/api/pyjs8call/heartbeat/enable')
@@ -1323,24 +1824,36 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.heartbeat.enable()
-            return StatusResponse(
-                success=True,
-                message='Heartbeat module enabled'
-            )
+            return {
+                'success': True,
+                'message': 'Heartbeat module enabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.put('/api/pyjs8call/heartbeat/disable')
     async def disable_heartbeat_module():
         client = app.state.client
         try:
             client.heartbeat.disable()
-            return StatusResponse(
-                success=True,
-                message='Heartbeat module disabled'
-            )
+            return {
+                'success': True,
+                'message': 'Heartbeat module disabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # inbox module control
     @app.put('/api/pyjs8call/inbox/enable')
@@ -1348,24 +1861,36 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.inbox.enable()
-            return StatusResponse(
-                success=True,
-                message='Inbox module enabled'
-            )
+            return {
+                'success': True,
+                'message': 'Inbox module enabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.put('/api/pyjs8call/inbox/disable')
     async def disable_inbox_module():
         client = app.state.client
         try:
             client.inbox.disable()
-            return StatusResponse(
-                success=True,
-                message='Inbox module disabled'
-            )
+            return {
+                'success': True,
+                'message': 'Inbox module disabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # offset module control
     @app.put('/api/pyjs8call/offset/enable')
@@ -1373,24 +1898,36 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.offset.enable()
-            return StatusResponse(
-                success=True,
-                message='Offset module enabled'
-            )
+            return {
+                'success': True,
+                'message': 'Offset module enabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.put('/api/pyjs8call/offset/disable')
     async def disable_offset_module():
         client = app.state.client
         try:
             client.offset.disable()
-            return StatusResponse(
-                success=True,
-                message='Offset module disabled'
-            )
+            return {
+                'success': True,
+                'message': 'Offset module disabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # outgoing module control
     @app.put('/api/pyjs8call/outgoing/enable')
@@ -1398,24 +1935,36 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.outgoing.enable()
-            return StatusResponse(
-                success=True,
-                message='Outgoing module enabled'
-            )
+            return {
+                'success': True,
+                'message': 'Outgoing module enabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.put('/api/pyjs8call/outgoing/disable')
     async def disable_outgoing_module():
         client = app.state.client
         try:
             client.outgoing.disable()
-            return StatusResponse(
-                success=True,
-                message='Outgoing module disabled'
-            )
+            return {
+                'success': True,
+                'message': 'Outgoing module disabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # spots module control
     @app.put('/api/pyjs8call/spots/enable')
@@ -1423,24 +1972,36 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.spots.enable()
-            return StatusResponse(
-                success=True,
-                message='Spots module enabled'
-            )
+            return {
+                'success': True,
+                'message': 'Spots module enabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.put('/api/pyjs8call/spots/disable')
     async def disable_spots_module():
         client = app.state.client
         try:
             client.spots.disable()
-            return StatusResponse(
-                success=True,
-                message='Spots module disabled'
-            )
+            return {
+                'success': True,
+                'message': 'Spots module disabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # window module control
     @app.put('/api/pyjs8call/window/enable')
@@ -1448,24 +2009,36 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.window.enable()
-            return StatusResponse(
-                success=True,
-                message='Window module enabled'
-            )
+            return {
+                'success': True,
+                'message': 'Window module enabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.put('/api/pyjs8call/window/disable')
     async def disable_window_module():
         client = app.state.client
         try:
             client.window.disable()
-            return StatusResponse(
-                success=True,
-                message='Window module disabled'
-            )
+            return {
+                'success': True,
+                'message': 'Window module disabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # schedule module control
     @app.put('/api/pyjs8call/schedule/enable')
@@ -1473,24 +2046,36 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.schedule.enable()
-            return StatusResponse(
-                success=True,
-                message='Schedule module enabled'
-            )
+            return {
+                'success': True,
+                'message': 'Schedule module enabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.put('/api/pyjs8call/schedule/disable')
     async def disable_schedule_module():
         client = app.state.client
         try:
             client.schedule.disable()
-            return StatusResponse(
-                success=True,
-                message='Schedule module disabled'
-            )
+            return {
+                'success': True,
+                'message': 'Schedule module disabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # notifications module control
     @app.put('/api/pyjs8call/notifications/enable')
@@ -1498,24 +2083,36 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.notifications.enable()
-            return StatusResponse(
-                success=True,
-                message='Notifications module enabled'
-            )
+            return {
+                'success': True,
+                'message': 'Notifications module enabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.put('/api/pyjs8call/notifications/disable')
     async def disable_notifications_module():
         client = app.state.client
         try:
             client.notifications.disable()
-            return StatusResponse(
-                success=True,
-                message='Notifications module disabled'
-            )
+            return {
+                'success': True,
+                'message': 'Notifications module disabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # time module control
     @app.put('/api/pyjs8call/time/enable')
@@ -1523,24 +2120,36 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.time.enable()
-            return StatusResponse(
-                success=True,
-                message='Time module enabled'
-            )
+            return {
+                'success': True,
+                'message': 'Time module enabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.put('/api/pyjs8call/time/disable')
     async def disable_time_module():
         client = app.state.client
         try:
             client.time.disable()
-            return StatusResponse(
-                success=True,
-                message='Time module disabled'
-            )
+            return {
+                'success': True,
+                'message': 'Time module disabled'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # configure inbox
     @app.put('/api/pyjs8call/inbox/config')
@@ -1551,18 +2160,22 @@ def add_routes(app: FastAPI):
                 client.inbox.enable(query=request.query, destination=request.destination, interval=request.interval)
             else:
                 client.inbox.disable()
-            return StatusResponse(
-                success=True,
-                message=f'Inbox module {"enabled" if request.enabled else "disabled"}',
-                data={
-                    'enabled': request.enabled,
-                    'query': request.query if request.enabled else False,
-                    'destination': request.destination if request.enabled else None,
-                    'interval': request.interval if request.enabled else None
+            return {
+                'success': True,
+                'message': f'Inbox module {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'query': request.query if request.enabled else False,
+                'destination': request.destination if request.enabled else None,
+                'interval': request.interval if request.enabled else None
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # configure heartbeat
     @app.put('/api/pyjs8call/heartbeat/config')
@@ -1576,16 +2189,20 @@ def add_routes(app: FastAPI):
                     client.heartbeat.enable()
             else:
                 client.heartbeat.disable()
-            return StatusResponse(
-                success=True,
-                message=f'Heartbeat module {"enabled" if request.enabled else "disabled"}',
-                data={
-                    'enabled': request.enabled,
-                    'interval': request.interval if request.enabled else None
+            return {
+                'success': True,
+                'message': f'Heartbeat module {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'interval': request.interval if request.enabled else None
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # configure offset
     @app.put('/api/pyjs8call/offset/config')
@@ -1604,19 +2221,23 @@ def add_routes(app: FastAPI):
                     client.offset.bandwidth_safety_factor = request.bandwidth_safety_factor
             else:
                 client.offset.disable()
-            return StatusResponse(
-                success=True,
-                message=f'Offset module {"enabled" if request.enabled else "disabled"}',
-                data={
-                    'enabled': request.enabled,
-                    'min_offset': request.min_offset if request.enabled else None,
-                    'max_offset': request.max_offset if request.enabled else None,
-                    'activity_cycles': request.activity_cycles if request.enabled else None,
-                    'bandwidth_safety_factor': request.bandwidth_safety_factor if request.enabled else None
+            return {
+                'success': True,
+                'message': f'Offset module {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'min_offset': request.min_offset if request.enabled else None,
+                'max_offset': request.max_offset if request.enabled else None,
+                'activity_cycles': request.activity_cycles if request.enabled else None,
+                'bandwidth_safety_factor': request.bandwidth_safety_factor if request.enabled else None
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # configure spots
     @app.put('/api/pyjs8call/spots/config')
@@ -1631,17 +2252,21 @@ def add_routes(app: FastAPI):
                     client.spots.set_watched_groups(request.watched_groups)
             else:
                 client.spots.disable()
-            return StatusResponse(
-                success=True,
-                message=f'Spots module {"enabled" if request.enabled else "disabled"}',
-                data={
-                    'enabled': request.enabled,
-                    'watched_stations': request.watched_stations if request.enabled else None,
-                    'watched_groups': request.watched_groups if request.enabled else None
+            return {
+                'success': True,
+                'message': f'Spots module {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'watched_stations': request.watched_stations if request.enabled else None,
+                'watched_groups': request.watched_groups if request.enabled else None
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # configure notifications
     @app.put('/api/pyjs8call/notifications/config')
@@ -1680,19 +2305,23 @@ def add_routes(app: FastAPI):
                     client.notifications.set_email_subject(request.email_subject)
             else:
                 client.notifications.disable()
-            return StatusResponse(
-                success=True,
-                message=f'Notifications module {"enabled" if request.enabled else "disabled"}',
-                data={
-                    'enabled': request.enabled,
-                    'incoming_enabled': request.incoming_enabled if request.enabled else None,
-                    'spots_enabled': request.spots_enabled if request.enabled else None,
-                    'station_spots_enabled': request.station_spots_enabled if request.enabled else None,
-                    'group_spots_enabled': request.group_spots_enabled if request.enabled else None
+            return {
+                'success': True,
+                'message': f'Notifications module {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'incoming_enabled': request.incoming_enabled if request.enabled else None,
+                'spots_enabled': request.spots_enabled if request.enabled else None,
+                'station_spots_enabled': request.station_spots_enabled if request.enabled else None,
+                'group_spots_enabled': request.group_spots_enabled if request.enabled else None
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # configure time
     @app.put('/api/pyjs8call/time/config')
@@ -1717,17 +2346,21 @@ def add_routes(app: FastAPI):
                     )
             else:
                 client.time.disable()
-            return StatusResponse(
-                success=True,
-                message=f'Time module {"enabled" if request.enabled else "disabled"}',
-                data={
-                    'enabled': request.enabled,
-                    'drift_monitor_enabled': request.drift_monitor_enabled if request.enabled else None,
-                    'timemaster_enabled': request.timemaster_enabled if request.enabled else None
+            return {
+                'success': True,
+                'message': f'Time module {"enabled" if request.enabled else "disabled"}',
+                'enabled': request.enabled,
+                'drift_monitor_enabled': request.drift_monitor_enabled if request.enabled else None,
+                'timemaster_enabled': request.timemaster_enabled if request.enabled else None
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # start pyjs8call client
     @app.post('/api/pyjs8call/start')
@@ -1740,18 +2373,22 @@ def add_routes(app: FastAPI):
                 debugging=request.debugging,
                 logging=request.logging
             )
-            return StatusResponse(
-                success=True,
-                message='PyJS8Call client started successfully',
-                data={
-                    'headless': request.headless,
-                    'debugging': request.debugging,
-                    'logging': request.logging,
-                    'args': request.args
+            return {
+                'success': True,
+                'message': 'PyJS8Call client started successfully',
+                'headless': request.headless,
+                'debugging': request.debugging,
+                'logging': request.logging,
+                'args': request.args
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # stop pyjs8call client
     @app.post('/api/pyjs8call/stop')
@@ -1759,13 +2396,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.stop(terminate_js8call=request.terminate_js8call)
-            return StatusResponse(
-                success=True,
-                message='PyJS8Call client stopped successfully',
-                data={'terminate_js8call': request.terminate_js8call}
-            )
+            return {
+                'success': True,
+                'message': 'PyJS8Call client stopped successfully',
+                'terminate_js8call': request.terminate_js8call
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get pyjs8call client status
     @app.get('/api/pyjs8call/status')
@@ -1794,12 +2437,18 @@ def add_routes(app: FastAPI):
                 except:
                     pass
             
-            return StatusResponse(
-                success=True,
-                data=status_data
-            )
+            return {
+                'success': True,
+                **status_data
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get schedule
     @app.get('/api/schedule')
@@ -1807,12 +2456,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             schedule = client.schedule.get_schedule()
-            return StatusResponse(
-                success=True,
-                data={'schedule': schedule, 'count': len(schedule)}
-            )
+            return {
+                'success': True,
+                'schedule': schedule,
+                'count': len(schedule)
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # add schedule entry
     @app.post('/api/schedule')
@@ -1826,19 +2482,23 @@ def add_routes(app: FastAPI):
                 profile=request.profile,
                 restart=request.restart
             )
-            return StatusResponse(
-                success=True,
-                message='Schedule entry added',
-                data={
-                    'start_time': request.start_time,
-                    'freq': request.freq,
-                    'speed': request.speed,
-                    'profile': request.profile,
-                    'restart': request.restart
+            return {
+                'success': True,
+                'message': 'Schedule entry added',
+                'start_time': request.start_time,
+                'freq': request.freq,
+                'speed': request.speed,
+                'profile': request.profile,
+                'restart': request.restart
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # remove schedule entry
     @app.delete('/api/schedule/{start_time}')
@@ -1846,13 +2506,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.schedule.remove(start_time=start_time, profile=profile)
-            return StatusResponse(
-                success=True,
-                message='Schedule entry removed',
-                data={'start_time': start_time, 'profile': profile}
-            )
+            return {
+                'success': True,
+                'message': 'Schedule entry removed',
+                'start_time': start_time,
+                'profile': profile
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get spots
     @app.get('/api/activity/spots/all')
@@ -1860,15 +2527,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             spots = client.spots.all()
-            return StatusResponse(
-                success=True,
-                data={
-                    'spots': [MessageModel.from_pyjs8call_message(spot).dict(exclude_none=True) for spot in spots],
-                    'count': len(spots)
+            return {
+                'success': True,
+                'spots': [MessageModel.from_pyjs8call_message(spot).dict(exclude_none=True) for spot in spots],
+                'count': len(spots)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # get call activity
     @app.get('/api/activity/calls')
@@ -1876,15 +2547,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             activity = client.get_call_activity_from_spots(age=age, hearing_age=hearing_age)
-            return StatusResponse(
-                success=True,
-                data={
-                    'call_activity': activity,
-                    'count': len(activity)
+            return {
+                'success': True,
+                'call_activity': activity,
+                'count': len(activity)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # get band activity
     @app.get('/api/activity/bands')
@@ -1892,15 +2567,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             activity = client.get_band_activity(age=age)
-            return StatusResponse(
-                success=True,
-                data={
-                    'band_activity': activity,
-                    'count': len(activity)
+            return {
+                'success': True,
+                'band_activity': activity,
+                'count': len(activity)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # get hearing analysis
     @app.get('/api/activity/hearing')
@@ -1908,15 +2587,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             hearing = client.hearing(age=age)
-            return StatusResponse(
-                success=True,
-                data={
-                    'hearing': hearing,
-                    'count': len(hearing)
+            return {
+                'success': True,
+                'hearing': hearing,
+                'count': len(hearing)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # get heard by analysis
     @app.get('/api/activity/heard-by')
@@ -1924,15 +2607,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             heard_by = client.heard_by(age=age)
-            return StatusResponse(
-                success=True,
-                data={
-                    'heard_by': heard_by,
-                    'count': len(heard_by)
+            return {
+                'success': True,
+                'heard_by': heard_by,
+                'count': len(heard_by)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # get station hearing
     @app.get('/api/activity/station/{callsign}/hearing')
@@ -1940,16 +2627,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             hearing = client.station_hearing(callsign)
-            return StatusResponse(
-                success=True,
-                data={
-                    'callsign': callsign,
-                    'hearing': hearing,
-                    'count': len(hearing)
+            return {
+                'success': True,
+                'callsign': callsign,
+                'hearing': hearing,
+                'count': len(hearing)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # get station heard by
     @app.get('/api/activity/station/{callsign}/heard-by')
@@ -1957,16 +2648,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             heard_by = client.station_heard_by(callsign)
-            return StatusResponse(
-                success=True,
-                data={
-                    'callsign': callsign,
-                    'heard_by': heard_by,
-                    'count': len(heard_by)
+            return {
+                'success': True,
+                'callsign': callsign,
+                'heard_by': heard_by,
+                'count': len(heard_by)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # check if JS8Call has activity
     @app.get('/api/activity')
@@ -1974,12 +2669,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             has_activity = client.activity(age=age)
-            return StatusResponse(
-                success=True,
-                data={'has_activity': has_activity, 'age': age}
-            )
+            return {
+                'success': True,
+                'has_activity': has_activity,
+                'age': age
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get inbox messages
     @app.get('/api/inbox/messages')
@@ -1987,15 +2689,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             messages = client.get_inbox_messages()
-            return StatusResponse(
-                success=True,
-                data={
-                    'messages': messages,
-                    'count': len(messages)
+            return {
+                'success': True,
+                'messages': messages,
+                'count': len(messages)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # get rx text
     @app.get('/api/text/rx')
@@ -2003,12 +2709,18 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             rx_text = client.get_rx_text()
-            return StatusResponse(
-                success=True,
-                data={'rx_text': rx_text}
-            )
+            return {
+                'success': True,
+                'rx_text': rx_text
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get tx text
     @app.get('/api/text/tx')
@@ -2016,12 +2728,18 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             tx_text = client.get_tx_text()
-            return StatusResponse(
-                success=True,
-                data={'tx_text': tx_text}
-            )
+            return {
+                'success': True,
+                'tx_text': tx_text
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # set tx text
     @app.put('/api/text/tx')
@@ -2029,13 +2747,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.set_tx_text(request.text)
-            return StatusResponse(
-                success=True,
-                message='TX text updated',
-                data={'tx_text': request.text}
-            )
+            return {
+                'success': True,
+                'message': 'TX text updated',
+                'tx_text': request.text
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # get rx messages
     @app.get('/api/text/rx-messages')
@@ -2043,15 +2767,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             messages = client.get_rx_messages()
-            return StatusResponse(
-                success=True,
-                data={
-                    'messages': [MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True) for msg in messages],
-                    'count': len(messages)
+            return {
+                'success': True,
+                'messages': [MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True) for msg in messages],
+                'count': len(messages)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # enhanced system status
     @app.get('/api/status/system')
@@ -2070,12 +2798,18 @@ def add_routes(app: FastAPI):
                 'groups': client.settings.get_groups_list(),
                 'selected_call': client.get_selected_call()
             }
-            return StatusResponse(
-                success=True,
-                data=status
-            )
+            return {
+                'success': True,
+                **status
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # JS8Call application control
     @app.post('/api/pyjs8call/restart')
@@ -2083,49 +2817,74 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.restart()
-            return StatusResponse(
-                success=True,
-                message='PyJS8Call restart initiated'
-            )
+            return {
+                'success': True,
+                'message': 'PyJS8Call restart initiated'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.post('/api/pyjs8call/restart-when-inactive')
     async def pyjs8call_restart_when_inactive(timeout: int = 300):
         client = app.state.client
         try:
             client.restart_when_inactive(timeout)
-            return StatusResponse(
-                success=True,
-                message=f'PyJS8Call will restart when inactive for {timeout} seconds',
-                data={'timeout': timeout, 'restart': True}
-            )
+            return {
+                'success': True,
+                'message': f'PyJS8Call will restart when inactive for {timeout} seconds',
+                'timeout': timeout,
+                'restart': True
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.post('/api/js8call/raise-window')
     async def js8call_raise_window():
         client = app.state.client
         try:
             client.raise_window()
-            return StatusResponse(
-                success=True,
-                message='JS8Call window raised'
-            )
+            return {
+                'success': True,
+                'message': 'JS8Call window raised'
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     @app.get('/api/js8call/selected')
     async def get_js8call_selected():
         client = app.state.client
         try:
             selected = client.get_selected_call()
-            return StatusResponse(
-                success=True,
-                data={'selected_call': selected}
-            )
+            return {
+                'success': True,
+                'selected_call': selected
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # grid distance calculation
     @app.get('/api/utils/grid-distance/{grid1}/{grid2}')
@@ -2133,18 +2892,22 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             distance, units, bearing = client.grid_distance(grid1, grid2)
-            return StatusResponse(
-                success=True,
-                data={
-                    'grid1': grid1,
-                    'grid2': grid2,
-                    'distance': distance,
-                    'units': units,
-                    'bearing': bearing
+            return {
+                'success': True,
+                'grid1': grid1,
+                'grid2': grid2,
+                'distance': distance,
+                'units': units,
+                'bearing': bearing
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # frequency to band conversion
     @app.get('/api/utils/freq-to-band/{frequency}')
@@ -2152,15 +2915,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             band = client.freq_to_band(frequency)
-            return StatusResponse(
-                success=True,
-                data={
-                    'frequency': frequency,
-                    'band': band
+            return {
+                'success': True,
+                'frequency': frequency,
+                'band': band
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # filter spots with advanced criteria
     @app.get('/api/activity/spots/filter')
@@ -2199,16 +2966,20 @@ def add_routes(app: FastAPI):
                 filter_kwargs['band'] = band
                 
             spots = client.spots.filter(**filter_kwargs)
-            return StatusResponse(
-                success=True,
-                data={
-                    'spots': [MessageModel.from_pyjs8call_message(spot).dict(exclude_none=True) for spot in spots],
-                    'count': len(spots),
-                    'filters': filter_kwargs
+            return {
+                'success': True,
+                'spots': [MessageModel.from_pyjs8call_message(spot).dict(exclude_none=True) for spot in spots],
+                'count': len(spots),
+                'filters': filter_kwargs
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # grid to lat/lon conversion
     @app.get('/api/utils/grid-to-latlon/{grid}')
@@ -2216,16 +2987,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             lat, lon = client.grid_to_lat_lon(grid)
-            return StatusResponse(
-                success=True,
-                data={
-                    'grid': grid,
-                    'latitude': lat,
-                    'longitude': lon
+            return {
+                'success': True,
+                'grid': grid,
+                'latitude': lat,
+                'longitude': lon
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # band frequency range
     @app.get('/api/utils/band-freq-range/{band}')
@@ -2233,15 +3008,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             freq_range = client.band_freq_range(band)
-            return StatusResponse(
-                success=True,
-                data={
-                    'band': band,
-                    'frequency_range': freq_range
+            return {
+                'success': True,
+                'band': band,
+                'frequency_range': freq_range
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # heard frequency bands
     @app.get('/api/utils/heard-freq-bands')
@@ -2249,12 +3028,18 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             bands = client.heard_freq_bands()
-            return StatusResponse(
-                success=True,
-                data={'heard_bands': bands}
-            )
+            return {
+                'success': True,
+                'heard_bands': bands
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # propagation analysis - grids dataset
     @app.get('/api/analysis/propagation/grids')
@@ -2262,16 +3047,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             dataset = client.propagation.grids_dataset(age=age)
-            return StatusResponse(
-                success=True,
-                data={
-                    'grids_dataset': dataset,
-                    'count': len(dataset),
-                    'age_filter': age
+            return {
+                'success': True,
+                'grids_dataset': dataset,
+                'count': len(dataset),
+                'age_filter': age
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # propagation analysis - grids median dataset
     @app.get('/api/analysis/propagation/grids-median')
@@ -2279,16 +3068,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             dataset = client.propagation.grids_median_dataset(age=age)
-            return StatusResponse(
-                success=True,
-                data={
-                    'grids_median_dataset': dataset,
-                    'count': len(dataset),
-                    'age_filter': age
+            return {
+                'success': True,
+                'grids_median_dataset': dataset,
+                'count': len(dataset),
+                'age_filter': age
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # propagation analysis - origins dataset
     @app.get('/api/analysis/propagation/origins')
@@ -2296,16 +3089,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             dataset = client.propagation.origins_dataset(age=age)
-            return StatusResponse(
-                success=True,
-                data={
-                    'origins_dataset': dataset,
-                    'count': len(dataset),
-                    'age_filter': age
+            return {
+                'success': True,
+                'origins_dataset': dataset,
+                'count': len(dataset),
+                'age_filter': age
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # propagation analysis - origins median dataset
     @app.get('/api/analysis/propagation/origins-median')
@@ -2313,16 +3110,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             dataset = client.propagation.origins_median_dataset(age=age)
-            return StatusResponse(
-                success=True,
-                data={
-                    'origins_median_dataset': dataset,
-                    'count': len(dataset),
-                    'age_filter': age
+            return {
+                'success': True,
+                'origins_median_dataset': dataset,
+                'count': len(dataset),
+                'age_filter': age
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # propagation analysis - origin median SNR
     @app.get('/api/analysis/propagation/origin/{origin}/median-snr')
@@ -2330,16 +3131,20 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             median_snr = client.propagation.origin_median_snr(origin, age=age)
-            return StatusResponse(
-                success=True,
-                data={
-                    'origin': origin,
-                    'median_snr': median_snr,
-                    'age_filter': age
+            return {
+                'success': True,
+                'origin': origin,
+                'median_snr': median_snr,
+                'age_filter': age
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # propagation analysis - best band for grid
     @app.get('/api/analysis/propagation/best-band/grid/{grid}')
@@ -2347,15 +3152,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             best_band = client.propagation.best_band_for_grid(grid)
-            return StatusResponse(
-                success=True,
-                data={
-                    'grid': grid,
-                    'best_band': best_band
+            return {
+                'success': True,
+                'grid': grid,
+                'best_band': best_band
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # propagation analysis - best band for origin
     @app.get('/api/analysis/propagation/best-band/origin/{origin}')
@@ -2363,15 +3172,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             best_band = client.propagation.best_band_for_origin(origin)
-            return StatusResponse(
-                success=True,
-                data={
-                    'origin': origin,
-                    'best_band': best_band
+            return {
+                'success': True,
+                'origin': origin,
+                'best_band': best_band
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # get watched stations
     @app.get('/api/activity/spots/watched/stations')
@@ -2379,15 +3192,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             watched = client.spots.watched_stations
-            return StatusResponse(
-                success=True,
-                data={
-                    'watched_stations': list(watched),
-                    'count': len(watched)
+            return {
+                'success': True,
+                'watched_stations': list(watched),
+                'count': len(watched)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # get watched groups
     @app.get('/api/activity/spots/watched/groups')
@@ -2395,15 +3212,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             watched = client.spots.watched_groups
-            return StatusResponse(
-                success=True,
-                data={
-                    'watched_groups': list(watched),
-                    'count': len(watched)
+            return {
+                'success': True,
+                'watched_groups': list(watched),
+                'count': len(watched)
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
     
     # add station watch
     @app.put('/api/activity/spots/watch/station/{callsign}')
@@ -2411,13 +3232,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.spots.add_station_watch(callsign)
-            return StatusResponse(
-                success=True,
-                message=f'Now watching station {callsign}',
-                data={'callsign': callsign}
-            )
+            return {
+                'success': True,
+                'message': f'Now watching station {callsign}',
+                'callsign': callsign
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # remove station watch
     @app.delete('/api/activity/spots/watch/station/{callsign}')
@@ -2425,13 +3252,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.spots.remove_station_watch(callsign)
-            return StatusResponse(
-                success=True,
-                message=f'Stopped watching station {callsign}',
-                data={'callsign': callsign}
-            )
+            return {
+                'success': True,
+                'message': f'Stopped watching station {callsign}',
+                'callsign': callsign
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # add group watch
     @app.put('/api/activity/spots/watch/group/{group}')
@@ -2439,13 +3272,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.spots.add_group_watch(group)
-            return StatusResponse(
-                success=True,
-                message=f'Now watching group {group}',
-                data={'group': group}
-            )
+            return {
+                'success': True,
+                'message': f'Now watching group {group}',
+                'group': group
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # remove group watch
     @app.delete('/api/activity/spots/watch/group/{group}')
@@ -2453,13 +3292,19 @@ def add_routes(app: FastAPI):
         client = app.state.client
         try:
             client.spots.remove_group_watch(group)
-            return StatusResponse(
-                success=True,
-                message=f'Stopped watching group {group}',
-                data={'group': group}
-            )
+            return {
+                'success': True,
+                'message': f'Stopped watching group {group}',
+                'group': group
+            }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
+                }
+            )
     
     # grid distance from local station
     @app.get('/api/utils/grid-distance-local/{grid}')
@@ -2468,15 +3313,19 @@ def add_routes(app: FastAPI):
         try:
             distance, units, bearing = client.grid_distance(grid)
             local_grid = client.settings.get_station_grid()
-            return StatusResponse(
-                success=True,
-                data={
-                    'local_grid': local_grid,
-                    'target_grid': grid,
-                    'distance': distance,
-                    'units': units,
-                    'bearing': bearing
+            return {
+                'success': True,
+                'local_grid': local_grid,
+                'target_grid': grid,
+                'distance': distance,
+                'units': units,
+                'bearing': bearing
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": str(e)
                 }
             )
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))

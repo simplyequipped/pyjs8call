@@ -420,11 +420,6 @@ class PropagationOriginRequest(BaseModel):
     age: Optional[int] = Field(None, description='Maximum age in minutes')
 
 
-class StatusResponse(BaseModel):
-    '''Response model for status endpoints.'''
-    success: bool = Field(..., description='Whether operation succeeded')
-    message: Optional[str] = Field(None, description='Status message')
-    data: Optional[Dict[str, Any]] = Field(None, description='Additional data')
 
 
 class WebSocketEvent(BaseModel):
