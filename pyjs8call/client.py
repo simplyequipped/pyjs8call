@@ -383,7 +383,7 @@ class Client:
         if self.settings.loaded_settings is not None:
             self.settings.apply_loaded_settings(post_start = True)
         
-        # Auto-start API server if enabled in config
+        # start api server if enabled in config
         self._start_api_server_if_enabled()
     
     def exit_tasks(self):
@@ -1826,21 +1826,21 @@ class Client:
         This method is called automatically during client startup.
         '''
         try:
-            # Check if API is enabled in config
+            # check if api is enabled in config
             api_config = {}
             try:
                 api_section = self.config.get_section('api')
                 if api_section:
                     api_config = dict(api_section)
             except:
-                return  # No API config section
+                return  # no api config section
             
-            # Check if API is enabled
+            # check if api is enabled
             enabled = api_config.get('enabled', 'false').lower()
             if enabled not in ('true', '1', 'yes', 'on'):
                 return
             
-            # Start API server in background
+            # start api server in background
             from pyjs8call.api import start_api_server_background
             start_api_server_background(self)
             
