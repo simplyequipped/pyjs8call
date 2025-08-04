@@ -382,6 +382,9 @@ class Client:
         # if settings loaded, apply post start settings
         if self.settings.loaded_settings is not None:
             self.settings.apply_loaded_settings(post_start = True)
+        
+        # Auto-start API server if enabled in config
+        self._start_api_server_if_enabled()
     
     def exit_tasks(self):
         '''Perform application exit tasks.
@@ -1816,4 +1819,44 @@ class Client:
                              '(case insensitive), and square must be numbers 0-9 (ex. EM19es).') from e
 
         return (lat, lon)
+
+    def _start_api_server_if_enabled(self):
+        '''Start API server if enabled in configuration.
+        
+        This method is called automatically during client startup.
+        '''
+        try:
+            # Check if API is enabled in config
+            api_config = {}
+            try:
+                api_section = self.config.get_section('api')
+                if api_section:
+                    api_config = dict(api_section)
+            except:
+                return  # No API config section
+            
+            # Check if API is enabled
+            enabled = api_config.get('enabled', 'false').lower()
+            if enabled not in ('true', '1', 'yes', 'on'):
+                return
+            
+            # Start API server in background
+            from pyjs8call.api import start_api_server_background
+            start_api_server_background(self)
+            
+        except Exception as e:
+            print(f"Warning: Failed to start API server: {e}")
+
+    def start_api_server(self):
+        '''Manually start API server.
+        
+        This method can be called to start the API server manually,
+        regardless of configuration settings.
+        
+        Raises:
+            ImportError: If FastAPI/uvicorn dependencies not available
+            ValueError: If API key not configured
+        '''
+        from pyjs8call.api import start_api_server
+        start_api_server(self)
 
