@@ -163,6 +163,8 @@ OPTIONS:
 --rns
     Utilize IO buffers to support the RNS PipeInterface, set configuration profile
     to 'RNS', allow free text, and add group @RNS (*)
+--api
+    Enable REST API server
 --freq
     Set radio frequency in Hz
 --grid
@@ -204,16 +206,16 @@ See [RNS PipeInterface](https://markqvist.github.io/Reticulum/manual/interfaces.
 
 #### Configuration
 
-Enable the API by adding this section to your `pyjs8call.ini` settings file:
+Enable the API by adding this section to the `pyjs8call.ini` settings file:
 
 ```ini
 [api]
-enabled=true
-api_key=secret-api-key-here
+enable=true
 port=8080
 bind_address=0.0.0.0
 rate_limit_per_minute=1000
 ```
+The *enable* option is the only required option, all others are shown here with their default values.
 
 #### API Endpoints
 
@@ -231,13 +233,10 @@ The API provides access to major functional areas:
 import requests
 
 # send a directed message
-requests.post('http://localhost:8080/api/messages/send/directed',
-    headers={'X-API-Key': 'secret-api-key-here'},
-    json={'destination': 'KT7RUN', 'message': 'Hello!'})
+requests.post('http://localhost:8080/api/messages/send/directed', json={'destination': 'KT7RUN', 'message': 'HELLO'})
 
 # get current frequency  
-response = requests.get('http://localhost:8080/api/settings/frequency',
-    headers={'X-API-Key': 'secret-api-key-here'})
+response = requests.get('http://localhost:8080/api/settings/frequency')
 print(f"Frequency: {response.json()['data']['frequency']} Hz")
 
 # websocket for real-time events
@@ -247,9 +246,8 @@ import json
 
 async def listen_for_events():
     uri = "ws://localhost:8080/api/events"
-    headers = {"X-API-Key": "secret-api-key-here"}
     
-    async with websockets.connect(uri, extra_headers=headers) as websocket:
+    async with websockets.connect(uri) as websocket:
         # subscribe to events
         await websocket.send(json.dumps({
             "action": "subscribe",
@@ -269,22 +267,23 @@ Visit `http://localhost:8080/docs` when the API server is running for interactiv
 
 #### Message Object Handling
 
-App implementations can import the Message class to convert API message representations back into Message objects in order to access convenience functions:
+Application implementations can import the Message class to convert API message representations back into Message objects to access convenience functions:
 
 ```python
 from pyjs8call import Message
 
-# api response from /api/activity/spots/all
-api_response = {
+# api response from /api/activity/spots/filter
+api_response = [{
     "origin": "KT7RUN",
-    "text": "HELLO WORLD!", 
+    "text": "HELLO WORLD", 
     "snr": -12,
     "freq": 14074500,
     "timestamp": 1641234567.123
-}
+}]
 
-msg = Message.load_from_api(api_response)
-msg.age()
+for msg in api_response:
+    msg = Message.load_from_api(api_response)
+    msg.age()
 ```
 
 &nbsp;
@@ -305,7 +304,7 @@ offset = js8call.settings.set_offset(1500)
 print('Frequency: ' + str(freq))
 print('Offset: ' + str(offset))
 
-# get inbox messages via JS8Call API
+# get inbox messages
 inbox = js8call.get_inbox_messages()
 for message in inbox:
     print(message)
