@@ -36,7 +36,7 @@ class PyJS8CallAPIClient:
     
     def get_connection_status(self):
         """Get JS8Call connection status."""
-        response = self.session.get(f"{self.base_url}/api/status/connection")
+        response = self.session.get(f"{self.base_url}/api/js8call/connected")
         response.raise_for_status()
         return response.json()
     
@@ -70,7 +70,7 @@ class PyJS8CallAPIClient:
     def send_directed_message(self, destination, message):
         """Send directed message."""
         response = self.session.post(
-            f"{self.base_url}/api/messages/send/directed",
+            f"{self.base_url}/api/message/directed",
             json={
                 "destination": destination,
                 "message": message
@@ -81,13 +81,13 @@ class PyJS8CallAPIClient:
     
     def send_heartbeat(self, grid=None):
         """Send heartbeat."""
-        payload = {}
+        params = {}
         if grid:
-            payload["grid"] = grid
+            params["grid"] = grid
             
         response = self.session.post(
-            f"{self.base_url}/api/messages/send/heartbeat",
-            json=payload
+            f"{self.base_url}/api/message/heartbeat",
+            params=params
         )
         response.raise_for_status()
         return response.json()
@@ -100,7 +100,7 @@ class PyJS8CallAPIClient:
     
     def get_inbox_messages(self):
         """Get inbox messages."""
-        response = self.session.get(f"{self.base_url}/api/reception/inbox/messages")
+        response = self.session.get(f"{self.base_url}/api/inbox/messages")
         response.raise_for_status()
         return response.json()
 
@@ -121,7 +121,7 @@ async def websocket_client(base_url="ws://localhost:8080", api_key="test-api-key
             # Subscribe to events
             subscription = {
                 "action": "subscribe",
-                "events": ["incoming_message", "new_spots", "outgoing_status", "inbox_message"]
+                "events": ["incoming_message", "new_spots", "outgoing_status", "inbox_message", "window_transition"]
             }
             await websocket.send(json.dumps(subscription))
             

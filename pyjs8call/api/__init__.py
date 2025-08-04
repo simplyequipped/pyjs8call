@@ -33,7 +33,7 @@ import time
 
 
 def start_api_server(client):
-    """Start API server if dependencies available and API enabled in config.
+    '''Start API server if dependencies available and API enabled in config.
     
     Args:
         client (pyjs8call.client.Client): pyjs8call client instance
@@ -42,71 +42,71 @@ def start_api_server(client):
         ImportError: If FastAPI/uvicorn dependencies not available
         ValueError: If API key not configured
     """
-    # Get API configuration first
+    # get API configuration first
     api_config = {}
     try:
         api_section = client.config.get_section('api')
         if api_section:
             api_config = dict(api_section)
     except:
-        return  # No API config section
+        return  # no API config section
     
-    # Check if API is enabled
+    # check if API is enabled
     enabled = api_config.get('enabled', 'false').lower()
     if enabled not in ('true', '1', 'yes', 'on'):
         return
         
-    # Validate API key
+    # validate API key
     api_key = api_config.get('api_key', '').strip()
     if not api_key:
-        raise ValueError("API key must be set in [api] section of config file")
+        raise ValueError('API key must be set in [api] section of config file')
     
-    # Only import dependencies when actually starting API
+    # only import dependencies when actually starting API
     try:
         import fastapi
         import uvicorn
     except ImportError as e:
-        raise ImportError(f"API dependencies not available: {e}. Install with: pip install fastapi uvicorn")
+        raise ImportError(f'API dependencies not available: {e}. Install with: pip install fastapi uvicorn')
     
     from .server import create_app
     
-    # Create FastAPI app
+    # create FastAPI app
     app = create_app(client, api_config)
     
-    # Get server configuration
+    # get server configuration
     bind_address = api_config.get('bind_address', '0.0.0.0')
     port = int(api_config.get('port', 8080))
     
-    print(f"Starting pyjs8call API server on {bind_address}:{port}")
+    print(f'Starting pyjs8call API server on {bind_address}:{port}')
     
-    # Start server (this blocks)
+    # start server (this blocks)
     uvicorn.run(
         app, 
         host=bind_address, 
         port=port,
-        log_level="info"
+        log_level='info'
     )
 
 
 def start_api_server_background(client):
-    """Start API server in background thread.
+    '''Start API server in background thread.
     
     Args:
         client (pyjs8call.client.Client): pyjs8call client instance
-    """
+    '''
     try:
         api_thread = threading.Thread(
             target=start_api_server,
             args=(client,),
             daemon=True,
-            name="pyjs8call-api"
+            name='pyjs8call-api'
         )
         api_thread.start()
         
-        # Give server time to start
+        # give server time to start
         time.sleep(0.5)
         
     except ImportError:
-        print("Warning: API enabled but FastAPI/Uvicorn not installed")
+        print('Warning: API enabled but FastAPI/Uvicorn not installed')
     except Exception as e:
-        print(f"Warning: Failed to start API server: {e}")
+        print(f'Warning: Failed to start API server: {e}')
