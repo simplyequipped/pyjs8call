@@ -1,8 +1,11 @@
 ### Versions
 
 **0.2.4**
+- Add REST API for better application integration, including multiple application simultaniously
+- Add *pyjs8call.Message.load_from_api()* static method for deserializing API responses
 - Add *pyjs8call.commands.Commands* to load and process custom JS8Call command plugins (see docs for details)
 - Add built-in custom command ' WX?' to send weather forecast and area synopsis information upon request
+- All callbacks now use register/remove functions to allow multiple callbacks per event type
 
 **0.2.3**
 - Add ROADMAP.md (included in documentation)
