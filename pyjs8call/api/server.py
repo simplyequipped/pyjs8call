@@ -69,34 +69,22 @@ class SimpleRateLimiter:
         client_requests.append(now)
         return True
 
-
-class AuthMiddleware(BaseHTTPMiddleware):
-    '''API key authentication middleware.'''
-    
-    def __init__(self, app, api_key: str, rate_limiter: SimpleRateLimiter):
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app: FastAPI, rate_limiter: SimpleRateLimiter):
         super().__init__(app)
-        self.api_key = api_key
         self.rate_limiter = rate_limiter
-    
+        
     async def dispatch(self, request: Request, call_next):
-        # skip auth for non-api paths and websocket upgrades
-        if not request.url.path.startswith('/api') or request.headers.get('upgrade') == 'websocket':
-            return await call_next(request)
-            
-        # get client ip
         client_ip = request.client.host
         
-        # check rate limit
         if not self.rate_limiter.is_allowed(client_ip):
-            raise HTTPException(status_code=429, detail='Rate limit exceeded')
-        
-        # check api key
-        api_key = request.headers.get('X-API-Key')
-        if api_key != self.api_key:
-            raise HTTPException(status_code=401, detail='Invalid API key')
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Rate limit exceeded, try again later"}
+            )
             
-        return await call_next(request)
-
+        response = await call_next(request)
+        return response
 
 class WebSocketManager:
     '''Manage WebSocket connections and event broadcasting.'''
@@ -246,37 +234,24 @@ class EventBridge:
         }
         self.ws_manager.broadcast_sync(event)
 
-
-def create_app(client, config: Dict[str, Any]) -> FastAPI:
+def create_app(client, rate_limit=1000):
     '''Create FastAPI application.
     
     Args:
         client: pyjs8call.client.Client instance
-        config: API configuration dictionary
+        rate_limit (int): requests per minute per IP address before limiting, defaults to 1000
         
     Returns:
-        FastAPI: Configured FastAPI application
+        FastAPI: FastAPI application
     '''
-    # create rate limiter
-    rate_limit = int(config.get('rate_limit_per_minute', 1000))
     rate_limiter = SimpleRateLimiter(rate_limit)
-    
-    # create middleware
-    auth_middleware = AuthMiddleware(
-        app=None,  # will be set by fastapi
-        api_key=config['api_key'],
-        rate_limiter=rate_limiter
-    )
-    
-    # create fastapi app with middleware
     app = FastAPI(
-        title='PyJS8Call API',
+        title='pyjs8call API',
         description='REST API and WebSocket interface for pyjs8call',
-        version='0.2.4',
-        middleware=[Middleware(AuthMiddleware, api_key=config['api_key'], rate_limiter=rate_limiter)]
+        version=pyjs8call.__api_version__
     )
+    app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
     
-    # create websocket manager and event bridge
     ws_manager = WebSocketManager()
     event_bridge = EventBridge(ws_manager)
     event_bridge.register_with_client(client)
@@ -284,12 +259,10 @@ def create_app(client, config: Dict[str, Any]) -> FastAPI:
     # store references for route handlers
     app.state.client = client
     app.state.ws_manager = ws_manager
-    
-    # add routes
+    # configure api routes
     add_routes(app)
     
     return app
-
 
 def add_routes(app: FastAPI):
     '''Add all API routes to the FastAPI app.'''
