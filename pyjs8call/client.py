@@ -382,9 +382,6 @@ class Client:
         # if settings loaded, apply post start settings
         if self.settings.loaded_settings is not None:
             self.settings.apply_loaded_settings(post_start = True)
-        
-        # start api server if enabled in config
-        self._start_api_server_if_enabled()
     
     def exit_tasks(self):
         '''Perform application exit tasks.

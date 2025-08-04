@@ -108,7 +108,7 @@ class Settings:
                 'group_spots': lambda value: self._client.notifications.enable_group_spots() if value else self._client.notifications.disable_group_spots()
             },
             'api': {
-                'enable': lambda value: pyjs8call.api.start_api_server(self._client) if value
+                'enable': lambda value: pyjs8call.api.start_api_server(self._client) if value else None
             }
         }
 

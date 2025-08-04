@@ -25,11 +25,10 @@ except ImportError:
 class PyJS8CallAPIClient:
     """Simple client for pyjs8call REST API."""
     
-    def __init__(self, base_url="http://localhost:8080", api_key="test-api-key"):
+    def __init__(self, base_url="http://localhost:8080"):
         self.base_url = base_url
         self.headers = {
-            'Content-Type': 'application/json',
-            'X-API-Key': api_key
+            'Content-Type': 'application/json'
         }
         self.session = requests.Session()
         self.session.headers.update(self.headers)
@@ -105,16 +104,12 @@ class PyJS8CallAPIClient:
         return response.json()
 
 
-async def websocket_client(base_url="ws://localhost:8080", api_key="test-api-key"):
+async def websocket_client(base_url="ws://localhost:8080"):
     """WebSocket client for real-time events."""
     uri = f"{base_url}/api/events"
     
     try:
-        # Connect with API key in headers
-        async with websockets.connect(
-            uri, 
-            extra_headers={"X-API-Key": api_key}
-        ) as websocket:
+        async with websockets.connect(uri) as websocket:
             
             print("Connected to WebSocket!")
             
@@ -173,12 +168,12 @@ def test_rest_api():
         print(f"Inbox (showing count): {inbox['count']} messages")
         
         # Test message sending (commented out to avoid actual transmission)
-        print("\n5. Testing message sending (skipped - would transmit)")
-        # result = client.send_directed_message("TEST", "API test message")
-        # print(f"Send Message Result: {json.dumps(result, indent=2)}")
-        
-        # result = client.send_heartbeat()
-        # print(f"Send Heartbeat Result: {json.dumps(result, indent=2)}")
+        #print("\n5. Testing message sending")
+        #result = client.send_directed_message("TEST", "API test message")
+        #print(f"Send Message Result: {json.dumps(result, indent=2)}")
+        #
+        #result = client.send_heartbeat()
+        #print(f"Send Heartbeat Result: {json.dumps(result, indent=2)}")
         
         # Test Message deserialization if available
         if MESSAGE_AVAILABLE:
