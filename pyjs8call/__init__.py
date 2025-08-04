@@ -51,3 +51,4 @@ from pyjs8call.client import Client
 from pyjs8call.settings import Settings
 from pyjs8call.callbacks import Callbacks
 from pyjs8call.commands import CustomCommand, Commands
+import pyjs8call.api
