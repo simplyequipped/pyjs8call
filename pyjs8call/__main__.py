@@ -123,6 +123,7 @@ if __name__ == '__main__':
     program = 'python -m pyjs8call'
     parser = argparse.ArgumentParser(prog=program, description='pyjs8call CLI and RNS interface', epilog = help_epilog)
     parser.add_argument('--rns', help='Enable RNS PipeInterface (sets config profile \'RNS\')', action='store_true')
+    parser.add_argument('--api', help='Enable REST API server', action='store_true')
     parser.add_argument('--freq', help='Set radio frequency in Hz', type=int)
     parser.add_argument('--grid', help='Set station grid square')
     parser.add_argument('--speed', help='Set speed of JS8Call modem, defaults to \'fast\'', default='fast')
@@ -146,6 +147,7 @@ if __name__ == '__main__':
     # set config settings after setting profile and loading settings to avoid overwriting
     if args.callsign: js8call.settings.set_station_callsign(args.callsign)
     if args.speed: js8call.settings.set_speed(args.speed)
+    if args.api: pyjs8call.api.start_api_server(js8call)
 
     if args.rns:
         # allow freetext
