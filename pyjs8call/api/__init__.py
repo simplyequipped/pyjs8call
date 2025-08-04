@@ -42,7 +42,26 @@ def start_api_server(client):
         ImportError: If FastAPI/uvicorn dependencies not available
         ValueError: If API key not configured
     """
-    # Only import when actually starting API
+    # Get API configuration first
+    api_config = {}
+    try:
+        api_section = client.config.get_section('api')
+        if api_section:
+            api_config = dict(api_section)
+    except:
+        return  # No API config section
+    
+    # Check if API is enabled
+    enabled = api_config.get('enabled', 'false').lower()
+    if enabled not in ('true', '1', 'yes', 'on'):
+        return
+        
+    # Validate API key
+    api_key = api_config.get('api_key', '').strip()
+    if not api_key:
+        raise ValueError("API key must be set in [api] section of config file")
+    
+    # Only import dependencies when actually starting API
     try:
         import fastapi
         import uvicorn
@@ -50,24 +69,6 @@ def start_api_server(client):
         raise ImportError(f"API dependencies not available: {e}. Install with: pip install fastapi uvicorn")
     
     from .server import create_app
-    
-    # Get API configuration
-    api_config = {}
-    try:
-        api_section = client.config.get_section('api')
-        if api_section:
-            api_config = dict(api_section)
-    except:
-        pass
-    
-    # Check if API is enabled
-    if not api_config.get('enabled', 'false').lower() in ('true', '1', 'yes', 'on'):
-        return
-        
-    # Validate API key
-    api_key = api_config.get('api_key', '').strip()
-    if not api_key:
-        raise ValueError("API key must be set in [api] section of config file")
     
     # Create FastAPI app
     app = create_app(client, api_config)
