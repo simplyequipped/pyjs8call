@@ -41,7 +41,7 @@ def start_api_server(client):
     Raises:
         ImportError: If FastAPI/uvicorn dependencies not available
         ValueError: If API key not configured
-    """
+    '''
     # get API configuration first
     api_config = {}
     try:
@@ -110,3 +110,4 @@ def start_api_server_background(client):
         print('Warning: API enabled but FastAPI/Uvicorn not installed')
     except Exception as e:
         print(f'Warning: Failed to start API server: {e}')
+
