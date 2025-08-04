@@ -106,10 +106,13 @@ class Settings:
                 'spots': lambda value: self._client.notifications.enable_spots() if value else self._client.notifications.disable_spots(),
                 'station_spots': lambda value: self._client.notifications.enable_station_spots() if value else self._client.notifications.disable_station_spots(),
                 'group_spots': lambda value: self._client.notifications.enable_group_spots() if value else self._client.notifications.disable_group_spots()
+            },
+            'api': {
+                'enable': lambda value: pyjs8call.api.start_api_server(self._client) if value
             }
         }
 
-        # settings set via js8call config file
+        # settings set via js8call config file, or other settings that should be handled before starting (aka on client init)
         self._pre_start_settings = {
             'station' : [
                 'callsign',
@@ -142,6 +145,9 @@ class Settings:
             'spots': [
             ],
             'notifications': [
+            ],
+            'api': [
+                'enable'
             ]
         }
 
@@ -252,15 +258,15 @@ class Settings:
 
                 # skip post start settings during pre start processing
                 if not post_start and key in self._pre_start_settings[section]:
-                    value = self._parse_loaded_value(value)
+                    value = self.parse_loaded_value(value)
                     self._settings_map[section][key](value)
 
                 # skip pre start settings during post start processing
                 if post_start and not key in self._pre_start_settings[section]:
-                    value = self._parse_loaded_value(value)
+                    value = self.parse_loaded_value(value)
                     self._settings_map[section][key](value)
 
-    def _parse_loaded_value(self, value):
+    def parse_loaded_value(self, value):
         '''Parse setting value from string to Python type.
         
         Args:
