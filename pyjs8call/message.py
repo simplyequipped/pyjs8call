@@ -285,6 +285,44 @@ class Message:
         "CQ"
     ]
 
+    @staticmethod
+    def load_from_api(data):
+        '''Recreate Message object from API message representation.
+        
+        Example usage:
+        ```
+        from pyjs8call import Message
+        
+        # example api message representation
+        api_response = {
+            "origin": "KT7RUN",
+            "text": "Hello world", 
+            "snr": -12,
+            "freq": 14074500,
+            "timestamp": 1641234567.123
+        }
+        
+        # load message object from API representation
+        msg = Message.load_from_api(api_response)
+        # use message object as usual
+        msg.age()
+        msg.is_directed()
+        ```
+            
+        Args:
+            data (dict): Dictionary containing message representation from API
+            
+        Returns:
+            pyjs8call.message.Message: Message object instance
+        '''        
+        msg = Message()
+        
+        for key, value in data.items():
+            if value is not None:
+                msg.set(key, value)
+        
+        return msg
+
     def __init__(self, destination=None, cmd=None, value=None, origin=None):
         '''Initialize message.
 

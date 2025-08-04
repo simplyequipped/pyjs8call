@@ -14,6 +14,13 @@ import asyncio
 import websockets
 from concurrent.futures import ThreadPoolExecutor
 
+# Import Message class for deserialization example
+try:
+    from pyjs8call import Message
+    MESSAGE_AVAILABLE = True
+except ImportError:
+    MESSAGE_AVAILABLE = False
+
 
 class PyJS8CallAPIClient:
     """Simple client for pyjs8call REST API."""
@@ -173,16 +180,37 @@ def test_rest_api():
         # result = client.send_heartbeat()
         # print(f"Send Heartbeat Result: {json.dumps(result, indent=2)}")
         
-        print("\n✓ REST API tests completed successfully!")
+        # Test Message deserialization if available
+        if MESSAGE_AVAILABLE:
+            print("\n6. Testing Message deserialization...")
+            try:
+                spots = client.get_spots()
+                if spots['data']['spots']:
+                    # Take first spot and convert to Message object
+                    spot_data = spots['data']['spots'][0]
+                    msg = Message.load_from_api(spot_data)
+                    
+                    print(f"   Converted spot to Message object:")
+                    print(f"   - Origin: {msg.origin}")
+                    print(f"   - Age: {msg.age():.1f} seconds")
+                    print(f"   - Is directed: {msg.is_directed()}")
+                    if hasattr(msg, 'grid') and msg.grid:
+                        print(f"   - Grid: {msg.grid}")
+                else:
+                    print("   No spots available for deserialization test")
+            except Exception as e:
+                print(f"   Message deserialization test failed: {e}")
+        
+        print("\nREST API tests completed successfully!")
         
     except requests.exceptions.ConnectionError:
-        print("❌ Could not connect to API server. Is pyjs8call running with API enabled?")
+        print("ERROR: Could not connect to API server. Is pyjs8call running with API enabled?")
     except requests.exceptions.HTTPError as e:
-        print(f"❌ HTTP Error: {e}")
+        print(f"HTTP Error: {e}")
         if e.response.status_code == 401:
             print("   Check your API key configuration")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
 
 
 def test_websocket():
@@ -193,9 +221,9 @@ def test_websocket():
     try:
         asyncio.run(websocket_client())
     except KeyboardInterrupt:
-        print("\n✓ WebSocket test stopped by user")
+        print("\nWebSocket test stopped by user")
     except Exception as e:
-        print(f"❌ WebSocket Error: {e}")
+        print(f"WebSocket Error: {e}")
 
 
 if __name__ == "__main__":
