@@ -70,7 +70,8 @@ def _start_api_server(client, port=8080, bind_address='0.0.0.0', rate_limit=1000
     uvicorn.run(
         app, 
         host=bind_address, 
-        port=port
+        port=port,
+        log_level='error'
     )
 
 def start_api_server(client, port=8080, bind_address='0.0.0.0', rate_limit=1000):
