@@ -1,6 +1,6 @@
 # MIT License
 # 
-# Copyright (c) 2022-2023 Simply Equipped
+# Copyright (c) 2022-2025 Simply Equipped
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -128,6 +128,7 @@ if __name__ == '__main__':
     parser.add_argument('--grid', help='Set station grid square')
     parser.add_argument('--speed', help='Set speed of JS8Call modem, defaults to \'fast\'', default='fast')
     parser.add_argument('--profile', help='Set JS8Call configuration profile')
+    parser.add_argument('--service', help='Running as a service (suppress output)', action='store_true')
     parser.add_argument('--callsign', help='Set station callsign')
     parser.add_argument('--settings', help='File path to pyjs8call settings file (NOT JS8CALL CONFIG FILE)')
     parser.add_argument('--headless', help='Run JS8Call headless (only available on Linux platforms)', action='store_true')
@@ -172,7 +173,7 @@ if __name__ == '__main__':
         thread = threading.Thread(target=_rns_read_stdin)
         thread.daemon = True
         thread.start()
-    else:
+    elif not args.service:
         print('pyjs8call modem started, press Ctrl-C to stop the modem...')
 
     # modem is stopped when EOF reached on RNS stdin pipe

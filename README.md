@@ -173,6 +173,8 @@ OPTIONS:
     Set speed of JS8Call modem, defaults to 'fast'
 --profile
     Set JS8Call configuration profile (**)
+--service
+    Running as a service (suppress CLI output)
 --callsign
     Set station callsign
 --settings
