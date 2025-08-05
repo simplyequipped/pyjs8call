@@ -92,8 +92,8 @@ js8call = pyjs8call.Client()
 # set callback functions
 js8call.callback.register_incoming(rx_message)
 js8call.callback.register_spots(new_spots)
-js8call.callback.outgoing = tx_status
-js8call.callback.inbox = new_inbox_msg
+js8call.callback.register_outgoing(tx_status)
+js8call.callback.register_inbox(new_inbox_msg)
 js8call.start(headless = headless)
 
 # read current configuration values

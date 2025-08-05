@@ -54,10 +54,12 @@ class Callbacks:
         Returns:
             pyjs8call.callbacks.Callbacks: Constructed callback object
         '''
-        self.outgoing = None
-        '''func: Outgoing message status change callback function, defaults to None
-        - *outgoing* callback signature: *func(msg)* where *msg* is a *pyjs8call.message.Message* object
-        - Called by pyjs8call.txmonitor'''
+        self.outgoing = []
+        '''list: Outgoing message status change callback functions, defaults to empty list
+        - *outgoing* structure: *[callback, ...]*
+        - callback signature: *func(msg)* where *msg* is a *pyjs8call.message.Message* object
+        - Called by pyjs8call.outgoingmonitor
+        - See *Callbacks.register_outgoing* and *Callbacks.remove_outgoing*'''
         self.spots = []
         '''list: New spots callback funtions, defaults to empty list
         - *spots* structure: *[callback, ...]*
@@ -76,19 +78,25 @@ class Callbacks:
         - callback signature: *func(msg)* where *msg* is a *pyjs8call.message.Message* object
         - Called by pyjs8call.spotmonitor
         - See *Callbacks.register_group_spot* and *Callbacks.remove_group_spot*'''
-        self.window = None
-        '''func: JS8Call rx/tx window transition callback function, defaults to None
-        - *window* callback signature: *func()*
-        - Called by pyjs8call.windowmonitor'''
-        self.inbox = None
-        '''func: New inbox message callback function, defaults to None
-        - *inbox* callback signature: *func(msgs)* where *msgs* is a list of *dict* message items
+        self.window = []
+        '''list: JS8Call rx/tx window transition callback functions, defaults to empty list
+        - *window* structure: *[callback, ...]*
+        - callback signature: *func()*
+        - Called by pyjs8call.windowmonitor
+        - See *Callbacks.register_window* and *Callbacks.remove_window*'''
+        self.inbox = []
+        '''list: New inbox message callback functions, defaults to empty list
+        - *inbox* structure: *[callback, ...]*
+        - callback signature: *func(msgs)* where *msgs* is a list of *dict* message items
         - See *client.get_inbox_messages()* for message item *dict* key details
-        - Called by pyjs8call.inboxmonitor'''
-        self.schedule = None
-        '''func: Schedule entry activation callback function, defaults to None
-        - *schedule* callback signature: *func(sch)* where *sch* is a *pyjs8call.schedulemonitor.ScheduleEntry* object
-        - Called by pyjs8call.schedulemonitor'''
+        - Called by pyjs8call.inboxmonitor
+        - See *Callbacks.register_inbox* and *Callbacks.remove_inbox*'''
+        self.schedule = []
+        '''list: Schedule entry activation callback functions, defaults to empty list
+        - *schedule* structure: *[callback, ...]*
+        - callback signature: *func(sch)* where *sch* is a *pyjs8call.schedulemonitor.ScheduleEntry* object
+        - Called by pyjs8call.schedulemonitor
+        - See *Callbacks.register_schedule* and *Callbacks.remove_schedule*'''
         self.incoming = {
             Message.RX_DIRECTED: [],
         }
@@ -96,11 +104,12 @@ class Callbacks:
         - *incoming* structure: *{type: [callback, ...], ...}*
             - *type* is an incoming  message type (see pyjs8call.message.Message for information on message types)
         - *callback* signature: *func(msg)* where *msg* is a *pyjs8call.message.Message* object'''
-        self.restart_complete = None
-        '''func: JS8Call application restart complete callback function, defaults to None
-        - *restart_complete* callback signature: *func()*
+        self.restart_complete = []
+        '''list: JS8Call application restart complete callback functions, defaults to empty list
+        - *restart_complete* structure: *[callback, ...]*
+        - callback signature: *func()*
         - Called by pyjs8call.client
-        '''
+        - See *Callbacks.register_restart_complete* and *Callbacks.remove_restart_complete*'''
         self.commands = {}
         '''dict: Mapping of custom commands strings to custom command callback functions list'''
 
@@ -221,7 +230,7 @@ class Callbacks:
             callback (func): Callback function object
         '''
         if callback in self.spots:
-            del self.spots[callback]
+            self.spots.remove(callback)
 
     def register_station_spot(self, callback):
         '''Register station spot callback.
@@ -241,7 +250,7 @@ class Callbacks:
             callback (func): Callback function object
         '''
         if callback in self.station_spot:
-            del self.station_spot[callback]
+            self.station_spot.remove(callback)
 
     def register_group_spot(self, callback):
         '''Register group spot callback.
@@ -261,5 +270,105 @@ class Callbacks:
             callback (func): Callback function object
         '''
         if callback in self.group_spot:
-            del self.group_spot[callback]
+            self.group_spot.remove(callback)
+
+    def register_outgoing(self, callback):
+        '''Register outgoing message status callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func(msg)* where *msg* is a pyjs8call.message.Message object
+        '''
+        if callback not in self.outgoing:
+            self.outgoing.append(callback)
+
+    def remove_outgoing(self, callback):
+        '''Remove outgoing message status callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.outgoing:
+            self.outgoing.remove(callback)
+
+    def register_window(self, callback):
+        '''Register window transition callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func()*
+        '''
+        if callback not in self.window:
+            self.window.append(callback)
+
+    def remove_window(self, callback):
+        '''Remove window transition callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.window:
+            self.window.remove(callback)
+
+    def register_inbox(self, callback):
+        '''Register inbox message callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func(msgs)* where *msgs* is a list of dict message items
+        '''
+        if callback not in self.inbox:
+            self.inbox.append(callback)
+
+    def remove_inbox(self, callback):
+        '''Remove inbox message callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.inbox:
+            self.inbox.remove(callback)
+
+    def register_schedule(self, callback):
+        '''Register schedule entry activation callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func(sch)* where *sch* is a pyjs8call.schedulemonitor.ScheduleEntry object
+        '''
+        if callback not in self.schedule:
+            self.schedule.append(callback)
+
+    def remove_schedule(self, callback):
+        '''Remove schedule entry activation callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.schedule:
+            self.schedule.remove(callback)
+
+    def register_restart_complete(self, callback):
+        '''Register restart complete callback.
+
+        Args:
+            callback (func): Callback function object
+            
+        *callback* function signature: *func()*
+        '''
+        if callback not in self.restart_complete:
+            self.restart_complete.append(callback)
+
+    def remove_restart_complete(self, callback):
+        '''Remove restart complete callback.
+
+        Args:
+            callback (func): Callback function object
+        '''
+        if callback in self.restart_complete:
+            self.restart_complete.remove(callback)
     

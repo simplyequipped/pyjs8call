@@ -126,10 +126,11 @@ class OutgoingMonitor:
         Args:
             msg (pyjs8call.message): Monitored message with changed status
         '''
-        if self._client.callback.outgoing is not None:
-            thread = threading.Thread(target=self._client.callback.outgoing, args=(msg,))
-            thread.daemon = True
-            thread.start()
+        if len(self._client.callback.outgoing) > 0:
+            for callback in self._client.callback.outgoing:
+                thread = threading.Thread(target=callback, args=(msg,))
+                thread.daemon = True
+                thread.start()
 
         if msg.destination == '@HB':
             self._client.heartbeat.outgoing_msg(msg)

@@ -163,6 +163,8 @@ OPTIONS:
 --rns
     Utilize IO buffers to support the RNS PipeInterface, set configuration profile
     to 'RNS', allow free text, and add group @RNS (*)
+--api
+    Enable REST API server
 --freq
     Set radio frequency in Hz
 --grid
@@ -171,6 +173,8 @@ OPTIONS:
     Set speed of JS8Call modem, defaults to 'fast'
 --profile
     Set JS8Call configuration profile (**)
+--service
+    Running as a service (suppress CLI output)
 --callsign
     Set station callsign
 --settings
@@ -198,6 +202,94 @@ See [RNS PipeInterface](https://markqvist.github.io/Reticulum/manual/interfaces.
 
 &nbsp;
 
+### API Server
+
+*pyjs8call* includes an optional REST API server that provides remote access to JS8Call functionality over HTTP and WebSocket connections.
+
+#### Configuration
+
+Enable the API by adding this section to the `pyjs8call.ini` settings file:
+
+```ini
+[api]
+enable=true
+port=8080
+bind_address=0.0.0.0
+rate_limit_per_minute=1000
+```
+The *enable* option is the only required option, all others are shown here with their default values.
+
+#### API Endpoints
+
+The API provides access to major functional areas:
+- **Messages**: Send directed messages, heartbeats, APRS messages, queries
+- **Settings**: Get/set frequency, callsign, grid, and JS8Call configuration  
+- **Activity**: Monitor spots, call activity, band activity
+- **Reception**: Access inbox messages and RX text
+- **Status**: Connection status and health monitoring
+- **Real-time Events**: WebSocket stream for incoming messages and spots
+
+#### API Usage Examples
+
+```python
+import requests
+
+# send a directed message
+requests.post('http://localhost:8080/api/messages/send/directed', json={'destination': 'KT7RUN', 'message': 'HELLO'})
+
+# get current frequency  
+response = requests.get('http://localhost:8080/api/settings/frequency')
+print(f"Frequency: {response.json()['data']['frequency']} Hz")
+
+# websocket for real-time events
+import websockets
+import asyncio
+import json
+
+async def listen_for_events():
+    uri = "ws://localhost:8080/api/events"
+    
+    async with websockets.connect(uri) as websocket:
+        # subscribe to events
+        await websocket.send(json.dumps({
+            "action": "subscribe",
+            "events": ["incoming_message", "new_spots"]
+        }))
+        
+        # listen for events
+        async for message in websocket:
+            event = json.loads(message)
+            print(f"Event: {event['event']}")
+            print(f"Data: {event['data']}")
+
+asyncio.run(listen_for_events())
+```
+
+Visit `http://localhost:8080/docs` when the API server is running for interactive API documentation.
+
+#### Message Object Handling
+
+Application implementations can import the Message class to convert API message representations back into Message objects to access convenience functions:
+
+```python
+from pyjs8call import Message
+
+# api response from /api/activity/spots/filter
+api_response = [{
+    "origin": "KT7RUN",
+    "text": "HELLO WORLD", 
+    "snr": -12,
+    "freq": 14074500,
+    "timestamp": 1641234567.123
+}]
+
+for msg in api_response:
+    msg = Message.load_from_api(api_response)
+    msg.age()
+```
+
+&nbsp;
+
 ### Examples
 
 Basic usage:
@@ -214,7 +306,7 @@ offset = js8call.settings.set_offset(1500)
 print('Frequency: ' + str(freq))
 print('Offset: ' + str(offset))
 
-# get inbox messages via JS8Call API
+# get inbox messages
 inbox = js8call.get_inbox_messages()
 for message in inbox:
     print(message)
@@ -287,11 +379,11 @@ def group_spotted(spot):
     
 js8call = pyjs8call.Client()
 # set spot monitor callback
-js8call.callback.spots = new_spots
+js8call.callback.register_spots(new_spots)
 # set station watcher callback
-js8call.callback.station_spot = station_spotted
+js8call.callback.register_station_spot(station_spotted)
 # set group watcher callback
-js8call.callback.group_spot = group_spotted
+js8call.callback.register_group_spot(group_spotted)
 js8call.start()
 
 # watch multiple stations
@@ -316,7 +408,7 @@ def new_inbox_msg(msgs):
 
 js8call = pyjs8call.Client()
 # set inbox monitor callback
-js8call.callback.inbox = new_inbox_msg
+js8call.callback.register_inbox(new_inbox_msg)
 js8call.start()
 
 # enable local inbox monitoring
@@ -341,7 +433,7 @@ def tx_status(msg):
     
 js8call = pyjs8call.Client()
 # set outgoing monitor callback
-js8call.callback.outgoing = tx_status
+js8call.callback.register_outgoing(tx_status)
 js8call.start()
 
 # monitor directed message tx automatically (default)
@@ -376,7 +468,7 @@ def schedule_activation(schedule_entry):
 
 js8call = pyjs8call.Client()
 # set schedule activation callback
-js8call.callbacks.schedule = schedule_activation
+js8call.callback.register_schedule(schedule_activation)
 js8call.start()
 
 # return to the current configuration later

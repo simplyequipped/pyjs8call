@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='pyjs8call',
-    version='0.2.4',
+    version='0.3.0',
     author='Simply Equipped LLC',
     author_email='howard@simplyequipped.com',
     description='Python package for interfacing with the JS8Call API',
@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/simplyequipped/pyjs8call',
     packages=setuptools.find_packages(),
-    install_requires=['psutil>=5.3', 'us'],
+    install_requires=['psutil>=5.3', 'us', 'fastapi>=0.68.0', 'uvicorn>=0.15.0', 'websockets>=10.0'],
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',

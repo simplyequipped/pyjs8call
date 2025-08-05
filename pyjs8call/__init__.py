@@ -27,7 +27,8 @@
 '''
 
 __docformat__ = 'google'
-__version__ = '0.2.4'
+__version__ = '0.3.0'
+__api_version__ = '1'
 
 
 from pyjs8call.confighandler import ConfigHandler
@@ -50,3 +51,4 @@ from pyjs8call.client import Client
 from pyjs8call.settings import Settings
 from pyjs8call.callbacks import Callbacks
 from pyjs8call.commands import CustomCommand, Commands
+import pyjs8call.api

@@ -378,10 +378,11 @@ class InboxMonitor:
             return msg.value.split('ID')[1].strip(' ' + Message.EOM)
 
     def _callback(self, msgs):
-        if self._client.callback.inbox is not None:
-            thread = threading.Thread(target=self._client.callback.inbox, args=(msgs,)) 
-            thread.daemon = True
-            thread.start()
+        if len(self._client.callback.inbox) > 0:
+            for callback in self._client.callback.inbox:
+                thread = threading.Thread(target=callback, args=(msgs,)) 
+                thread.daemon = True
+                thread.start()
 
     def _monitor(self, query, destination, query_interval):
         '''Inbox monitor thread.'''

@@ -1,6 +1,6 @@
 # MIT License
 # 
-# Copyright (c) 2022-2023 Simply Equipped
+# Copyright (c) 2022-2025 Simply Equipped
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -123,10 +123,12 @@ if __name__ == '__main__':
     program = 'python -m pyjs8call'
     parser = argparse.ArgumentParser(prog=program, description='pyjs8call CLI and RNS interface', epilog = help_epilog)
     parser.add_argument('--rns', help='Enable RNS PipeInterface (sets config profile \'RNS\')', action='store_true')
+    parser.add_argument('--api', help='Enable REST API server', action='store_true')
     parser.add_argument('--freq', help='Set radio frequency in Hz', type=int)
     parser.add_argument('--grid', help='Set station grid square')
     parser.add_argument('--speed', help='Set speed of JS8Call modem, defaults to \'fast\'', default='fast')
     parser.add_argument('--profile', help='Set JS8Call configuration profile')
+    parser.add_argument('--service', help='Running as a service (suppress output)', action='store_true')
     parser.add_argument('--callsign', help='Set station callsign')
     parser.add_argument('--settings', help='File path to pyjs8call settings file (NOT JS8CALL CONFIG FILE)')
     parser.add_argument('--headless', help='Run JS8Call headless (only available on Linux platforms)', action='store_true')
@@ -146,6 +148,7 @@ if __name__ == '__main__':
     # set config settings after setting profile and loading settings to avoid overwriting
     if args.callsign: js8call.settings.set_station_callsign(args.callsign)
     if args.speed: js8call.settings.set_speed(args.speed)
+    if args.api: pyjs8call.api.start_api_server(js8call)
 
     if args.rns:
         # allow freetext
@@ -170,7 +173,7 @@ if __name__ == '__main__':
         thread = threading.Thread(target=_rns_read_stdin)
         thread.daemon = True
         thread.start()
-    else:
+    elif not args.service:
         print('pyjs8call modem started, press Ctrl-C to stop the modem...')
 
     # modem is stopped when EOF reached on RNS stdin pipe
