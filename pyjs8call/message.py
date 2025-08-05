@@ -296,13 +296,13 @@ class Message:
         # example api message representation
         api_response = {
             "origin": "KT7RUN",
-            "text": "Hello world", 
+            "text": "HELLO WORLD", 
             "snr": -12,
             "freq": 14074500,
             "timestamp": 1641234567.123
         }
         
-        # load message object from API representation
+        # load message object from API dict
         msg = Message.load_from_api(api_response)
         # use message object as usual
         msg.age()
@@ -318,6 +318,10 @@ class Message:
         msg = Message()
         
         for key, value in data.items():
+            # drop api related keys
+            if key in ('success', 'message', 'restart'):
+                continue
+                
             if value is not None:
                 msg.set(key, value)
         
