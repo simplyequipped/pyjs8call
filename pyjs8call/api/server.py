@@ -841,12 +841,14 @@ def add_routes(app: FastAPI):
     async def set_callsign(request: SetCallsignRequest):
         client = app.state.client
         try:
+            current_callsign = client.settings.get_station_callsign()
             client.settings.set_station_callsign(request.callsign)
+            needs_restart = current_callsign != request.callsign
             return {
                 'success': True,
                 'message': 'Station callsign updated',
                 'callsign': request.callsign,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -944,12 +946,14 @@ def add_routes(app: FastAPI):
     async def set_speed(request: SetSpeedRequest):
         client = app.state.client
         try:
+            current_speed = client.settings.get_speed()
             client.settings.set_speed(request.speed)
+            needs_restart = current_speed != request.speed
             return {
                 'success': True,
                 'message': 'Modem speed updated',
                 'speed': request.speed,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1026,12 +1030,14 @@ def add_routes(app: FastAPI):
     async def set_heartbeat_interval(request: SetHeartbeatIntervalRequest):
         client = app.state.client
         try:
+            current_interval = client.settings.get_heartbeat_interval()
             client.settings.set_heartbeat_interval(request.interval)
+            needs_restart = current_interval != request.interval
             return {
                 'success': True,
                 'message': 'Heartbeat interval updated',
                 'interval': request.interval,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1067,12 +1073,14 @@ def add_routes(app: FastAPI):
     async def set_idle_timeout(request: SetIdleTimeoutRequest):
         client = app.state.client
         try:
+            current_timeout = client.settings.get_idle_timeout()
             client.settings.set_idle_timeout(request.timeout)
+            needs_restart = current_timeout != request.timeout
             return {
                 'success': True,
                 'message': 'Idle timeout updated',
                 'timeout': request.timeout,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1169,12 +1177,14 @@ def add_routes(app: FastAPI):
     async def set_primary_highlights(request: SetHighlightWordsRequest):
         client = app.state.client
         try:
+            current_words = client.settings.get_primary_highlight_words()
             client.settings.set_primary_highlight_words(request.words)
+            needs_restart = current_words != request.words
             return {
                 'success': True,
                 'message': 'Primary highlight words updated',
                 'words': request.words,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1190,12 +1200,14 @@ def add_routes(app: FastAPI):
     async def set_secondary_highlights(request: SetHighlightWordsRequest):
         client = app.state.client
         try:
+            current_words = client.settings.get_secondary_highlight_words()
             client.settings.set_secondary_highlight_words(request.words)
+            needs_restart = current_words != request.words
             return {
                 'success': True,
                 'message': 'Secondary highlight words updated',
                 'words': request.words,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1231,15 +1243,17 @@ def add_routes(app: FastAPI):
     async def set_heartbeat_networking(request: EnableFeatureRequest):
         client = app.state.client
         try:
+            current_enabled = client.settings.get_heartbeat_networking()
             if request.enabled:
                 client.settings.enable_heartbeat_networking()
             else:
                 client.settings.disable_heartbeat_networking()
+            needs_restart = current_enabled != request.enabled
             return {
                 'success': True,
                 'message': f'Heartbeat networking {"enabled" if request.enabled else "disabled"}',
                 'enabled': request.enabled,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1275,15 +1289,17 @@ def add_routes(app: FastAPI):
     async def set_heartbeat_acknowledgements(request: EnableFeatureRequest):
         client = app.state.client
         try:
+            current_enabled = client.settings.get_heartbeat_acknowledgements()
             if request.enabled:
                 client.settings.enable_heartbeat_acknowledgements()
             else:
                 client.settings.disable_heartbeat_acknowledgements()
+            needs_restart = current_enabled != request.enabled
             return {
                 'success': True,
                 'message': f'Heartbeat acknowledgements {"enabled" if request.enabled else "disabled"}',
                 'enabled': request.enabled,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1319,17 +1335,19 @@ def add_routes(app: FastAPI):
     async def set_heartbeat_qso_pause(request: EnableFeatureRequest):
         client = app.state.client
         try:
+            current_paused = client.settings.heartbeat_during_qso_paused()
             if request.enabled:
                 client.settings.pause_heartbeat_during_qso()
                 message = 'Heartbeat during QSO paused'
             else:
                 client.settings.allow_heartbeat_during_qso()
                 message = 'Heartbeat during QSO allowed'
+            needs_restart = current_paused != request.enabled
             return {
                 'success': True,
                 'message': message,
                 'paused': request.enabled,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1365,15 +1383,17 @@ def add_routes(app: FastAPI):
     async def set_multi_decode(request: EnableFeatureRequest):
         client = app.state.client
         try:
+            current_enabled = client.settings.get_multi_decode()
             if request.enabled:
                 client.settings.enable_multi_decode()
             else:
                 client.settings.disable_multi_decode()
+            needs_restart = current_enabled != request.enabled
             return {
                 'success': True,
                 'message': f'Multi decode {"enabled" if request.enabled else "disabled"}',
                 'enabled': request.enabled,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1409,15 +1429,17 @@ def add_routes(app: FastAPI):
     async def set_autoreply_startup(request: EnableFeatureRequest):
         client = app.state.client
         try:
+            current_enabled = client.settings.get_autoreply_startup()
             if request.enabled:
                 client.settings.enable_autoreply_startup()
             else:
                 client.settings.disable_autoreply_startup()
+            needs_restart = current_enabled != request.enabled
             return {
                 'success': True,
                 'message': f'Autoreply startup {"enabled" if request.enabled else "disabled"}',
                 'enabled': request.enabled,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1453,15 +1475,17 @@ def add_routes(app: FastAPI):
     async def set_autoreply_confirmation(request: EnableFeatureRequest):
         client = app.state.client
         try:
+            current_enabled = client.settings.get_autoreply_confirmation()
             if request.enabled:
                 client.settings.enable_autoreply_confirmation()
             else:
                 client.settings.disable_autoreply_confirmation()
+            needs_restart = current_enabled != request.enabled
             return {
                 'success': True,
                 'message': f'Autoreply confirmation {"enabled" if request.enabled else "disabled"}',
                 'enabled': request.enabled,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1497,15 +1521,17 @@ def add_routes(app: FastAPI):
     async def set_allcall(request: EnableFeatureRequest):
         client = app.state.client
         try:
+            current_enabled = client.settings.get_allcall()
             if request.enabled:
                 client.settings.enable_allcall()
             else:
                 client.settings.disable_allcall()
+            needs_restart = current_enabled != request.enabled
             return {
                 'success': True,
                 'message': f'Allcall {"enabled" if request.enabled else "disabled"}',
                 'enabled': request.enabled,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1541,15 +1567,17 @@ def add_routes(app: FastAPI):
     async def set_reporting(request: EnableFeatureRequest):
         client = app.state.client
         try:
+            current_enabled = client.settings.get_reporting()
             if request.enabled:
                 client.settings.enable_reporting()
             else:
                 client.settings.disable_reporting()
+            needs_restart = current_enabled != request.enabled
             return {
                 'success': True,
                 'message': f'Reporting {"enabled" if request.enabled else "disabled"}',
                 'enabled': request.enabled,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1585,15 +1613,17 @@ def add_routes(app: FastAPI):
     async def set_transmit(request: EnableFeatureRequest):
         client = app.state.client
         try:
+            current_enabled = client.settings.get_transmit()
             if request.enabled:
                 client.settings.enable_transmit()
             else:
                 client.settings.disable_transmit()
+            needs_restart = current_enabled != request.enabled
             return {
                 'success': True,
                 'message': f'Transmit {"enabled" if request.enabled else "disabled"}',
                 'enabled': request.enabled,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1695,14 +1725,16 @@ def add_routes(app: FastAPI):
     async def set_profile(request: SetProfileRequest):
         client = app.state.client
         try:
+            current_profile = client.settings.get_profile()
             client.settings.set_profile(request.profile, request.restore_on_exit, request.create)
+            needs_restart = current_profile != request.profile
             return {
                 'success': True,
                 'message': 'Active profile updated',
                 'profile': request.profile,
                 'restore_on_exit': request.restore_on_exit,
                 'create': request.create,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1724,7 +1756,7 @@ def add_routes(app: FastAPI):
                 'message': 'New profile created',
                 'new_profile': request.new_profile,
                 'copy_profile': request.copy_profile,
-                'restart': True
+                'restart': True # always requires a restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1760,12 +1792,14 @@ def add_routes(app: FastAPI):
     async def set_groups(request: SetGroupsRequest):
         client = app.state.client
         try:
+            current_groups = client.settings.get_groups_list()
             client.settings.set_groups(request.groups)
+            needs_restart = current_groups != request.groups
             return {
                 'success': True,
                 'message': 'Groups list updated',
                 'groups': request.groups,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1781,12 +1815,15 @@ def add_routes(app: FastAPI):
     async def add_group(request: AddGroupRequest):
         client = app.state.client
         try:
+            current_groups = client.settings.get_groups_list()
             client.settings.add_group(request.group)
+            new_groups = client.settings.get_groups_list()
+            needs_restart = current_groups != new_groups
             return {
                 'success': True,
                 'message': 'Group added',
                 'group': request.group,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
@@ -1802,12 +1839,15 @@ def add_routes(app: FastAPI):
     async def remove_group(request: RemoveGroupRequest):
         client = app.state.client
         try:
+            current_groups = client.settings.get_groups_list()
             client.settings.remove_group(request.group)
+            new_groups = client.settings.get_groups_list()
+            needs_restart = current_groups != new_groups
             return {
                 'success': True,
                 'message': 'Group removed',
                 'group': request.group,
-                'restart': True
+                'restart': needs_restart
             }
         except Exception as e:
             return JSONResponse(
