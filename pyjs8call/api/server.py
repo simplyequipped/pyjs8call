@@ -30,6 +30,7 @@ from collections import defaultdict, deque
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware import Middleware
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -255,6 +256,15 @@ def create_app(client, rate_limit=1000):
         version=pyjs8call.__api_version__
     )
     app.add_middleware(RateLimitMiddleware, rate_limiter=rate_limiter)
+    
+    # Add CORS middleware to allow cross-origin requests
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     
     ws_manager = WebSocketManager()
     event_bridge = EventBridge(ws_manager)
