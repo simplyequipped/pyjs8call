@@ -177,7 +177,7 @@ def main():
         print('pyjs8call modem started, press Ctrl-C to stop the modem...')
 
     # modem is stopped when EOF reached on RNS stdin pipe
-    while js8call.connected():
+    while js8call.connected() or js8call.restarting:
         try:
             time.sleep(0.25)
         except KeyboardInterrupt:
