@@ -115,12 +115,12 @@ def _rns_read_stdin():
                 data_buffer += bytes([byte])
 
 
-if __name__ == '__main__':
+def main():
     help_epilog =  'RNS PipeInterface must be configured and enabled in the Reticulum config file. '
     help_epilog += 'If specified profile does not exist, it is created by copying the \'Default\' profile. '
     help_epilog += 'See pyjs8call docs for more information: https://simplyequipped.github.io/pyjs8call'
 
-    program = 'python -m pyjs8call'
+    program = 'pyjs8call'
     parser = argparse.ArgumentParser(prog=program, description='pyjs8call CLI and RNS interface', epilog = help_epilog)
     parser.add_argument('--rns', help='Enable RNS PipeInterface (sets config profile \'RNS\')', action='store_true')
     parser.add_argument('--api', help='Enable REST API server', action='store_true')
@@ -184,4 +184,8 @@ if __name__ == '__main__':
             js8call.stop()
             print('pyjs8call modem stopped')
             break
+
+
+if __name__ == '__main__':
+    main()
     
