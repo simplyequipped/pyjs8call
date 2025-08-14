@@ -128,11 +128,22 @@ class WebSocketManager:
         
         # run broadcast in event loop
         if loop.is_running():
-            # if loop is running, schedule coroutine
-            asyncio.create_task(self._broadcast_async(event))
+            # if loop is running, schedule coroutine with error handling
+            task = asyncio.create_task(self._broadcast_async(event))
+            # add done callback to handle any exceptions
+            task.add_done_callback(self._handle_task_exception)
         else:
             # if loop is not running, run coroutine
             loop.run_until_complete(self._broadcast_async(event))
+    
+    def _handle_task_exception(self, task):
+        '''Handle exceptions from async tasks.'''
+        try:
+            task.result()  # This will raise the exception if one occurred
+        except Exception as e:
+            import traceback
+            print(f"Error in WebSocket broadcast: {e}")
+            traceback.print_exc()
     
     async def _broadcast_async(self, event: Dict[str, Any]):
         '''Asynchronously broadcast event to subscribed clients.'''
@@ -183,37 +194,29 @@ class EventBridge:
     
     def on_incoming_message(self, msg):
         '''Callback for incoming directed messages.'''
-        event = {
-            'event': 'incoming_message',
-            'timestamp': time.time(),
-            'data': MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-        }
+        event = MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
+        event['event'] = 'incoming_message'
         self.ws_manager.broadcast_sync(event)
     
     def on_new_spots(self, spots):
         '''Callback for new spots.'''
         event = {
             'event': 'new_spots',
-            'timestamp': time.time(),
-            'data': [MessageModel.from_pyjs8call_message(spot).dict(exclude_none=True) for spot in spots]
+            'spots': [MessageModel.from_pyjs8call_message(spot).dict(exclude_none=True) for spot in spots]
         }
         self.ws_manager.broadcast_sync(event)
     
     def on_outgoing_status(self, msg):
         '''Callback for outgoing message status changes.'''
-        event = {
-            'event': 'outgoing_status',
-            'timestamp': time.time(),
-            'data': MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
-        }
+        event = MessageModel.from_pyjs8call_message(msg).dict(exclude_none=True)
+        event['event'] = 'outgoing_status'
         self.ws_manager.broadcast_sync(event)
     
     def on_inbox_message(self, msgs):
         '''Callback for new inbox messages.'''
         event = {
             'event': 'inbox_message',
-            'timestamp': time.time(),
-            'data': msgs  # already list of dicts
+            'messages': msgs  # already list of dicts
         }
         self.ws_manager.broadcast_sync(event)
     
@@ -232,11 +235,8 @@ class EventBridge:
             except:
                 pass  # window info not available
         
-        event = {
-            'event': 'window_transition',
-            'timestamp': transition_time,
-            'data': data
-        }
+        event = data
+        event['event'] = 'window_transition'
         self.ws_manager.broadcast_sync(event)
 
 def create_app(client, rate_limit=1000):
@@ -311,8 +311,7 @@ def add_routes(app: FastAPI):
                     ws_manager.subscribe(websocket, events)
                     await websocket.send_json({
                         'event': 'subscribed',
-                        'timestamp': time.time(),
-                        'data': {'events': events}
+                        'events': events
                     })
                     
         except WebSocketDisconnect:
