@@ -53,6 +53,7 @@ def _start_api_server(client, port=8080, bind_address='0.0.0.0', rate_limit=1000
                     if 'port' in key.lower(): port = client.settings.parse_loaded_value(value)
                     elif 'address' in key.lower(): bind_address = client.settings.parse_loaded_value(value)
                     elif 'limit' in key.lower(): rate_limit = client.settings.parse_loaded_value(value)
+                    
     except (configparser.NoSectionError, AttributeError, TypeError):
         pass
     
