@@ -446,6 +446,18 @@ class JS8Call:
             queued_outgoing = bool(len([msg for msg in self._tx_queue if msg.type in Message.USER_MSG_TYPES]) > 0)
 
         return any((outgoing_text, queued_outgoing, activity_age))
+
+    def queued_msg_count(self):
+        '''Number of queued outgoing messages.
+
+        Returns:
+            int: number of queued outgoing user messages
+        '''
+        with self._tx_queue_lock:
+            # count of queued outgoing user msgs
+            queued_outgoing = len([msg for msg in self._tx_queue if msg.type in Message.USER_MSG_TYPES])
+
+        return queued_outgoing
     
     def block_until_inactive(self, age=0):
         '''Block until not outgoing activity.
