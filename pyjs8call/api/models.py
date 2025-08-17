@@ -458,6 +458,11 @@ class SpotFilterRequest(BaseModel):
     band: Optional[str] = Field(None, description='Filter by band')
 
 
+class ConfigRequest(BaseModel):
+    '''Request model for setting configuration values.'''
+    value: str = Field(..., description='Configuration value to set')
+
+
 class CallActivityResponse(BaseModel):
     '''Response model for call activity.'''
     callsign: str
