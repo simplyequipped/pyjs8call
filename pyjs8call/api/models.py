@@ -68,7 +68,7 @@ class MessageModel(BaseModel):
     error: Optional[str] = None
     
     # time fields
-    utc: Optional[str] = None
+    utc: Union[str, int, None] = None
     utc_time_str: Optional[str] = None
     local_time_str: Optional[str] = None
     
