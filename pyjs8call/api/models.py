@@ -52,7 +52,8 @@ class MessageModel(BaseModel):
     dial: Optional[int] = None
     offset: Optional[int] = None
     snr: Optional[float] = None
-    speed: Optional[str] = None
+    #TODO
+    speed: Union[str, int, None] = None
     tdrift: Optional[float] = None
     
     # location/distance
