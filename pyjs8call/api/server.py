@@ -177,7 +177,7 @@ class EventBridge:
         # store client reference for callbacks that need it
         self.client = client
         
-        # register for directed messages (rx_directed is default)
+        # register for directed messages (type RX_DIRECTED is default)
         client.callback.register_incoming(self.on_incoming_message)
         
         # register for spots
@@ -799,7 +799,7 @@ def add_routes(app: FastAPI):
         try:
             freq = client.settings.set_freq(request.frequency)
             return {
-                'success': True
+                'success': True,
                 'frequency': freq,
                 'restart': False
             }
@@ -2914,6 +2914,23 @@ def add_routes(app: FastAPI):
             return {
                 'success': True,
                 'selected': selected
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    'success': False,
+                    'error': str(e)
+                }
+            )
+    
+    @app.get('/api/js8call/queued-msg-count')
+    async def get_js8call_queued_msg_count():
+        client = app.state.client
+        try:
+            return {
+                'success': True,
+                'count': client.js8call.queued_msg_count()
             }
         except Exception as e:
             return JSONResponse(
