@@ -27,6 +27,7 @@ __docformat__ = 'google'
 import time
 from typing import Dict, List, Any, Optional
 from collections import defaultdict, deque
+from urllib.parse import unquote
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware import Middleware
@@ -2645,6 +2646,7 @@ def add_routes(app: FastAPI):
     @app.get('/api/activity/{callsign}/hearing')
     async def get_station_hearing(callsign: str):
         client = app.state.client
+        callsign = unquote(callsign)
         try:
             hearing = client.station_hearing(callsign)
             return {
@@ -2665,6 +2667,7 @@ def add_routes(app: FastAPI):
     @app.get('/api/activity/{callsign}/heard-by')
     async def get_station_heard_by(callsign: str):
         client = app.state.client
+        callsign = unquote(callsign)
         try:
             heard_by = client.station_heard_by(callsign)
             return {
@@ -3289,6 +3292,7 @@ def add_routes(app: FastAPI):
     @app.put('/api/spots/watch/station/{callsign}')
     async def add_station_watch(callsign: str):
         client = app.state.client
+        callsign = unquote(callsign)
         try:
             client.spots.add_station_watch(callsign)
             return {
@@ -3307,6 +3311,7 @@ def add_routes(app: FastAPI):
     @app.delete('/api/spots/watch/station/{callsign}')
     async def remove_station_watch(callsign: str):
         client = app.state.client
+        callsign = unquote(callsign)
         try:
             client.spots.remove_station_watch(callsign)
             return {
