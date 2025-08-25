@@ -2644,11 +2644,11 @@ def add_routes(app: FastAPI):
             )
     
     @app.get('/api/activity/{callsign}/hearing')
-    async def get_station_hearing(callsign: str):
+    async def get_station_hearing(callsign: str, age: Optional[int] = None):
         client = app.state.client
         callsign = unquote(callsign)
         try:
-            hearing = client.station_hearing(callsign)
+            hearing = client.station_hearing(callsign, age)
             return {
                 'success': True,
                 'callsign': callsign,
@@ -2665,11 +2665,11 @@ def add_routes(app: FastAPI):
             )
     
     @app.get('/api/activity/{callsign}/heard-by')
-    async def get_station_heard_by(callsign: str):
+    async def get_station_heard_by(callsign: str, age: Optional[int] = None):
         client = app.state.client
         callsign = unquote(callsign)
         try:
-            heard_by = client.station_heard_by(callsign)
+            heard_by = client.station_heard_by(callsign, age)
             return {
                 'success': True,
                 'callsign': callsign,
