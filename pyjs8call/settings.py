@@ -219,6 +219,10 @@ class Settings:
         spots=false
         station_spots=true
         group_spots=true
+
+        [api]
+        
+        enable=true
         ```
 
         Args:
@@ -247,9 +251,14 @@ class Settings:
             post_start (bool): Post start processing if True, pre start processing if False, defaults to False
         '''
         for section in self.loaded_settings.sections():
-            #skip unsupported section
+            # skip unsupported section
             if section not in self._settings_map:
                 continue
+            # handle special cases during js8call restart
+            if self._client.restarting:
+                # avoid trying to start api server while already running
+                if section == 'api':
+                    continue
 
             for key, value in self.loaded_settings[section].items():
                 # skip unsupported key
