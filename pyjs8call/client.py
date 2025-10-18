@@ -459,6 +459,10 @@ class Client:
         self.js8call.stop()
         time.sleep(1)
 
+        # if settings loaded, apply pre start (config file) settings
+        if self.settings.loaded_settings is not None:
+            self.settings.apply_loaded_settings()
+    
         # start
         self.js8call = pyjs8call.JS8Call(self, self.host, self.port)
         # restore settings
@@ -471,6 +475,10 @@ class Client:
         rx_thread.start()
         time.sleep(0.5)
 
+        # if settings loaded, apply post start settings
+        if self.settings.loaded_settings is not None:
+            self.settings.apply_loaded_settings(post_start=True)
+    
         # resume paused module loops
         for module in paused_modules:
             module.resume()
