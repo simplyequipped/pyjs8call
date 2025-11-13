@@ -3068,10 +3068,10 @@ def add_routes(app: FastAPI):
             )
     
     @app.get('/api/propagation/grids')
-    async def get_grids_dataset(age: Optional[int] = None):
+    async def get_grids_dataset(age: Optional[int] = 30):
         client = app.state.client
         try:
-            dataset = client.propagation.grids_dataset(age=age)
+            dataset = client.propagation.grids_dataset(max_age=age)
             return {
                 'success': True,
                 'grids': dataset,
@@ -3088,10 +3088,10 @@ def add_routes(app: FastAPI):
             )
     
     @app.get('/api/propagation/grids/median')
-    async def get_grids_median_dataset(age: Optional[int] = None):
+    async def get_grids_median_dataset(age: Optional[int] = 30):
         client = app.state.client
         try:
-            dataset = client.propagation.grids_median_dataset(age=age)
+            dataset = client.propagation.grids_median_dataset(max_age=age)
             return {
                 'success': True,
                 'grids': dataset,
@@ -3107,11 +3107,32 @@ def add_routes(app: FastAPI):
                 }
             )
     
-    @app.get('/api/propagation/origins')
-    async def get_origins_dataset(age: Optional[int] = None):
+    @app.get('/api/propagation/grid-median-snr/{grid}')
+    async def get_grid_median_snr(grid: str, age: Optional[int] = 30):
         client = app.state.client
         try:
-            dataset = client.propagation.origins_dataset(age=age)
+            median_snr = client.propagation.grid_median_snr(grid, max_age=age)
+            return {
+                'success': True,
+                'grid': grid,
+                'snr': median_snr,
+                'age': age
+            }
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    'success': False,
+                    'error': str(e)
+                }
+            )
+    
+    
+    @app.get('/api/propagation/origins')
+    async def get_origins_dataset(age: Optional[int] = 30):
+        client = app.state.client
+        try:
+            dataset = client.propagation.origins_dataset(max_age=age)
             return {
                 'success': True,
                 'origins': dataset,
@@ -3128,10 +3149,10 @@ def add_routes(app: FastAPI):
             )
     
     @app.get('/api/propagation/origins/median')
-    async def get_origins_median_dataset(age: Optional[int] = None):
+    async def get_origins_median_dataset(age: Optional[int] = 30):
         client = app.state.client
         try:
-            dataset = client.propagation.origins_median_dataset(age=age)
+            dataset = client.propagation.origins_median_dataset(max_age=age)
             return {
                 'success': True,
                 'origins': dataset,
@@ -3148,10 +3169,10 @@ def add_routes(app: FastAPI):
             )
     
     @app.get('/api/propagation/origin-median-snr/{origin}')
-    async def get_origin_median_snr(origin: str, age: Optional[int] = None):
+    async def get_origin_median_snr(origin: str, age: Optional[int] = 30):
         client = app.state.client
         try:
-            median_snr = client.propagation.origin_median_snr(origin, age=age)
+            median_snr = client.propagation.origin_median_snr(origin, max_age=age)
             return {
                 'success': True,
                 'origin': origin,
